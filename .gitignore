@@ -11,3 +11,7 @@ wheels/
 
 # Vim temporaries
 *.swp
+
+# Example generated code
+example.wat
+example.wasm
