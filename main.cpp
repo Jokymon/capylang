@@ -1,3 +1,4 @@
+#include "args_parse.h"
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -7,24 +8,31 @@ struct Args {
     std::string output_path;
 };
 
+void parse_option(const char* option, ArgvIterator& start, const ArgvIterator &end, std::string& output_string) {
+    if ((*start).starts_with(option)) {
+        if ((*start).size()==strlen(option)) {
+            // we have to take the argument for the given option from the next
+            // argument
+            if (++start != end) {
+                output_string = *start;
+            }
+        } else {
+            // The option is already included in the argument and has to be
+            // removed
+            output_string = (*start).substr(strlen(option));
+        }
+    }
+}
+
 Args parse_args(int argc, char* argv[]) {
     Args arguments;
 
-    for (int i=0; i<argc; i++) {
-        std::string arg{argv[i]};
-        if (arg.starts_with("-o")) {
-            if (arg.size()==2) {
-                if (i+1<argc) {
-                    // we have to take the argument for -o from the next argv
-                    // entry
-                    arguments.output_path = std::string{argv[++i]};
-                }
-            } else {
-                // -o and the argument come in one and we just need to remove
-                // the argument name
-                arguments.output_path = arg.substr(2);
-            }
-        }
+    ArgvRange args{argc, argv};
+    auto args_start = args.begin();
+    auto args_end = args.end();
+
+    for (; args_start != args_end; args_start++) {
+        parse_option("-o", args_start, args_end, arguments.output_path);
     }
     return arguments;
 }
