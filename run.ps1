@@ -2,8 +2,12 @@
 # the result WAT file to WASM and finally running the resulting WASI-compatible WASM
 # module with a WASM runtime
 
+# Cleanup first
+rm example.wat
+rm example.wasm 
+
 # Run the capylang compiler
-C:\sw\wasmtime-v33.0.0-x86_64-windows\wasmtime.exe run --dir . .\build\capylang.wasm $args
+C:\sw\wasmtime-v33.0.0-x86_64-windows\wasmtime.exe run --dir . .\build\capylang.wasm -o example.wat
 
 # convert the WAT file to WASM
 C:\sw\wasm-tools-1.230.0-x86_64-windows\wasm-tools.exe parse example.wat -o example.wasm

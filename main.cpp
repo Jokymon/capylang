@@ -3,11 +3,28 @@
 #include <string>
 #include <vector>
 
-std::vector<std::string> parse_args(int argc, char* argv[]) {
-    std::vector<std::string> arguments;
+struct Args {
+    std::string output_path;
+};
+
+Args parse_args(int argc, char* argv[]) {
+    Args arguments;
 
     for (int i=0; i<argc; i++) {
-        arguments.emplace_back(std::string{argv[i]});
+        std::string arg{argv[i]};
+        if (arg.starts_with("-o")) {
+            if (arg.size()==2) {
+                if (i+1<argc) {
+                    // we have to take the argument for -o from the next argv
+                    // entry
+                    arguments.output_path = std::string{argv[++i]};
+                }
+            } else {
+                // -o and the argument come in one and we just need to remove
+                // the argument name
+                arguments.output_path = arg.substr(2);
+            }
+        }
     }
     return arguments;
 }
@@ -15,12 +32,12 @@ std::vector<std::string> parse_args(int argc, char* argv[]) {
 int main(int argc, char* argv[]) {
     auto args = parse_args(argc, argv);
 
-    if (args.size()<2) {
-        std::cerr << "One argument required: output file path\n";
+    if (args.output_path == "") {
+        std::cerr << "Argument required: -o\n";
         return 1;
     }
 
-    std::ofstream outfile(args[1]);
+    std::ofstream outfile(args.output_path);
 
     outfile << "(module\n";
     outfile << "  (type (;0;) (func))\n";
