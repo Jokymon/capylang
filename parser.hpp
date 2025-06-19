@@ -37,3 +37,29 @@ private:
 
     token parse_number();
 };
+
+// ---------------------------------------------------------------------------------------------
+
+struct node_number
+{
+    int number;
+};
+
+struct node_parse_error
+{
+    std::string error_message;
+    // A node representing a failed parsing result
+};
+
+using ast_node = std::variant<node_number, node_parse_error>;
+
+class parser
+{
+public:
+    explicit parser(lexer &l);
+
+    ast_node parse();
+
+private:
+    lexer &capy_lexer;
+};

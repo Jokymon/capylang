@@ -35,7 +35,9 @@ void lexer::skip_whitespace()
 void lexer::skip_comment()
 {
     char ch;
-    while ((ch = input_.get()) != '\n') {}
+    while ((ch = input_.get()) != '\n')
+    {
+    }
 }
 
 token lexer::parse_token()
@@ -72,4 +74,19 @@ token lexer::parse_number()
         num += input_.get();
     }
     return token_integer{std::stoi(num)};
+}
+
+parser::parser(lexer &l)
+    : capy_lexer(l) {}
+
+ast_node parser::parse()
+{
+    auto token = capy_lexer.next_token();
+
+    if (!std::holds_alternative<token_integer>(token))
+    {
+        return node_parse_error{"Expected a number in the input"};
+    }
+
+    return node_number{std::get<token_integer>(token).number};
 }

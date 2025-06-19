@@ -57,28 +57,35 @@ int main(int argc, char* argv[]) {
     std::ifstream infile(args.input_path);
 
     lexer capylexer{infile};
+    parser capyparser{capylexer};
 
-    auto t = capylexer.next_token();
+    auto root_node = capyparser.parse();
 
-    if (!std::holds_alternative<token_integer>(t)) {
-        std::cerr << "Expected a number in the input\n";
-        return 1;
-    }
+    int exit_code = std::visit([&](const auto& ast) -> int {
+        using T = std::decay_t<decltype(ast)>;
+        if constexpr (std::is_same_v<T, node_number>) {
+            outfile << "(module\n";
+            outfile << "  (type (;0;) (func))\n";
+            outfile << "  (type (;1;) (func (param i32)))\n";
+            outfile << "  (import \"wasi_snapshot_preview1\" \"proc_exit\" (func $__imported_wasi_snapshot_preview1_proc_exit (;0;) (type 1)))\n";
+            outfile << "  (memory (;0;) 2)\n";
+            outfile << "  (export \"memory\" (memory 0))\n";
+            outfile << "  (export \"_start\" (func $_start))\n";
+            outfile << "  (func $_start (type 0)\n";
+            outfile << "      i32.const " << ast.number << "\n";
+            outfile << "      call $__imported_wasi_snapshot_preview1_proc_exit\n";
+            outfile << "      unreachable\n";
+            outfile << "  )\n";
+            outfile << ")\n";
 
-    outfile << "(module\n";
-    outfile << "  (type (;0;) (func))\n";
-    outfile << "  (type (;1;) (func (param i32)))\n";
-    outfile << "  (import \"wasi_snapshot_preview1\" \"proc_exit\" (func $__imported_wasi_snapshot_preview1_proc_exit (;0;) (type 1)))\n";
-    outfile << "  (memory (;0;) 2)\n";
-    outfile << "  (export \"memory\" (memory 0))\n";
-    outfile << "  (export \"_start\" (func $_start))\n";
-    outfile << "  (func $_start (type 0)\n";
-    outfile << "      i32.const " << std::get<token_integer>(t).number << "\n";
-    outfile << "      call $__imported_wasi_snapshot_preview1_proc_exit\n";
-    outfile << "      unreachable\n";
-    outfile << "  )\n";
-    outfile << ")\n";
+            return 0;
+        } else if constexpr (std::is_same_v<T, node_parse_error>) {
+            std::cerr << "Compile error: " << ast.error_message << "\n";
+            return 1;
+        }
+    }, root_node);
+
     outfile.close();
 
-    return 0;
+    return exit_code;
 }
