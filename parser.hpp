@@ -32,6 +32,7 @@ private:
     std::optional<token> lookahead_;
 
     void skip_whitespace();
+    void skip_comment();
     token parse_token();
 
     token parse_number();

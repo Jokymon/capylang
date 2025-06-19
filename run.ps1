@@ -12,6 +12,10 @@ if (Test-Path example.wasm) {
 
 # Run the capylang compiler
 C:\sw\wasmtime-v33.0.0-x86_64-windows\wasmtime.exe run --dir . .\build\capylang.wasm -i example.capy -o example.wat
+if ($LASTEXITCODE -ne 0) {
+    echo "Compilation failed, terminating script"
+    exit $LASTEXITCODE
+}
 
 # convert the WAT file to WASM
 C:\sw\wasm-tools-1.230.0-x86_64-windows\wasm-tools.exe parse example.wat -o example.wasm

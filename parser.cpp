@@ -32,6 +32,12 @@ void lexer::skip_whitespace()
     }
 }
 
+void lexer::skip_comment()
+{
+    char ch;
+    while ((ch = input_.get()) != '\n') {}
+}
+
 token lexer::parse_token()
 {
     skip_whitespace();
@@ -42,6 +48,13 @@ token lexer::parse_token()
     }
 
     char ch = input_.peek();
+    if (ch == '/')
+    {
+        skip_comment();
+        skip_whitespace();
+    }
+
+    ch = input_.peek();
     if (std::isdigit(ch))
     {
         return parse_number();
@@ -51,9 +64,11 @@ token lexer::parse_token()
     return token_illegal{std::to_string(ch)};
 }
 
-token lexer::parse_number() {
+token lexer::parse_number()
+{
     std::string num;
-    while (std::isdigit(input_.peek())) {
+    while (std::isdigit(input_.peek()))
+    {
         num += input_.get();
     }
     return token_integer{std::stoi(num)};
