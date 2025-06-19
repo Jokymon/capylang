@@ -5,6 +5,7 @@
 #include <vector>
 
 struct Args {
+    std::string input_path;
     std::string output_path;
 };
 
@@ -33,6 +34,7 @@ Args parse_args(int argc, char* argv[]) {
 
     for (; args_start != args_end; args_start++) {
         parse_option("-o", args_start, args_end, arguments.output_path);
+        parse_option("-i", args_start, args_end, arguments.input_path);
     }
     return arguments;
 }
@@ -42,6 +44,10 @@ int main(int argc, char* argv[]) {
 
     if (args.output_path == "") {
         std::cerr << "Argument required: -o\n";
+        return 1;
+    }
+    if (args.input_path == "") {
+        std::cerr << "Argument required: -i\n";
         return 1;
     }
 
