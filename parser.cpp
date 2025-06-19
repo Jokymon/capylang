@@ -87,6 +87,10 @@ ast_node parser::parse()
     {
         return node_parse_error{"Expected a number in the input"};
     }
+    if (!std::holds_alternative<token_eof>(capy_lexer.peek_token()))
+    {
+        return node_parse_error{"Expected the end of file"};
+    }
 
     return node_number{std::get<token_integer>(token).number};
 }
