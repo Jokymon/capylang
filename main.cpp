@@ -1,4 +1,6 @@
 #include "args_parse.h"
+#include "parser.hpp"
+#include <cctype>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -52,6 +54,16 @@ int main(int argc, char* argv[]) {
     }
 
     std::ofstream outfile(args.output_path);
+    std::ifstream infile(args.input_path);
+
+    lexer capylexer{infile};
+
+    auto t = capylexer.next_token();
+
+    if (!std::holds_alternative<token_integer>(t)) {
+        std::cerr << "Expected a number in the input\n";
+        return 1;
+    }
 
     outfile << "(module\n";
     outfile << "  (type (;0;) (func))\n";
@@ -61,7 +73,7 @@ int main(int argc, char* argv[]) {
     outfile << "  (export \"memory\" (memory 0))\n";
     outfile << "  (export \"_start\" (func $_start))\n";
     outfile << "  (func $_start (type 0)\n";
-    outfile << "      i32.const 3\n";
+    outfile << "      i32.const " << std::get<token_integer>(t).number << "\n";
     outfile << "      call $__imported_wasi_snapshot_preview1_proc_exit\n";
     outfile << "      unreachable\n";
     outfile << "  )\n";
