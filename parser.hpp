@@ -52,12 +52,17 @@ struct node_parse_error
 };
 
 using ast_node = std::variant<node_number, node_parse_error>;
+using node_root_type = node_number;
 
 class parser
 {
 public:
     explicit parser(lexer &l);
 
+    // TODO: this should probably only either return a AST root
+    // node type or an error type. Maybe we could using or typedef
+    // a root node type during the development to make the switches
+    // a little easier
     ast_node parse();
 
 private:
