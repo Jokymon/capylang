@@ -1,45 +1,10 @@
-#include "args_parse.h"
+#include "args_parse.hpp"
 #include "parser.hpp"
 #include <cctype>
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <vector>
-
-struct Args {
-    std::string input_path;
-    std::string output_path;
-};
-
-void parse_option(const char* option, ArgvIterator& start, const ArgvIterator &end, std::string& output_string) {
-    if ((*start).starts_with(option)) {
-        if ((*start).size()==strlen(option)) {
-            // we have to take the argument for the given option from the next
-            // argument
-            if (++start != end) {
-                output_string = *start;
-            }
-        } else {
-            // The option is already included in the argument and has to be
-            // removed
-            output_string = (*start).substr(strlen(option));
-        }
-    }
-}
-
-Args parse_args(int argc, char* argv[]) {
-    Args arguments;
-
-    ArgvRange args{argc, argv};
-    auto args_start = args.begin();
-    auto args_end = args.end();
-
-    for (; args_start != args_end; args_start++) {
-        parse_option("-o", args_start, args_end, arguments.output_path);
-        parse_option("-i", args_start, args_end, arguments.input_path);
-    }
-    return arguments;
-}
 
 int main(int argc, char* argv[]) {
     auto args = parse_args(argc, argv);

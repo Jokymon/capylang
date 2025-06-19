@@ -3,6 +3,7 @@ project(capylang C CXX)
 
 add_executable(${PROJECT_NAME}
     main.cpp
+    args_parse.cpp
     parser.cpp
 )
 
