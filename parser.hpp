@@ -24,6 +24,20 @@ class lexer
 public:
     explicit lexer(std::istream &input);
 
+    template <typename T>
+    bool ahead_is() {
+        const token& tok = peek_token();
+        return std::holds_alternative<T>(tok);
+    }
+
+    template <typename T>
+    std::optional<T> expect() {
+        if (std::holds_alternative<T>(peek_token())) {
+            return std::get<T>(next_token());
+        }
+        return std::nullopt;
+    }
+
     token next_token();
     const token &peek_token();
 

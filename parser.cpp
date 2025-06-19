@@ -81,16 +81,16 @@ parser::parser(lexer &l)
 
 ast_node parser::parse()
 {
-    auto token = capy_lexer.next_token();
+    auto token = capy_lexer.expect<token_integer>();
 
-    if (!std::holds_alternative<token_integer>(token))
+    if (!token.has_value())
     {
         return node_parse_error{"Expected a number in the input"};
     }
-    if (!std::holds_alternative<token_eof>(capy_lexer.peek_token()))
+    if (!capy_lexer.ahead_is<token_eof>())
     {
         return node_parse_error{"Expected the end of file"};
     }
 
-    return node_number{std::get<token_integer>(token).number};
+    return node_number{token.value().number};
 }
