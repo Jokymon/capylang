@@ -8,6 +8,15 @@ struct token_integer
     long number;
 };
 
+struct token_operator
+{
+    enum operator_type
+    {
+        op_plus
+    };
+    operator_type op_type;
+};
+
 struct token_eof
 {
 };
@@ -17,7 +26,7 @@ struct token_illegal
     std::string token_text;
 };
 
-using token = std::variant<token_integer, token_eof, token_illegal>;
+using token = std::variant<token_integer, token_operator, token_eof, token_illegal>;
 
 class lexer
 {
@@ -25,14 +34,17 @@ public:
     explicit lexer(std::istream &input);
 
     template <typename T>
-    bool ahead_is() {
-        const token& tok = peek_token();
+    bool ahead_is()
+    {
+        const token &tok = peek_token();
         return std::holds_alternative<T>(tok);
     }
 
     template <typename T>
-    std::optional<T> expect() {
-        if (std::holds_alternative<T>(peek_token())) {
+    std::optional<T> expect()
+    {
+        if (std::holds_alternative<T>(peek_token()))
+        {
             return std::get<T>(next_token());
         }
         return std::nullopt;
@@ -50,6 +62,7 @@ private:
     token parse_token();
 
     token parse_number();
+    token parse_operator();
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -59,14 +72,20 @@ struct node_number
     int number;
 };
 
+struct node_expression
+{
+    std::unique_ptr<node_number> left, right;
+    token_operator operation;
+};
+
 struct node_parse_error
 {
     std::string error_message;
     // A node representing a failed parsing result
 };
 
-using ast_node = std::variant<node_number, node_parse_error>;
-using node_root_type = node_number;
+using ast_node = std::variant<node_expression, node_number, node_parse_error>;
+using node_root_type = node_expression;
 
 class parser
 {
@@ -81,4 +100,6 @@ public:
 
 private:
     lexer &capy_lexer;
+
+    ast_node parse_expression();
 };

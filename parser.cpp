@@ -1,4 +1,5 @@
 #include "parser.hpp"
+#include <memory>
 #include <string>
 
 lexer::lexer(std::istream &input)
@@ -60,6 +61,8 @@ token lexer::parse_token()
     if (std::isdigit(ch))
     {
         return parse_number();
+    } else if (ch == '+') {
+        return parse_operator();
     }
 
     input_.get();
@@ -76,21 +79,37 @@ token lexer::parse_number()
     return token_integer{std::stoi(num)};
 }
 
+token lexer::parse_operator()
+{
+    input_.get();
+    return token_operator{token_operator::op_plus};
+}
+
 parser::parser(lexer &l)
     : capy_lexer(l) {}
 
 ast_node parser::parse()
 {
-    auto token = capy_lexer.expect<token_integer>();
+    return parse_expression();
+}
 
-    if (!token.has_value())
+ast_node parser::parse_expression()
+{
+    auto lhs = capy_lexer.expect<token_integer>();
+    if (!lhs.has_value())
     {
         return node_parse_error{"Expected a number in the input"};
     }
-    if (!capy_lexer.ahead_is<token_eof>())
-    {
-        return node_parse_error{"Expected the end of file"};
-    }
+    if (capy_lexer.ahead_is<token_operator>()) {
+        auto op = capy_lexer.next_token();
+        auto rhs = capy_lexer.expect<token_integer>();
 
-    return node_number{token.value().number};
+        return node_expression{
+            .left = std::make_unique<node_number>(std::move(lhs.value().number)),
+            .right = std::make_unique<node_number>(std::move(rhs.value().number)),
+            .operation = std::get<token_operator>(op).op_type
+        };
+    } else {
+        return node_number{lhs.value().number};
+    }
 }
