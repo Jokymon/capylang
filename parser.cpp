@@ -14,6 +14,35 @@ bool is_operator(char ch)
     }
 }
 
+bool is_id_start_character(char ch)
+{
+    if (ch >= 'a' && ch <= 'z')
+    {
+        return true;
+    }
+    if (ch >= 'A' && ch <= 'Z')
+    {
+        return true;
+    }
+    if ((ch == '$') || (ch == '_'))
+    {
+        return true;
+    }
+    return false;
+}
+
+bool is_id_character(char ch)
+{
+    if (is_id_start_character(ch)) {
+        return true;
+    }
+    if (ch >= '0' && ch <= '9')
+    {
+        return true;
+    }
+    return false;
+}
+
 lexer::lexer(std::istream &input)
     : input_(input), lookahead_(std::nullopt) {}
 
@@ -92,6 +121,10 @@ token lexer::parse_token()
         input_.get();
         return token_symbol{token_symbol::sym_brac_close};
     }
+    else if (is_id_start_character(ch))
+    {
+        return parse_identifier();
+    }
 
     input_.get();
     return token_illegal{std::to_string(ch)};
@@ -106,6 +139,17 @@ token lexer::parse_number()
     }
 
     return token_integer{std::stoi(num)};
+}
+
+token lexer::parse_identifier()
+{
+    std::string id_name;
+    while (is_id_character(input_.peek()))
+    {
+        id_name += input_.get();
+    }
+
+    return token_identifier{id_name};
 }
 
 token lexer::parse_operator()
@@ -149,7 +193,7 @@ ast_node parser::parse_expression()
 
         auto expression = parse_expression();
 
-        if (std::holds_alternative<node_parse_error>(expression))
+        if (is_error(expression))
         {
             // Expression parsing already failed, so early return
             return expression;
@@ -166,6 +210,20 @@ ast_node parser::parse_expression()
     }
     else
     {
+        if (capy_lexer.ahead_is<token_identifier>())
+        {
+            auto id = capy_lexer.expect<token_identifier>();
+
+            if (capy_lexer.ahead_is<token_symbol>() &&
+                capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_brac_open)
+            {
+                return parse_function_call(id.value().name);
+            }
+            else {
+                return node_parse_error{"Variables are not supported yet"};
+            }
+        }
+
         auto lhs = parse_number();
         if (is_error(lhs))
         {
@@ -185,6 +243,23 @@ ast_node parser::parse_expression()
 
         return lhs;
     }
+}
+
+ast_node parser::parse_function_call(const std::string function_name)
+{
+    // skip over the opening ( of the function call
+    capy_lexer.expect<token_symbol>();
+
+    auto parameter = parse_expression();
+
+    auto call = node_function_call{
+        .function_name = function_name,
+        .parameter = std::make_unique<ast_node>(std::move(parameter))};
+
+    // TODO: check for closing )
+    capy_lexer.expect<token_symbol>();
+
+    return call;
 }
 
 ast_node parser::parse_number()

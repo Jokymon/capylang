@@ -17,7 +17,6 @@ void emitter::generate(const ast_node &node)
 
     this->emit(node);
 
-    output_ << "      call $__imported_wasi_snapshot_preview1_proc_exit\n";
     output_ << "      unreachable\n";
     output_ << "  )\n";
     output_ << ")\n";
@@ -31,9 +30,17 @@ void emitter::emit(const ast_node &node)
 
         if constexpr (std::is_same_v<T, node_number>) {
             this->emit(n);
+        } else if constexpr (std::is_same_v<T, node_function_call>) {
+            this->emit(n);
         } else if constexpr (std::is_same_v<T, node_expression>) {
             this->emit(n);
         } else {} }, node);
+}
+
+void emitter::emit(const node_function_call& func_call)
+{
+    emit(*func_call.parameter);
+    output_ << "      call " << func_call.function_name << "\n";
 }
 
 void emitter::emit(const node_expression &root)

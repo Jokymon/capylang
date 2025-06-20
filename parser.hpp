@@ -8,6 +8,11 @@ struct token_integer
     long number;
 };
 
+struct token_identifier
+{
+    std::string name;
+};
+
 struct token_symbol
 {
     enum symbol_type
@@ -38,7 +43,7 @@ struct token_illegal
     std::string token_text;
 };
 
-using token = std::variant<token_integer, token_operator, token_symbol, token_eof, token_illegal>;
+using token = std::variant<token_integer, token_identifier, token_operator, token_symbol, token_eof, token_illegal>;
 
 class lexer
 {
@@ -80,6 +85,7 @@ private:
     token parse_token();
 
     token parse_number();
+    token parse_identifier();
     token parse_operator();
 };
 
@@ -87,13 +93,20 @@ private:
 
 struct node_expression;
 struct node_number;
+struct node_function_call;
 struct node_parse_error;
 
-using ast_node = std::variant<node_expression, node_number, node_parse_error>;
+using ast_node = std::variant<node_expression, node_number, node_function_call, node_parse_error>;
 
 struct node_number
 {
     int number;
+};
+
+struct node_function_call
+{
+    std::string function_name;
+    std::unique_ptr<ast_node> parameter;
 };
 
 struct node_expression
@@ -121,5 +134,6 @@ private:
     lexer &capy_lexer;
 
     ast_node parse_expression();
+    ast_node parse_function_call(const std::string function_name);
     ast_node parse_number();
 };
