@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
         std::cerr << "Compile error: " << std::get<node_parse_error>(root_node).error_message << "\n";
         return 1;
     }
-    capyemitter.emit(root_node);
+    capyemitter.generate(root_node);
 
     outfile.close();
 

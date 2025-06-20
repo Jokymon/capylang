@@ -61,7 +61,9 @@ token lexer::parse_token()
     if (std::isdigit(ch))
     {
         return parse_number();
-    } else if (ch == '+') {
+    }
+    else if (ch == '+')
+    {
         return parse_operator();
     }
 
@@ -76,6 +78,7 @@ token lexer::parse_number()
     {
         num += input_.get();
     }
+
     return token_integer{std::stoi(num)};
 }
 
@@ -85,31 +88,49 @@ token lexer::parse_operator()
     return token_operator{token_operator::op_plus};
 }
 
+// ---------------------------------------------------------------------------------------------------
+
+bool is_error(const ast_node& node)
+{
+    return std::holds_alternative<node_parse_error>(node);
+}
+
 parser::parser(lexer &l)
     : capy_lexer(l) {}
 
 ast_node parser::parse()
 {
+    // TODO: check for EOF after expression
     return parse_expression();
 }
 
 ast_node parser::parse_expression()
+{
+    auto lhs = parse_number();
+    if (is_error(lhs)) {
+        return lhs;
+    }
+
+    while (capy_lexer.ahead_is<token_operator>())
+    {
+        auto op = capy_lexer.next_token();
+        auto rhs = parse_expression();
+
+        lhs = node_expression{
+            .left = std::make_unique<ast_node>(std::move(lhs)),
+            .right = std::make_unique<ast_node>(std::move(rhs)),
+            .operation = {std::get<token_operator>(op).op_type}};
+    }
+
+    return lhs;
+}
+
+ast_node parser::parse_number()
 {
     auto lhs = capy_lexer.expect<token_integer>();
     if (!lhs.has_value())
     {
         return node_parse_error{"Expected a number in the input"};
     }
-    if (capy_lexer.ahead_is<token_operator>()) {
-        auto op = capy_lexer.next_token();
-        auto rhs = capy_lexer.expect<token_integer>();
-
-        return node_expression{
-            .left = std::make_unique<node_number>(std::move(lhs.value().number)),
-            .right = std::make_unique<node_number>(std::move(rhs.value().number)),
-            .operation = std::get<token_operator>(op).op_type
-        };
-    } else {
-        return node_number{lhs.value().number};
-    }
+    return node_number{lhs.value().number};
 }

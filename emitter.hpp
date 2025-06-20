@@ -6,6 +6,8 @@ class emitter
 public:
     explicit emitter(std::ostream &output);
 
+    void generate(const ast_node& node);
+
     void emit(const ast_node& node);
 
     void emit(const node_expression& root);

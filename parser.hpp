@@ -67,6 +67,12 @@ private:
 
 // ---------------------------------------------------------------------------------------------
 
+struct node_expression;
+struct node_number;
+struct node_parse_error;
+
+using ast_node = std::variant<node_expression, node_number, node_parse_error>;
+
 struct node_number
 {
     int number;
@@ -74,7 +80,7 @@ struct node_number
 
 struct node_expression
 {
-    std::unique_ptr<node_number> left, right;
+    std::unique_ptr<ast_node> left, right;
     token_operator operation;
 };
 
@@ -84,22 +90,18 @@ struct node_parse_error
     // A node representing a failed parsing result
 };
 
-using ast_node = std::variant<node_expression, node_number, node_parse_error>;
-using node_root_type = node_expression;
+bool is_error(const ast_node& node);
 
 class parser
 {
 public:
     explicit parser(lexer &l);
 
-    // TODO: this should probably only either return a AST root
-    // node type or an error type. Maybe we could using or typedef
-    // a root node type during the development to make the switches
-    // a little easier
     ast_node parse();
 
 private:
     lexer &capy_lexer;
 
     ast_node parse_expression();
+    ast_node parse_number();
 };

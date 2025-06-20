@@ -16,6 +16,6 @@
    --> Wasmtime or other WASM runtimes
 
  * Parser error locations in output
- * Support for multiple operators
- * ignoring whitespaces around operators
+ * Make sure, no tokens follow after valid parse
  * operator precedence
+ * add other operator types
