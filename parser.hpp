@@ -12,7 +12,8 @@ struct token_operator
 {
     enum operator_type
     {
-        op_plus
+        op_multiply,
+        op_plus,
     };
     operator_type op_type;
 };
@@ -81,7 +82,7 @@ struct node_number
 struct node_expression
 {
     std::unique_ptr<ast_node> left, right;
-    token_operator operation;
+    token_operator::operator_type operation;
 };
 
 struct node_parse_error

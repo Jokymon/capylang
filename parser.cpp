@@ -2,6 +2,18 @@
 #include <memory>
 #include <string>
 
+bool is_operator(char ch)
+{
+    switch (ch)
+    {
+    case '+':
+    case '*':
+        return true;
+    default:
+        return false;
+    }
+}
+
 lexer::lexer(std::istream &input)
     : input_(input), lookahead_(std::nullopt) {}
 
@@ -38,7 +50,8 @@ void lexer::skip_comment()
     char ch;
     while ((ch = input_.get()) != '\n')
     {
-        if (input_.eof()) {
+        if (input_.eof())
+        {
             return;
         }
     }
@@ -65,7 +78,7 @@ token lexer::parse_token()
     {
         return parse_number();
     }
-    else if (ch == '+')
+    else if (is_operator(ch))
     {
         return parse_operator();
     }
@@ -87,13 +100,21 @@ token lexer::parse_number()
 
 token lexer::parse_operator()
 {
-    input_.get();
-    return token_operator{token_operator::op_plus};
+    char ch = input_.get();
+    switch (ch) {
+        case '*':
+            return token_operator{token_operator::op_multiply};
+        case '+':
+            return token_operator{token_operator::op_plus};
+        default:
+            // This shouldn't really happen
+            return token_illegal{"Unknown operator"};
+    }
 }
 
 // ---------------------------------------------------------------------------------------------------
 
-bool is_error(const ast_node& node)
+bool is_error(const ast_node &node)
 {
     return std::holds_alternative<node_parse_error>(node);
 }
@@ -110,7 +131,8 @@ ast_node parser::parse()
 ast_node parser::parse_expression()
 {
     auto lhs = parse_number();
-    if (is_error(lhs)) {
+    if (is_error(lhs))
+    {
         return lhs;
     }
 
@@ -122,7 +144,7 @@ ast_node parser::parse_expression()
         lhs = node_expression{
             .left = std::make_unique<ast_node>(std::move(lhs)),
             .right = std::make_unique<ast_node>(std::move(rhs)),
-            .operation = {std::get<token_operator>(op).op_type}};
+            .operation = std::get<token_operator>(op).op_type};
     }
 
     return lhs;

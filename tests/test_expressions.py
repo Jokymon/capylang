@@ -15,6 +15,13 @@ def test_binary_addition():
     assert exit_code == 8
 
 
+def test_binary_multiplication():
+    code = """3*5"""
+    exit_code, _ = tools.run_test_code(code)
+
+    assert exit_code == 15
+
+
 def test_multiple_operations():
     code = """5+ 2+3"""
     exit_code, _ = tools.run_test_code(code)

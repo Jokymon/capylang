@@ -40,7 +40,15 @@ void emitter::emit(const node_expression &root)
 {
     emit(*root.left);
     emit(*root.right);
-    output_ << "      i32.add\n";
+    switch (root.operation)
+    {
+    case token_operator::op_plus:
+        output_ << "      i32.add\n";
+        break;
+    case token_operator::op_multiply:
+        output_ << "      i32.mul\n";
+        break;
+    }
 }
 
 void emitter::emit(const node_number &number)
