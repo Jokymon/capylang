@@ -27,3 +27,17 @@ def test_multiple_operations():
     exit_code, _ = tools.run_test_code(code)
 
     assert exit_code == 10
+
+
+def test_simple_braced_expressions():
+    code = """(3+4)"""
+    exit_code, _ = tools.run_test_code(code)
+
+    assert exit_code == 7
+
+
+def test_complex_braced_expressions():
+    code = """3*(3+4)"""
+    exit_code, _ = tools.run_test_code(code)
+
+    assert exit_code == 21

@@ -82,6 +82,16 @@ token lexer::parse_token()
     {
         return parse_operator();
     }
+    else if (ch == '(')
+    {
+        input_.get();
+        return token_symbol{token_symbol::sym_brac_open};
+    }
+    else if (ch == ')')
+    {
+        input_.get();
+        return token_symbol{token_symbol::sym_brac_close};
+    }
 
     input_.get();
     return token_illegal{std::to_string(ch)};
@@ -101,14 +111,15 @@ token lexer::parse_number()
 token lexer::parse_operator()
 {
     char ch = input_.get();
-    switch (ch) {
-        case '*':
-            return token_operator{token_operator::op_multiply};
-        case '+':
-            return token_operator{token_operator::op_plus};
-        default:
-            // This shouldn't really happen
-            return token_illegal{"Unknown operator"};
+    switch (ch)
+    {
+    case '*':
+        return token_operator{token_operator::op_multiply};
+    case '+':
+        return token_operator{token_operator::op_plus};
+    default:
+        // This shouldn't really happen
+        return token_illegal{"Unknown operator"};
     }
 }
 
@@ -130,24 +141,50 @@ ast_node parser::parse()
 
 ast_node parser::parse_expression()
 {
-    auto lhs = parse_number();
-    if (is_error(lhs))
+    if (capy_lexer.ahead_is<token_symbol>() &&
+        (capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_brac_open))
     {
+        // eat up the '(' token
+        capy_lexer.next_token();
+
+        auto expression = parse_expression();
+
+        if (std::holds_alternative<node_parse_error>(expression))
+        {
+            // Expression parsing already failed, so early return
+            return expression;
+        }
+
+        // check for a closing )
+        auto closing_brace = capy_lexer.expect<token_symbol>();
+        if (closing_brace.has_value() && (closing_brace.value().sym_type == token_symbol::sym_brac_close))
+        {
+            return expression;
+        }
+
+        return node_parse_error{"Expected a closing brace ')' at the end of the expression"};
+    }
+    else
+    {
+        auto lhs = parse_number();
+        if (is_error(lhs))
+        {
+            return lhs;
+        }
+
+        while (capy_lexer.ahead_is<token_operator>())
+        {
+            auto op = capy_lexer.next_token();
+            auto rhs = parse_expression();
+
+            lhs = node_expression{
+                .left = std::make_unique<ast_node>(std::move(lhs)),
+                .right = std::make_unique<ast_node>(std::move(rhs)),
+                .operation = std::get<token_operator>(op).op_type};
+        }
+
         return lhs;
     }
-
-    while (capy_lexer.ahead_is<token_operator>())
-    {
-        auto op = capy_lexer.next_token();
-        auto rhs = parse_expression();
-
-        lhs = node_expression{
-            .left = std::make_unique<ast_node>(std::move(lhs)),
-            .right = std::make_unique<ast_node>(std::move(rhs)),
-            .operation = std::get<token_operator>(op).op_type};
-    }
-
-    return lhs;
 }
 
 ast_node parser::parse_number()

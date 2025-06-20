@@ -8,6 +8,17 @@ struct token_integer
     long number;
 };
 
+struct token_symbol
+{
+    enum symbol_type
+    {
+        sym_brac_open,
+        sym_brac_close,
+    };
+
+    symbol_type sym_type;
+};
+
 struct token_operator
 {
     enum operator_type
@@ -27,7 +38,7 @@ struct token_illegal
     std::string token_text;
 };
 
-using token = std::variant<token_integer, token_operator, token_eof, token_illegal>;
+using token = std::variant<token_integer, token_operator, token_symbol, token_eof, token_illegal>;
 
 class lexer
 {
@@ -39,6 +50,12 @@ public:
     {
         const token &tok = peek_token();
         return std::holds_alternative<T>(tok);
+    }
+
+    template <typename T>
+    T next_as()
+    {
+        return std::get<T>(peek_token());
     }
 
     template <typename T>
@@ -91,7 +108,7 @@ struct node_parse_error
     // A node representing a failed parsing result
 };
 
-bool is_error(const ast_node& node);
+bool is_error(const ast_node &node);
 
 class parser
 {
