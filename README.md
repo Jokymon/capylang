@@ -5,6 +5,11 @@
  * build a WASM compiler that runs in a WASM runtime with WASI p1
    or maybe p2
 
+## Testing
+
+A simple framework was set in place to run compiled WASM modules and check their output and
+exit codes. This is supported by `uv` and the `pytest` library.
+
 ## TODO
 
  * testing infrastructure
