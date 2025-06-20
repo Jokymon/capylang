@@ -5,9 +5,6 @@ import tempfile
 
 
 def run_compile(source_path, wat_path, wasm_path):
-    with open(source_path, "r") as fp:
-        data = fp.read()
-
     res = subprocess.run(f"C:/sw/wasmtime-v33.0.0-x86_64-windows/wasmtime.exe run --dir {source_path.parent.as_posix()} ./build/capylang.wasm -i {source_path.as_posix()} -o {wat_path.as_posix()}", capture_output=True)
     res = subprocess.run(f"C:/sw/wasm-tools-1.230.0-x86_64-windows/wasm-tools.exe parse {wat_path.as_posix()} -o {wasm_path.as_posix()}", capture_output=True)
 
