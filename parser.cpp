@@ -38,6 +38,9 @@ void lexer::skip_comment()
     char ch;
     while ((ch = input_.get()) != '\n')
     {
+        if (input_.eof()) {
+            return;
+        }
     }
 }
 
