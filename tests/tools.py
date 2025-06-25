@@ -35,5 +35,14 @@ def run_test_code(source_code) -> tuple[int, str]:
         os.remove(wat_file_path)
     if os.path.exists(wasm_file_path):
         os.remove(wasm_file_path)
-    
+
     return exit_code, stdout
+
+
+def expression_to_full_program(code):
+    procedure_wrapper = """
+fn $_start() {{
+    {code}
+}}"""
+    full_code = procedure_wrapper.format(code=code)
+    return full_code

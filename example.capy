@@ -1,2 +1,4 @@
 // This file currently only contains some more data like parts
-$__imported_wasi_snapshot_preview1_proc_exit(5 + 2+2)
+fn $_start() {
+    $__imported_wasi_snapshot_preview1_proc_exit(5 + 2+2)
+}

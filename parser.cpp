@@ -2,6 +2,34 @@
 #include <memory>
 #include <string>
 
+std::string token_symbol::to_string() const
+{
+    switch (sym_type)
+    {
+    case sym_kw_fn:
+        return "SYM_KW_FN";
+    case sym_brac_open:
+        return "SYM_(";
+    case sym_brac_close:
+        return "SYM_)";
+    case sym_curly_open:
+        return "SYM_{";
+    case sym_curly_close:
+        return "SYM_}";
+    }
+}
+
+std::string token_operator::to_string() const
+{
+    switch (op_type)
+    {
+    case op_multiply:
+        return "OP_MULT";
+    case op_plus:
+        return "OP_PLUS";
+    }
+}
+
 bool is_operator(char ch)
 {
     switch (ch)
@@ -33,7 +61,8 @@ bool is_id_start_character(char ch)
 
 bool is_id_character(char ch)
 {
-    if (is_id_start_character(ch)) {
+    if (is_id_start_character(ch))
+    {
         return true;
     }
     if (ch >= '0' && ch <= '9')
@@ -41,6 +70,28 @@ bool is_id_character(char ch)
         return true;
     }
     return false;
+}
+
+std::string repr_token(const token &tok)
+{
+    return std::visit([&](const auto &n) -> std::string
+                      {
+                          using T = std::decay_t<decltype(n)>;
+
+                          if constexpr (std::is_same_v<T, token_eof>) {
+                            return "<TOK_EOF>";
+                          } else if constexpr (std::is_same_v<T, token_identifier>) {
+                            return "<TOK_ID: "+n.name+">";
+                          } else if constexpr (std::is_same_v<T, token_illegal>) {
+                            return "<TOK_ILLEGAL: "+n.token_text+">";
+                          } else if constexpr (std::is_same_v<T, token_integer>) {
+                            return "<TOK_INT: "+std::to_string(n.number)+">";
+                          } else if constexpr (std::is_same_v<T, token_operator>) {
+                            return "<TOK_OP: "+n.to_string()+">";
+                          } else if constexpr (std::is_same_v<T, token_symbol>) {
+                            return "<TOK_SYM: "+n.to_string()+">";
+                          } },
+                      tok);
 }
 
 lexer::lexer(std::istream &input)
@@ -53,6 +104,16 @@ const token &lexer::peek_token()
         lookahead_ = parse_token();
     }
     return *lookahead_;
+}
+
+bool lexer::expect_symbol(token_symbol::symbol_type symbol)
+{
+    auto t = expect<token_symbol>();
+    if (!t.has_value() || t.value().sym_type != symbol)
+    {
+        return false;
+    }
+    return true;
 }
 
 token lexer::next_token()
@@ -121,9 +182,19 @@ token lexer::parse_token()
         input_.get();
         return token_symbol{token_symbol::sym_brac_close};
     }
+    else if (ch == '{')
+    {
+        input_.get();
+        return token_symbol{token_symbol::sym_curly_open};
+    }
+    else if (ch == '}')
+    {
+        input_.get();
+        return token_symbol{token_symbol::sym_curly_close};
+    }
     else if (is_id_start_character(ch))
     {
-        return parse_identifier();
+        return parse_identifier_or_keyword();
     }
 
     input_.get();
@@ -141,7 +212,7 @@ token lexer::parse_number()
     return token_integer{std::stoi(num)};
 }
 
-token lexer::parse_identifier()
+token lexer::parse_identifier_or_keyword()
 {
     std::string id_name;
     while (is_id_character(input_.peek()))
@@ -149,7 +220,14 @@ token lexer::parse_identifier()
         id_name += input_.get();
     }
 
-    return token_identifier{id_name};
+    if (id_name == "fn")
+    {
+        return token_symbol{token_symbol::sym_kw_fn};
+    }
+    else
+    {
+        return token_identifier{id_name};
+    }
 }
 
 token lexer::parse_operator()
@@ -179,8 +257,56 @@ parser::parser(lexer &l)
 
 ast_node parser::parse()
 {
-    // TODO: check for EOF after expression
-    return parse_expression();
+    auto root = parse_function_definition();
+    if (!capy_lexer.ahead_is<token_eof>())
+    {
+        return node_parse_error{"Unexpected trailing code after function definition"};
+    }
+    return root;
+}
+
+ast_node parser::parse_function_definition()
+{
+    if (!capy_lexer.expect_symbol(token_symbol::sym_kw_fn))
+    {
+        return node_parse_error{"Expecting a function definition starting with keyword 'fn'"};
+    }
+
+    auto function_name = capy_lexer.expect<token_identifier>();
+    if (!function_name.has_value())
+    {
+        return node_parse_error{"Expecting a function name"};
+    }
+
+    if (!capy_lexer.expect_symbol(token_symbol::sym_brac_open))
+    {
+        return node_parse_error{"Expecting an opening bracket '(' for function parameters"};
+    }
+
+    if (!capy_lexer.expect_symbol(token_symbol::sym_brac_close))
+    {
+        return node_parse_error{"Expecting an closing bracket ')' for function parameters"};
+    }
+
+    if (!capy_lexer.expect_symbol(token_symbol::sym_curly_open))
+    {
+        return node_parse_error{"Expecting an opening brace '{' for function body definition"};
+    }
+
+    auto function_body = parse_expression();
+    if (is_error(function_body))
+    {
+        return function_body;
+    }
+
+    if (!capy_lexer.expect_symbol(token_symbol::sym_curly_close))
+    {
+        return node_parse_error{"Expecting a closing brace '}' after function body definition"};
+    }
+
+    return node_function_definition{
+        .function_name = function_name.value().name,
+        .code = std::make_unique<ast_node>(std::move(function_body))};
 }
 
 ast_node parser::parse_expression()
@@ -219,7 +345,8 @@ ast_node parser::parse_expression()
             {
                 return parse_function_call(id.value().name);
             }
-            else {
+            else
+            {
                 return node_parse_error{"Variables are not supported yet"};
             }
         }

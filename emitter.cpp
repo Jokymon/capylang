@@ -13,12 +13,9 @@ void emitter::generate(const ast_node &node)
     output_ << "  (memory (;0;) 2)\n";
     output_ << "  (export \"memory\" (memory 0))\n";
     output_ << "  (export \"_start\" (func $_start))\n";
-    output_ << "  (func $_start (type 0)\n";
 
     this->emit(node);
 
-    output_ << "      unreachable\n";
-    output_ << "  )\n";
     output_ << ")\n";
 }
 
@@ -32,9 +29,20 @@ void emitter::emit(const ast_node &node)
             this->emit(n);
         } else if constexpr (std::is_same_v<T, node_function_call>) {
             this->emit(n);
+        } else if constexpr (std::is_same_v<T, node_function_definition>) {
+            this->emit(n);
         } else if constexpr (std::is_same_v<T, node_expression>) {
             this->emit(n);
         } else {} }, node);
+}
+
+void emitter::emit(const node_function_definition& func_def)
+{
+    output_ << "  (func " << func_def.function_name << "\n";
+    
+    emit(*func_def.code);
+
+    output_ << "  )\n";
 }
 
 void emitter::emit(const node_function_call& func_call)

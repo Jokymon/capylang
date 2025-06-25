@@ -2,42 +2,48 @@ import tools
 
 
 def test_single_number():
-    code = """4"""
+    code = """$__imported_wasi_snapshot_preview1_proc_exit(4)"""
+    code = tools.expression_to_full_program(code)
     exit_code, _ = tools.run_test_code(code)
 
     assert exit_code == 4
 
 
 def test_binary_addition():
-    code = """5+3"""
+    code = """$__imported_wasi_snapshot_preview1_proc_exit(5+3)"""
+    code = tools.expression_to_full_program(code)
     exit_code, _ = tools.run_test_code(code)
 
     assert exit_code == 8
 
 
 def test_binary_multiplication():
-    code = """3*5"""
+    code = """$__imported_wasi_snapshot_preview1_proc_exit(3*5)"""
+    code = tools.expression_to_full_program(code)
     exit_code, _ = tools.run_test_code(code)
 
     assert exit_code == 15
 
 
 def test_multiple_operations():
-    code = """5+ 2+3"""
+    code = """$__imported_wasi_snapshot_preview1_proc_exit(5+ 2+3)"""
+    code = tools.expression_to_full_program(code)
     exit_code, _ = tools.run_test_code(code)
 
     assert exit_code == 10
 
 
 def test_simple_braced_expressions():
-    code = """(3+4)"""
+    code = """$__imported_wasi_snapshot_preview1_proc_exit((3+4))"""
+    code = tools.expression_to_full_program(code)
     exit_code, _ = tools.run_test_code(code)
 
     assert exit_code == 7
 
 
 def test_complex_braced_expressions():
-    code = """3*(3+4)"""
+    code = """$__imported_wasi_snapshot_preview1_proc_exit(3*(3+4))"""
+    code = tools.expression_to_full_program(code)
     exit_code, _ = tools.run_test_code(code)
 
     assert exit_code == 21
