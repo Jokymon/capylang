@@ -3,6 +3,25 @@
 #include <optional>
 #include <variant>
 
+struct source_position
+{
+    size_t line = 1;
+    size_t column = 1;
+};
+
+struct source_range
+{
+    source_position start;
+    source_position end;
+};
+
+template <typename T>
+struct located
+{
+    T value;
+    source_range location;
+};
+
 struct token_integer
 {
     long number;
@@ -51,7 +70,8 @@ struct token_illegal
     std::string token_text;
 };
 
-using token = std::variant<token_integer, token_identifier, token_operator, token_symbol, token_eof, token_illegal>;
+using token_raw = std::variant<token_integer, token_identifier, token_operator, token_symbol, token_eof, token_illegal>;
+using token = located<token_raw>;
 
 std::string repr_token(const token &tok);
 
@@ -64,21 +84,21 @@ public:
     bool ahead_is()
     {
         const token &tok = peek_token();
-        return std::holds_alternative<T>(tok);
+        return std::holds_alternative<T>(tok.value);
     }
 
     template <typename T>
     T next_as()
     {
-        return std::get<T>(peek_token());
+        return std::get<T>(peek_token().value);
     }
 
     template <typename T>
     std::optional<T> expect()
     {
-        if (std::holds_alternative<T>(peek_token()))
+        if (std::holds_alternative<T>(peek_token().value))
         {
-            return std::get<T>(next_token());
+            return std::get<T>(next_token().value);
         }
         return std::nullopt;
     }
@@ -91,6 +111,7 @@ public:
 private:
     std::istream &input_;
     std::optional<token> lookahead_;
+    source_position current_position;
 
     void skip_whitespace();
     void skip_comment();

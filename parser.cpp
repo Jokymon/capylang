@@ -2,6 +2,16 @@
 #include <memory>
 #include <string>
 
+template <typename T, typename... Args>
+token make_located(source_position start, source_position end, Args... args)
+{
+    return token{
+        .value = T{args...},
+        .location = source_range{
+            .start = start,
+            .end = end}};
+}
+
 std::string token_symbol::to_string() const
 {
     switch (sym_type)
@@ -90,12 +100,14 @@ std::string repr_token(const token &tok)
                             return "<TOK_OP: "+n.to_string()+">";
                           } else if constexpr (std::is_same_v<T, token_symbol>) {
                             return "<TOK_SYM: "+n.to_string()+">";
+                          } else {
+                            return "<!TOK_FAIL!>";
                           } },
-                      tok);
+                      tok.value);
 }
 
 lexer::lexer(std::istream &input)
-    : input_(input), lookahead_(std::nullopt) {}
+    : input_(input), lookahead_(std::nullopt), current_position{} {}
 
 const token &lexer::peek_token()
 {
@@ -131,7 +143,16 @@ void lexer::skip_whitespace()
 {
     while (std::isspace(input_.peek()))
     {
-        input_.get();
+        char ch = input_.get();
+        if (ch == '\n')
+        {
+            current_position.line += 1;
+            current_position.column = 1;
+        }
+        else
+        {
+            current_position.column += 1;
+        }
     }
 }
 
@@ -145,6 +166,8 @@ void lexer::skip_comment()
             return;
         }
     }
+
+    current_position.line += 1;
 }
 
 token lexer::parse_token()
@@ -153,7 +176,7 @@ token lexer::parse_token()
 
     if (input_.eof())
     {
-        return token_eof{};
+        return make_located<token_eof>(current_position, current_position);
     }
 
     char ch = input_.peek();
@@ -175,22 +198,22 @@ token lexer::parse_token()
     else if (ch == '(')
     {
         input_.get();
-        return token_symbol{token_symbol::sym_brac_open};
+        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_brac_open);
     }
     else if (ch == ')')
     {
         input_.get();
-        return token_symbol{token_symbol::sym_brac_close};
+        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_brac_close);
     }
     else if (ch == '{')
     {
         input_.get();
-        return token_symbol{token_symbol::sym_curly_open};
+        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_curly_open);
     }
     else if (ch == '}')
     {
         input_.get();
-        return token_symbol{token_symbol::sym_curly_close};
+        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_curly_close);
     }
     else if (is_id_start_character(ch))
     {
@@ -198,22 +221,24 @@ token lexer::parse_token()
     }
 
     input_.get();
-    return token_illegal{std::to_string(ch)};
+    return make_located<token_illegal>(current_position, current_position, std::to_string(ch));
 }
 
 token lexer::parse_number()
 {
+    auto start_position = current_position;
     std::string num;
     while (std::isdigit(input_.peek()))
     {
         num += input_.get();
     }
 
-    return token_integer{std::stoi(num)};
+    return make_located<token_integer>(start_position, current_position, std::stoi(num));
 }
 
 token lexer::parse_identifier_or_keyword()
 {
+    auto start_position = current_position;
     std::string id_name;
     while (is_id_character(input_.peek()))
     {
@@ -222,11 +247,11 @@ token lexer::parse_identifier_or_keyword()
 
     if (id_name == "fn")
     {
-        return token_symbol{token_symbol::sym_kw_fn};
+        return make_located<token_symbol>(start_position, current_position, token_symbol::sym_kw_fn);
     }
     else
     {
-        return token_identifier{id_name};
+        return make_located<token_identifier>(start_position, current_position, id_name);
     }
 }
 
@@ -236,12 +261,12 @@ token lexer::parse_operator()
     switch (ch)
     {
     case '*':
-        return token_operator{token_operator::op_multiply};
+        return make_located<token_operator>(current_position, current_position, token_operator::op_multiply);
     case '+':
-        return token_operator{token_operator::op_plus};
+        return make_located<token_operator>(current_position, current_position, token_operator::op_plus);
     default:
         // This shouldn't really happen
-        return token_illegal{"Unknown operator"};
+        return make_located<token_illegal>(current_position, current_position, "Unknown operator");
     }
 }
 
@@ -359,13 +384,13 @@ ast_node parser::parse_expression()
 
         while (capy_lexer.ahead_is<token_operator>())
         {
-            auto op = capy_lexer.next_token();
+            auto op = capy_lexer.expect<token_operator>();
             auto rhs = parse_expression();
 
             lhs = node_expression{
                 .left = std::make_unique<ast_node>(std::move(lhs)),
                 .right = std::make_unique<ast_node>(std::move(rhs)),
-                .operation = std::get<token_operator>(op).op_type};
+                .operation = op.value().op_type};
         }
 
         return lhs;
