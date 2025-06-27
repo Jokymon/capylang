@@ -16,6 +16,8 @@ std::string token_symbol::to_string() const
     {
     case sym_kw_fn:
         return "SYM_KW_FN";
+    case sym_arrow:
+        return "SYM_ARROW";
     case sym_brac_open:
         return "SYM_(";
     case sym_brac_close:
@@ -230,6 +232,12 @@ token lexer::parse_token()
     if (std::isdigit(ch))
     {
         return parse_number();
+    }
+    else if ((ch=='-') && (peek_ahead() == '>'))
+    {
+        auto start_position = current_position;
+        get_char(); get_char();
+        return make_located<token_symbol>(start_position, current_position, token_symbol::sym_arrow);
     }
     else if (is_operator(ch))
     {

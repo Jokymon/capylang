@@ -30,6 +30,7 @@ struct node_function_definition
     // TODO: parameter definitions;
     // TODO: code should probably be a list of expressions or similar
     std::unique_ptr<ast_node> code;
+    type_kind return_type;
 };
 
 struct node_expression

@@ -56,6 +56,21 @@ ast_node parser::parse_function_definition()
         return create_error("Expecting an closing bracket ')' for function parameters");
     }
 
+    type_kind return_type = type_kind::void_type;
+    if (capy_lexer.ahead_is<token_symbol>() && (capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_arrow))
+    {
+        capy_lexer.next_token();
+
+        auto return_type_id = capy_lexer.expect<token_identifier>();
+        if (!return_type_id.has_value()) {
+            return create_error("Expecting a return type identifier after ->");
+        }
+
+        if (return_type_id.value().name == "u32") {
+            return_type = type_kind::u32;
+        }
+    }
+
     if (!capy_lexer.expect_symbol(token_symbol::sym_curly_open))
     {
         return create_error("Expecting an opening brace '{' for function body definition");
@@ -74,7 +89,9 @@ ast_node parser::parse_function_definition()
 
     return node_function_definition{
         .function_name = function_name.value().name,
-        .code = std::make_unique<ast_node>(std::move(function_body))};
+        .code = std::make_unique<ast_node>(std::move(function_body)),
+        .return_type = return_type,
+    };
 }
 
 ast_node parser::parse_expression(int min_precedence)

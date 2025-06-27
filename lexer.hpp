@@ -27,6 +27,7 @@ enum class type_kind
 {
     unassigned,
 
+    void_type,
     s32,
     u32
 };
@@ -47,6 +48,8 @@ struct token_symbol
     enum symbol_type
     {
         sym_kw_fn,
+
+        sym_arrow,
 
         sym_brac_open,
         sym_brac_close,
