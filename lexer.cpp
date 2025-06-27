@@ -273,7 +273,21 @@ token lexer::parse_number()
         num += get_char();
     }
 
-    return make_located<token_integer>(start_position, current_position, std::stoi(num));
+    std::string suffix;
+    // we've already eating up all the digits, so if the following character
+    // is something of an id (and not a whitespace or something else) then
+    // this could be a type suffix
+    while (is_id_character(input_.peek()))
+    {
+        suffix += get_char();
+    }
+
+    type_kind number_type = type_kind::s32;
+    if (suffix=="u32") {
+        number_type = type_kind::u32;
+    }
+
+    return make_located<token_integer>(start_position, current_position, std::stoi(num), number_type);
 }
 
 token lexer::parse_identifier_or_keyword()

@@ -23,9 +23,18 @@ struct located
     source_range location;
 };
 
+enum class type_kind
+{
+    unassigned,
+
+    s32,
+    u32
+};
+
 struct token_integer
 {
     long number;
+    type_kind assigned_type;
 };
 
 struct token_identifier

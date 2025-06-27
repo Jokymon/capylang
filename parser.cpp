@@ -125,7 +125,9 @@ ast_node parser::parse_expression(int min_precedence)
             lhs = node_expression{
                 .left = std::make_unique<ast_node>(std::move(lhs)),
                 .right = std::make_unique<ast_node>(std::move(rhs)),
-                .operation = op.op_type};
+                .operation = op.op_type,
+                .assigned_type = type_kind::unassigned,
+            };
         }
 
         return lhs;
@@ -186,5 +188,8 @@ ast_node parser::parse_number()
     {
         return create_error("Expected a number in the input");
     }
-    return node_number{lhs.value().number};
+    return node_number{
+        .number = lhs.value().number,
+        .assigned_type = lhs.value().assigned_type,
+    };
 }

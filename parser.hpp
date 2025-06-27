@@ -14,7 +14,8 @@ using ast_node = std::variant<node_number, node_function_call, node_function_def
 
 struct node_number
 {
-    int number;
+    long long number;
+    type_kind assigned_type;
 };
 
 struct node_function_call
@@ -35,6 +36,7 @@ struct node_expression
 {
     std::unique_ptr<ast_node> left, right;
     token_operator::operator_type operation;
+    type_kind assigned_type;
 };
 
 struct node_parse_error

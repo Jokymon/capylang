@@ -9,6 +9,14 @@ def test_single_number():
     assert exit_code == 4
 
 
+def test_single_number_with_type_suffix():
+    code = """$__imported_wasi_snapshot_preview1_proc_exit(4u32)"""
+    code = tools.expression_to_full_program(code)
+    exit_code, _ = tools.run_test_code(code)
+
+    assert exit_code == 4
+
+
 def test_binary_addition():
     code = """$__imported_wasi_snapshot_preview1_proc_exit(5+3)"""
     code = tools.expression_to_full_program(code)
