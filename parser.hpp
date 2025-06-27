@@ -80,6 +80,8 @@ class lexer
 public:
     explicit lexer(std::istream &input);
 
+    source_position current_source_position() const;
+
     template <typename T>
     bool ahead_is()
     {
@@ -113,6 +115,7 @@ private:
     std::optional<token> lookahead_;
     source_position current_position;
 
+    int get_char();
     void skip_whitespace();
     void skip_comment();
     token parse_token();
@@ -159,6 +162,7 @@ struct node_expression
 
 struct node_parse_error
 {
+    source_position error_location;
     std::string error_message;
     // A node representing a failed parsing result
 };
@@ -174,6 +178,8 @@ public:
 
 private:
     lexer &capy_lexer;
+
+    ast_node create_error(const std::string& error_message);
 
     ast_node parse_function_definition();
     ast_node parse_expression();

@@ -118,6 +118,11 @@ const token &lexer::peek_token()
     return *lookahead_;
 }
 
+source_position lexer::current_source_position() const
+{
+    return current_position;
+}
+
 bool lexer::expect_symbol(token_symbol::symbol_type symbol)
 {
     auto t = expect<token_symbol>();
@@ -139,35 +144,39 @@ token lexer::next_token()
     return parse_token();
 }
 
+int lexer::get_char()
+{
+    char ch = input_.get();
+
+    if (ch == '\n') {
+        current_position.line += 1;
+        current_position.column = 1;
+    }
+    else
+    {
+        current_position.column += 1;
+    }
+
+    return ch;
+}
+
 void lexer::skip_whitespace()
 {
     while (std::isspace(input_.peek()))
     {
-        char ch = input_.get();
-        if (ch == '\n')
-        {
-            current_position.line += 1;
-            current_position.column = 1;
-        }
-        else
-        {
-            current_position.column += 1;
-        }
+        get_char();
     }
 }
 
 void lexer::skip_comment()
 {
-    char ch;
-    while ((ch = input_.get()) != '\n')
+    while (get_char() != '\n')
     {
         if (input_.eof())
         {
             return;
         }
     }
-
-    current_position.line += 1;
 }
 
 token lexer::parse_token()
@@ -197,22 +206,22 @@ token lexer::parse_token()
     }
     else if (ch == '(')
     {
-        input_.get();
+        get_char();
         return make_located<token_symbol>(current_position, current_position, token_symbol::sym_brac_open);
     }
     else if (ch == ')')
     {
-        input_.get();
+        get_char();
         return make_located<token_symbol>(current_position, current_position, token_symbol::sym_brac_close);
     }
     else if (ch == '{')
     {
-        input_.get();
+        get_char();
         return make_located<token_symbol>(current_position, current_position, token_symbol::sym_curly_open);
     }
     else if (ch == '}')
     {
-        input_.get();
+        get_char();
         return make_located<token_symbol>(current_position, current_position, token_symbol::sym_curly_close);
     }
     else if (is_id_start_character(ch))
@@ -220,7 +229,7 @@ token lexer::parse_token()
         return parse_identifier_or_keyword();
     }
 
-    input_.get();
+    get_char();
     return make_located<token_illegal>(current_position, current_position, std::to_string(ch));
 }
 
@@ -230,7 +239,7 @@ token lexer::parse_number()
     std::string num;
     while (std::isdigit(input_.peek()))
     {
-        num += input_.get();
+        num += get_char();
     }
 
     return make_located<token_integer>(start_position, current_position, std::stoi(num));
@@ -242,7 +251,7 @@ token lexer::parse_identifier_or_keyword()
     std::string id_name;
     while (is_id_character(input_.peek()))
     {
-        id_name += input_.get();
+        id_name += get_char();
     }
 
     if (id_name == "fn")
@@ -257,7 +266,7 @@ token lexer::parse_identifier_or_keyword()
 
 token lexer::parse_operator()
 {
-    char ch = input_.get();
+    char ch = get_char();
     switch (ch)
     {
     case '*':
@@ -283,39 +292,52 @@ parser::parser(lexer &l)
 ast_node parser::parse()
 {
     auto root = parse_function_definition();
+    if (is_error(root))
+    {
+        return root;
+    }
     if (!capy_lexer.ahead_is<token_eof>())
     {
-        return node_parse_error{"Unexpected trailing code after function definition"};
+        return create_error("Unexpected trailing code after function definition");
     }
     return root;
 }
+
+ast_node parser::create_error(const std::string& error_message)
+{
+    return node_parse_error{
+        .error_location = capy_lexer.current_source_position(),
+        .error_message = error_message
+    };
+}
+
 
 ast_node parser::parse_function_definition()
 {
     if (!capy_lexer.expect_symbol(token_symbol::sym_kw_fn))
     {
-        return node_parse_error{"Expecting a function definition starting with keyword 'fn'"};
+        return create_error("Expecting a function definition starting with keyword 'fn'");
     }
 
     auto function_name = capy_lexer.expect<token_identifier>();
     if (!function_name.has_value())
     {
-        return node_parse_error{"Expecting a function name"};
+        return create_error("Expecting a function name");
     }
 
     if (!capy_lexer.expect_symbol(token_symbol::sym_brac_open))
     {
-        return node_parse_error{"Expecting an opening bracket '(' for function parameters"};
+        return create_error("Expecting an opening bracket '(' for function parameters");
     }
 
     if (!capy_lexer.expect_symbol(token_symbol::sym_brac_close))
     {
-        return node_parse_error{"Expecting an closing bracket ')' for function parameters"};
+        return create_error("Expecting an closing bracket ')' for function parameters");
     }
 
     if (!capy_lexer.expect_symbol(token_symbol::sym_curly_open))
     {
-        return node_parse_error{"Expecting an opening brace '{' for function body definition"};
+        return create_error("Expecting an opening brace '{' for function body definition");
     }
 
     auto function_body = parse_expression();
@@ -326,7 +348,7 @@ ast_node parser::parse_function_definition()
 
     if (!capy_lexer.expect_symbol(token_symbol::sym_curly_close))
     {
-        return node_parse_error{"Expecting a closing brace '}' after function body definition"};
+        return create_error("Expecting a closing brace ')' after function body definition");
     }
 
     return node_function_definition{
@@ -357,7 +379,7 @@ ast_node parser::parse_expression()
             return expression;
         }
 
-        return node_parse_error{"Expected a closing brace ')' at the end of the expression"};
+        return create_error("Expected a closing brace ')' at the end of the expression");
     }
     else
     {
@@ -372,7 +394,7 @@ ast_node parser::parse_expression()
             }
             else
             {
-                return node_parse_error{"Variables are not supported yet"};
+                return create_error("Variables are not supported yet");
             }
         }
 
@@ -385,7 +407,12 @@ ast_node parser::parse_expression()
         while (capy_lexer.ahead_is<token_operator>())
         {
             auto op = capy_lexer.expect<token_operator>();
+
             auto rhs = parse_expression();
+
+            if (is_error(rhs)) {
+                return create_error("Incomplete expression, expecting another operand");
+            }
 
             lhs = node_expression{
                 .left = std::make_unique<ast_node>(std::move(lhs)),
@@ -403,6 +430,10 @@ ast_node parser::parse_function_call(const std::string function_name)
     capy_lexer.expect<token_symbol>();
 
     auto parameter = parse_expression();
+    if (is_error(parameter))
+    {
+        return parameter;
+    }
 
     auto call = node_function_call{
         .function_name = function_name,
@@ -419,7 +450,7 @@ ast_node parser::parse_number()
     auto lhs = capy_lexer.expect<token_integer>();
     if (!lhs.has_value())
     {
-        return node_parse_error{"Expected a number in the input"};
+        return create_error("Expected a number in the input");
     }
     return node_number{lhs.value().number};
 }

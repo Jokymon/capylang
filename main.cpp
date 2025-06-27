@@ -29,7 +29,8 @@ int main(int argc, char *argv[])
 
     if (std::holds_alternative<node_parse_error>(root_node))
     {
-        std::cerr << "Compile error: " << std::get<node_parse_error>(root_node).error_message << "\n";
+        auto error = std::get<node_parse_error>(root_node);
+        std::cerr << args.input_path << ":" << error.error_location.line << ":" << error.error_location.column << ": " << error.error_message << "\n";
         return 1;
     }
     capyemitter.generate(root_node);

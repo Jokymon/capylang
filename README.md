@@ -11,8 +11,6 @@ A simple framework was set in place to run compiled WASM modules and check their
 exit codes. This is supported by `uv` and the `pytest` library.
 
 ## TODO
- * Improve testing environment to show compile errors, when compiling fails
-   unexpectedly
  * formalizing the grammar
    --> derive syntax highlighters and a language server
  * document or even automate the setup of the development tools
@@ -20,8 +18,6 @@ exit codes. This is supported by `uv` and the `pytest` library.
    --> Wasm tools
    --> Wasmtime or other WASM runtimes
 
- * Parser error locations in output
- * Make sure, no tokens follow after valid parse
  * operator precedence
  * add other operator types
  * Improve maintainability of emitter-visitor; shouldn't be necessary
