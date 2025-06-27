@@ -33,7 +33,10 @@ int token_operator::get_precedence() const
 {
     switch (op_type) {
         case op_multiply:
+        case op_division:
+        case op_modulus:
             return 2;
+        case op_minus:
         case op_plus:
             return 1;
         default:
@@ -45,8 +48,14 @@ std::string token_operator::to_string() const
 {
     switch (op_type)
     {
+    case op_division:
+        return "OP_DIV";
     case op_multiply:
         return "OP_MULT";
+    case op_modulus:
+        return "OP_MOD";
+    case op_minus:
+        return "OP_MINUS";
     case op_plus:
         return "OP_PLUS";
     }
@@ -56,8 +65,11 @@ bool is_operator(char ch)
 {
     switch (ch)
     {
+    case '-':
     case '+':
     case '*':
+    case '/':
+    case '%':
         return true;
     default:
         return false;
@@ -156,6 +168,15 @@ token lexer::next_token()
     return parse_token();
 }
 
+int lexer::peek_ahead()
+{
+    input_.get();
+    int ch = input_.peek();
+    input_.unget();
+
+    return ch;
+}
+
 int lexer::get_char()
 {
     char ch = input_.get();
@@ -201,7 +222,7 @@ token lexer::parse_token()
     }
 
     char ch = input_.peek();
-    if (ch == '/')
+    if ((ch == '/') && (peek_ahead() == '/'))
     {
         skip_comment();
         skip_whitespace();
@@ -281,8 +302,14 @@ token lexer::parse_operator()
     char ch = get_char();
     switch (ch)
     {
+    case '/':
+        return make_located<token_operator>(current_position, current_position, token_operator::op_division);
     case '*':
         return make_located<token_operator>(current_position, current_position, token_operator::op_multiply);
+    case '%':
+        return make_located<token_operator>(current_position, current_position, token_operator::op_modulus);
+    case '-':
+        return make_located<token_operator>(current_position, current_position, token_operator::op_minus);
     case '+':
         return make_located<token_operator>(current_position, current_position, token_operator::op_plus);
     default:

@@ -54,7 +54,10 @@ struct token_operator
     enum operator_type
     {
         op_multiply,
+        op_division,
+        op_modulus,
         op_plus,
+        op_minus,
     };
     operator_type op_type;
 
@@ -117,7 +120,9 @@ private:
     std::optional<token> lookahead_;
     source_position current_position;
 
+    int peek_ahead();
     int get_char();
+
     void skip_whitespace();
     void skip_comment();
     token parse_token();

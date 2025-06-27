@@ -17,6 +17,30 @@ def test_binary_addition():
     assert exit_code == 8
 
 
+def test_binary_subtraction():
+    code = """$__imported_wasi_snapshot_preview1_proc_exit(8-2)"""
+    code = tools.expression_to_full_program(code)
+    exit_code, _ = tools.run_test_code(code)
+
+    assert exit_code == 6
+
+
+def test_binary_int_division():
+    code = """$__imported_wasi_snapshot_preview1_proc_exit(10/3)"""
+    code = tools.expression_to_full_program(code)
+    exit_code, _ = tools.run_test_code(code)
+
+    assert exit_code == 3
+
+
+def test_binary_modulus():
+    code = """$__imported_wasi_snapshot_preview1_proc_exit(19%5)"""
+    code = tools.expression_to_full_program(code)
+    exit_code, _ = tools.run_test_code(code)
+
+    assert exit_code == 4
+
+
 def test_binary_multiplication():
     code = """$__imported_wasi_snapshot_preview1_proc_exit(3*5)"""
     code = tools.expression_to_full_program(code)

@@ -57,11 +57,20 @@ void emitter::emit(const node_expression &root)
     emit(*root.right);
     switch (root.operation)
     {
+    case token_operator::op_minus:
+        output_ << "      i32.sub\n";
+        break;
     case token_operator::op_plus:
         output_ << "      i32.add\n";
         break;
     case token_operator::op_multiply:
         output_ << "      i32.mul\n";
+        break;
+    case token_operator::op_division:
+        output_ << "      i32.div_u\n";
+        break;
+    case token_operator::op_modulus:
+        output_ << "      i32.rem_u\n";
         break;
     }
 }
