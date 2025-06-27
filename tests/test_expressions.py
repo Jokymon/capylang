@@ -47,3 +47,11 @@ def test_complex_braced_expressions():
     exit_code, _ = tools.run_test_code(code)
 
     assert exit_code == 21
+
+
+def test_correct_priority_of_plus_and_multiply():
+    code = """$__imported_wasi_snapshot_preview1_proc_exit(4*3+3)"""
+    code = tools.expression_to_full_program(code)
+    exit_code, _ = tools.run_test_code(code)
+
+    assert exit_code == 15

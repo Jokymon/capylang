@@ -29,6 +29,18 @@ std::string token_symbol::to_string() const
     }
 }
 
+int token_operator::get_precedence() const
+{
+    switch (op_type) {
+        case op_multiply:
+            return 2;
+        case op_plus:
+            return 1;
+        default:
+            return 0;
+    }
+}
+
 std::string token_operator::to_string() const
 {
     switch (op_type)
@@ -356,7 +368,7 @@ ast_node parser::parse_function_definition()
         .code = std::make_unique<ast_node>(std::move(function_body))};
 }
 
-ast_node parser::parse_expression()
+ast_node parser::parse_expression(int min_precedence)
 {
     if (capy_lexer.ahead_is<token_symbol>() &&
         (capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_brac_open))
@@ -383,32 +395,19 @@ ast_node parser::parse_expression()
     }
     else
     {
-        if (capy_lexer.ahead_is<token_identifier>())
-        {
-            auto id = capy_lexer.expect<token_identifier>();
-
-            if (capy_lexer.ahead_is<token_symbol>() &&
-                capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_brac_open)
-            {
-                return parse_function_call(id.value().name);
-            }
-            else
-            {
-                return create_error("Variables are not supported yet");
-            }
-        }
-
-        auto lhs = parse_number();
-        if (is_error(lhs))
-        {
+        auto lhs = parse_primary();
+        if (is_error(lhs)) {
             return lhs;
         }
 
         while (capy_lexer.ahead_is<token_operator>())
         {
-            auto op = capy_lexer.expect<token_operator>();
+            auto op = capy_lexer.next_as<token_operator>();
+            int prec = op.get_precedence();
+            if (prec < min_precedence) break;
 
-            auto rhs = parse_expression();
+            capy_lexer.next_token();
+            auto rhs = parse_expression(prec+1);
 
             if (is_error(rhs)) {
                 return create_error("Incomplete expression, expecting another operand");
@@ -417,7 +416,7 @@ ast_node parser::parse_expression()
             lhs = node_expression{
                 .left = std::make_unique<ast_node>(std::move(lhs)),
                 .right = std::make_unique<ast_node>(std::move(rhs)),
-                .operation = op.value().op_type};
+                .operation = op.op_type};
         }
 
         return lhs;
@@ -443,6 +442,32 @@ ast_node parser::parse_function_call(const std::string function_name)
     capy_lexer.expect<token_symbol>();
 
     return call;
+}
+
+ast_node parser::parse_primary()
+{
+    if (capy_lexer.ahead_is<token_identifier>())
+    {
+        auto id = capy_lexer.expect<token_identifier>();
+
+        if (capy_lexer.ahead_is<token_symbol>() &&
+            capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_brac_open)
+        {
+            return parse_function_call(id.value().name);
+        }
+        else
+        {
+            return create_error("Variables are not supported yet");
+        }
+    }
+    else if (capy_lexer.ahead_is<token_integer>())
+    {
+        return parse_number();
+    }
+    else
+    {
+        return create_error("Expected a primary (function call, number, variable)");
+    }
 }
 
 ast_node parser::parse_number()

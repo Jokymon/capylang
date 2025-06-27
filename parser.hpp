@@ -58,6 +58,8 @@ struct token_operator
     };
     operator_type op_type;
 
+    int get_precedence() const;
+
     std::string to_string() const;
 };
 
@@ -182,7 +184,8 @@ private:
     ast_node create_error(const std::string& error_message);
 
     ast_node parse_function_definition();
-    ast_node parse_expression();
+    ast_node parse_expression(int min_precedence=0);
     ast_node parse_function_call(const std::string function_name);
+    ast_node parse_primary();
     ast_node parse_number();
 };
