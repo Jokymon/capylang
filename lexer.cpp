@@ -290,12 +290,7 @@ token lexer::parse_number()
         suffix += get_char();
     }
 
-    type_kind number_type = type_kind::s32;
-    if (suffix=="u32") {
-        number_type = type_kind::u32;
-    }
-
-    return make_located<token_integer>(start_position, current_position, std::stoi(num), number_type);
+    return make_located<token_integer>(start_position, current_position, std::stoi(num), suffix);
 }
 
 token lexer::parse_identifier_or_keyword()

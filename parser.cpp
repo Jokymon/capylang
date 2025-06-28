@@ -7,6 +7,20 @@ bool is_error(const ast_node &node)
     return std::holds_alternative<node_parse_error>(node);
 }
 
+std::optional<type_kind> type_from_id(const std::string &id)
+{
+    if (id == "u32")
+    {
+        return type_kind::u32;
+    }
+    else if (id == "")
+    {
+        return type_kind::s32;
+    }
+
+    return std::nullopt;
+}
+
 parser::parser(lexer &l)
     : capy_lexer(l) {}
 
@@ -24,14 +38,12 @@ ast_node parser::parse()
     return root;
 }
 
-ast_node parser::create_error(const std::string& error_message)
+ast_node parser::create_error(const std::string &error_message)
 {
     return node_parse_error{
         .error_location = capy_lexer.current_source_position(),
-        .error_message = error_message
-    };
+        .error_message = error_message};
 }
-
 
 ast_node parser::parse_function_definition()
 {
@@ -56,18 +68,22 @@ ast_node parser::parse_function_definition()
         return create_error("Expecting an closing bracket ')' for function parameters");
     }
 
-    type_kind return_type = type_kind::void_type;
+    std::optional<type_kind> return_type = type_kind::void_type;
+
     if (capy_lexer.ahead_is<token_symbol>() && (capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_arrow))
     {
         capy_lexer.next_token();
 
         auto return_type_id = capy_lexer.expect<token_identifier>();
-        if (!return_type_id.has_value()) {
+        if (!return_type_id.has_value())
+        {
             return create_error("Expecting a return type identifier after ->");
         }
 
-        if (return_type_id.value().name == "u32") {
-            return_type = type_kind::u32;
+        return_type = type_from_id(return_type_id.value().name);
+        if (!return_type.has_value())
+        {
+            return create_error("Return type " + return_type_id.value().name + " is unknown");
         }
     }
 
@@ -90,7 +106,7 @@ ast_node parser::parse_function_definition()
     return node_function_definition{
         .function_name = function_name.value().name,
         .code = std::make_unique<ast_node>(std::move(function_body)),
-        .return_type = return_type,
+        .return_type = return_type.value(),
     };
 }
 
@@ -122,7 +138,8 @@ ast_node parser::parse_expression(int min_precedence)
     else
     {
         auto lhs = parse_primary();
-        if (is_error(lhs)) {
+        if (is_error(lhs))
+        {
             return lhs;
         }
 
@@ -130,12 +147,14 @@ ast_node parser::parse_expression(int min_precedence)
         {
             auto op = capy_lexer.next_as<token_operator>();
             int prec = op.get_precedence();
-            if (prec < min_precedence) break;
+            if (prec < min_precedence)
+                break;
 
             capy_lexer.next_token();
-            auto rhs = parse_expression(prec+1);
+            auto rhs = parse_expression(prec + 1);
 
-            if (is_error(rhs)) {
+            if (is_error(rhs))
+            {
                 return create_error("Incomplete expression, expecting another operand");
             }
 
@@ -205,8 +224,15 @@ ast_node parser::parse_number()
     {
         return create_error("Expected a number in the input");
     }
+
+    auto number_type = type_from_id(lhs.value().type_suffix);
+    if (!number_type.has_value())
+    {
+        return create_error("Number has an illegal suffix");
+    }
+
     return node_number{
         .number = lhs.value().number,
-        .assigned_type = lhs.value().assigned_type,
+        .assigned_type = number_type.value(),
     };
 }

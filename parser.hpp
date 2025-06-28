@@ -4,6 +4,15 @@
 #include <variant>
 #include "lexer.hpp"
 
+enum class type_kind
+{
+    unassigned,
+
+    void_type,
+    s32,
+    u32
+};
+
 struct node_number;
 struct node_function_call;
 struct node_function_definition;

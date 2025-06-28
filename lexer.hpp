@@ -23,19 +23,10 @@ struct located
     source_range location;
 };
 
-enum class type_kind
-{
-    unassigned,
-
-    void_type,
-    s32,
-    u32
-};
-
 struct token_integer
 {
     long number;
-    type_kind assigned_type;
+    std::string type_suffix;
 };
 
 struct token_identifier
