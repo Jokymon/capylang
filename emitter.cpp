@@ -72,6 +72,9 @@ void emitter::emit(const node_expression &root)
     case token_operator::op_modulus:
         output_ << "      i32.rem_u\n";
         break;
+    case token_operator::op_conversion:
+        // TODO
+        break;
     }
 }
 

@@ -14,17 +14,23 @@ enum class type_kind
 };
 
 struct node_number;
+struct node_type_spec;
 struct node_function_call;
 struct node_function_definition;
 struct node_expression;
 struct node_parse_error;
 
-using ast_node = std::variant<node_number, node_function_call, node_function_definition, node_expression, node_parse_error>;
+using ast_node = std::variant<node_number, node_type_spec, node_function_call, node_function_definition, node_expression, node_parse_error>;
 
 struct node_number
 {
     long long number;
     type_kind assigned_type;
+};
+
+struct node_type_spec
+{
+    type_kind type_spec;
 };
 
 struct node_function_call
@@ -74,5 +80,6 @@ private:
     ast_node parse_expression(int min_precedence=0);
     ast_node parse_function_call(const std::string function_name);
     ast_node parse_primary();
+    ast_node parse_type_reference();
     ast_node parse_number();
 };

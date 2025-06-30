@@ -20,5 +20,5 @@ def test_location_of_incomplete_expression():
     assert exit_code == 1
     assert (
         normalize_filename_from_output(stderr)
-        == "filename:3:10: Incomplete expression, expecting another operand\n"
+        == "filename:3:10: Expected a primary (function call, number, variable)\n"
     )

@@ -62,6 +62,8 @@ struct token_operator
         op_modulus,
         op_plus,
         op_minus,
+
+        op_conversion,
     };
     operator_type op_type;
 

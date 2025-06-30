@@ -32,6 +32,8 @@ std::string token_symbol::to_string() const
 int token_operator::get_precedence() const
 {
     switch (op_type) {
+        case op_conversion:
+            return 3;
         case op_multiply:
         case op_division:
         case op_modulus:
@@ -58,6 +60,8 @@ std::string token_operator::to_string() const
         return "OP_MINUS";
     case op_plus:
         return "OP_PLUS";
+    case op_conversion:
+        return "OP_CONV";
     }
 }
 
@@ -305,6 +309,10 @@ token lexer::parse_identifier_or_keyword()
     if (id_name == "fn")
     {
         return make_located<token_symbol>(start_position, current_position, token_symbol::sym_kw_fn);
+    }
+    else if (id_name == "as")
+    {
+        return make_located<token_operator>(start_position, current_position, token_operator::op_conversion);
     }
     else
     {

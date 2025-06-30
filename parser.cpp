@@ -13,7 +13,7 @@ std::optional<type_kind> type_from_id(const std::string &id)
     {
         return type_kind::u32;
     }
-    else if (id == "")
+    else if ((id == "s32") || (id == ""))
     {
         return type_kind::s32;
     }
@@ -130,7 +130,26 @@ ast_node parser::parse_expression(int min_precedence)
         auto closing_brace = capy_lexer.expect<token_symbol>();
         if (closing_brace.has_value() && (closing_brace.value().sym_type == token_symbol::sym_brac_close))
         {
-            return expression;
+            if (capy_lexer.ahead_is<token_operator>() && (capy_lexer.next_as<token_operator>().op_type == token_operator::op_conversion))
+            {
+                // next token is a conversion operator, skip it
+                capy_lexer.next_token();
+
+                auto type_spec = parse_type_reference();
+                if (is_error(type_spec)) {
+                    return type_spec;
+                }
+
+                return node_expression{
+                    .left = std::make_unique<ast_node>(std::move(expression)),
+                    .right = std::make_unique<ast_node>(std::move(type_spec)),
+                    .operation = token_operator::op_conversion,
+                    .assigned_type = type_kind::unassigned,
+                };
+            }
+            else {
+                return expression;
+            }
         }
 
         return create_error("Expected a closing brace ')' at the end of the expression");
@@ -149,13 +168,21 @@ ast_node parser::parse_expression(int min_precedence)
             int prec = op.get_precedence();
             if (prec < min_precedence)
                 break;
-
             capy_lexer.next_token();
-            auto rhs = parse_expression(prec + 1);
+
+            ast_node rhs;
+            if (op.op_type == token_operator::op_conversion)
+            {
+                rhs = parse_type_reference();
+            }
+            else
+            {
+                rhs = parse_expression(prec + 1);
+            }
 
             if (is_error(rhs))
             {
-                return create_error("Incomplete expression, expecting another operand");
+                return rhs;
             }
 
             lhs = node_expression{
@@ -215,6 +242,25 @@ ast_node parser::parse_primary()
     {
         return create_error("Expected a primary (function call, number, variable)");
     }
+}
+
+ast_node parser::parse_type_reference()
+{
+    auto type_name = capy_lexer.expect<token_identifier>();
+    if (!type_name.has_value())
+    {
+        return create_error("Expecting an identifier for the type specification");
+    }
+
+    auto type_spec = type_from_id(type_name.value().name);
+    if (!type_spec.has_value())
+    {
+        return create_error("Unknown type specification: " + type_name.value().name);
+    }
+
+    return node_type_spec{
+        .type_spec = type_spec.value(),
+    };
 }
 
 ast_node parser::parse_number()
