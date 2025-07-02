@@ -7,6 +7,21 @@ bool is_error(const ast_node &node)
     return std::holds_alternative<node_parse_error>(node);
 }
 
+std::string repr_type(type_kind type_spec)
+{
+    switch (type_spec)
+    {
+    case type_kind::unassigned:
+        return "!unassigned!";
+    case type_kind::void_type:
+        return "void";
+    case type_kind::s32:
+        return "s32";
+    case type_kind::u32:
+        return "u32";
+    }
+}
+
 std::optional<type_kind> type_from_id(const std::string &id)
 {
     if (id == "u32")
@@ -136,7 +151,8 @@ ast_node parser::parse_expression(int min_precedence)
                 capy_lexer.next_token();
 
                 auto type_spec = parse_type_reference();
-                if (is_error(type_spec)) {
+                if (is_error(type_spec))
+                {
                     return type_spec;
                 }
 
@@ -147,7 +163,8 @@ ast_node parser::parse_expression(int min_precedence)
                     .assigned_type = type_kind::unassigned,
                 };
             }
-            else {
+            else
+            {
                 return expression;
             }
         }

@@ -13,6 +13,8 @@ enum class type_kind
     u32
 };
 
+std::string repr_type(type_kind type_spec);
+
 struct node_number;
 struct node_type_spec;
 struct node_function_call;
