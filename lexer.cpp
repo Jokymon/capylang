@@ -15,17 +15,17 @@ std::string token_symbol::to_string() const
     switch (sym_type)
     {
     case sym_kw_fn:
-        return "SYM_KW_FN";
+        return "fn";
     case sym_arrow:
-        return "SYM_ARROW";
+        return "->";
     case sym_brac_open:
-        return "SYM_(";
+        return "(";
     case sym_brac_close:
-        return "SYM_)";
+        return ")";
     case sym_curly_open:
-        return "SYM_{";
+        return "{";
     case sym_curly_close:
-        return "SYM_}";
+        return "}";
     }
 }
 
@@ -48,21 +48,7 @@ int token_operator::get_precedence() const
 
 std::string token_operator::to_string() const
 {
-    switch (op_type)
-    {
-    case op_division:
-        return "OP_DIV";
-    case op_multiply:
-        return "OP_MULT";
-    case op_modulus:
-        return "OP_MOD";
-    case op_minus:
-        return "OP_MINUS";
-    case op_plus:
-        return "OP_PLUS";
-    case op_conversion:
-        return "OP_CONV";
-    }
+    return repr_op(op_type);
 }
 
 bool is_operator(char ch)
@@ -108,6 +94,25 @@ bool is_id_character(char ch)
         return true;
     }
     return false;
+}
+
+std::string repr_op(token_operator::operator_type op)
+{
+    switch (op)
+    {
+    case token_operator::op_division:
+        return "/";
+    case token_operator::op_multiply:
+        return "*";
+    case token_operator::op_modulus:
+        return "%";
+    case token_operator::op_minus:
+        return "-";
+    case token_operator::op_plus:
+        return "+";
+    case token_operator::op_conversion:
+        return "as";
+    }
 }
 
 std::string repr_token(const token &tok)

@@ -84,6 +84,7 @@ struct token_illegal
 using token_raw = std::variant<token_integer, token_identifier, token_operator, token_symbol, token_eof, token_illegal>;
 using token = located<token_raw>;
 
+std::string repr_op(token_operator::operator_type op);
 std::string repr_token(const token &tok);
 
 class lexer
