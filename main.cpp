@@ -1,6 +1,7 @@
 #include "args_parse.hpp"
 #include "emitter.hpp"
 #include "parser.hpp"
+#include "semantics.hpp"
 #include <iostream>
 #include <fstream>
 
@@ -24,15 +25,22 @@ int main(int argc, char *argv[])
     parser capyparser{capylexer};
     auto root_node = capyparser.parse();
 
-    std::ofstream outfile(args.output_path);
-    emitter capyemitter{outfile};
-
     if (std::holds_alternative<node_parse_error>(root_node))
     {
         auto error = std::get<node_parse_error>(root_node);
         std::cerr << args.input_path << ":" << error.error_location.line << ":" << error.error_location.column << ": " << error.error_message << "\n";
         return 1;
     }
+
+    auto error = semantic_analysis(root_node);
+    if (error.has_value())
+    {
+        std::cerr << args.input_path << ":" << error.value().error_location.line << ":" << error.value().error_location.column << ": " << error.value().error_message << "\n";
+        return 1;
+    }
+
+    std::ofstream outfile(args.output_path);
+    emitter capyemitter{outfile};
     capyemitter.generate(root_node);
 
     outfile.close();

@@ -1,0 +1,106 @@
+#include "semantics.hpp"
+#include <iostream>
+
+type_kind assigned_node_type(const ast_node &node)
+{
+    return std::visit([&](const auto &n)
+                      {
+        using T = std::decay_t<decltype(n)>;
+
+        if constexpr (std::is_same_v<T, node_number>) {
+            return n.assigned_type;
+        } else if constexpr (std::is_same_v<T, node_type_spec>) {
+            return n.type_spec;
+        } else if constexpr (std::is_same_v<T, node_expression>) {
+             return n.assigned_type;
+        } else {
+            return type_kind::unassigned;
+        } }, node);
+}
+
+std::optional<node_parse_error> process(node_number &n)
+{
+    return std::nullopt;
+}
+
+std::optional<node_parse_error> process(node_type_spec &n)
+{
+    return std::nullopt;
+}
+
+std::optional<node_parse_error> process(node_function_call &n)
+{
+    return semantic_analysis(*n.parameter);
+}
+
+std::optional<node_parse_error> process(node_function_definition &n)
+{
+    return semantic_analysis(*n.code);
+}
+
+std::optional<node_parse_error> process(node_expression &n)
+{
+    auto lhs_error = semantic_analysis(*n.left);
+    if (lhs_error.has_value())
+    {
+        return lhs_error;
+    }
+    auto lhs_type = assigned_node_type(*n.left);
+
+    auto rhs_error = semantic_analysis(*n.right);
+    if (rhs_error.has_value())
+    {
+        return rhs_error;
+    }
+    auto rhs_type = assigned_node_type(*n.right);
+
+    if ((lhs_type == rhs_type) && (lhs_type != type_kind::unassigned))
+    {
+        n.assigned_type = lhs_type;
+        return std::nullopt;
+    }
+    else if (n.operation == token_operator::op_conversion)
+    {
+        if (!std::holds_alternative<node_type_spec>(*n.right))
+        {
+            return node_parse_error{
+                .error_location = source_position{1, 1},
+                .error_message = "Illegal parse tree"};
+        }
+
+        n.assigned_type = std::get<node_type_spec>(*n.right).type_spec;
+
+        return std::nullopt;
+    }
+    else
+    {
+        return node_parse_error{
+            .error_location = source_position{1, 1},
+            .error_message = "Types for '" + repr_op(n.operation) +
+                             "'-operation do not match; they should be equal but are '" +
+                             repr_type(lhs_type) + "' and '" + repr_type(rhs_type) + "'",
+        };
+    }
+}
+
+std::optional<node_parse_error> semantic_analysis(ast_node &root)
+{
+    return std::visit([&](auto &n) -> std::optional<node_parse_error>
+                      {
+        using T = std::decay_t<decltype(n)>;
+
+        if constexpr (std::is_same_v<T, node_number>) {
+            return process(n);
+        } else if constexpr (std::is_same_v<T, node_type_spec>) {
+            return process(n);
+        } else if constexpr (std::is_same_v<T, node_function_call>) {
+            return process(n);
+        } else if constexpr (std::is_same_v<T, node_function_definition>) {
+            return process(n);
+        } else if constexpr (std::is_same_v<T, node_expression>) {
+            return process(n);
+        } else {
+            // TODO: This should happen, maybe return special error
+            return std::nullopt;
+        } }, root);
+}

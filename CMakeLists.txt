@@ -7,6 +7,7 @@ add_executable(${PROJECT_NAME}
     lexer.cpp
     emitter.cpp
     parser.cpp
+    semantics.cpp
 )
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
