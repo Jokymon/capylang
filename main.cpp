@@ -25,9 +25,9 @@ int main(int argc, char *argv[])
     parser capyparser{capylexer};
     auto root_node = capyparser.parse();
 
-    if (std::holds_alternative<node_parse_error>(root_node))
+    if (std::holds_alternative<node_parse_error>(root_node.value))
     {
-        auto error = std::get<node_parse_error>(root_node);
+        auto error = std::get<node_parse_error>(root_node.value);
         std::cerr << args.input_path << ":" << error.error_location.line << ":" << error.error_location.column << ": " << error.error_message << "\n";
         return 1;
     }

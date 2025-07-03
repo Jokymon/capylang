@@ -33,7 +33,7 @@ void emitter::emit(const ast_node &node)
             this->emit(n);
         } else if constexpr (std::is_same_v<T, node_expression>) {
             this->emit(n);
-        } else {} }, node);
+        } else {} }, node.value);
 }
 
 void emitter::emit(const node_function_definition& func_def)

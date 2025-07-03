@@ -22,7 +22,8 @@ struct node_function_definition;
 struct node_expression;
 struct node_parse_error;
 
-using ast_node = std::variant<node_number, node_type_spec, node_function_call, node_function_definition, node_expression, node_parse_error>;
+using ast_node_raw = std::variant<node_number, node_type_spec, node_function_call, node_function_definition, node_expression, node_parse_error>;
+using ast_node = located<ast_node_raw>;
 
 struct node_number
 {
@@ -53,12 +54,14 @@ struct node_function_definition
 struct node_expression
 {
     std::unique_ptr<ast_node> left, right;
+    source_range op_range;
     token_operator::operator_type operation;
     type_kind assigned_type;
 };
 
 struct node_parse_error
 {
+    // TODO: the location is now duplicated from located<ast>
     source_position error_location;
     std::string error_message;
     // A node representing a failed parsing result

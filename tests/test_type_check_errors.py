@@ -19,8 +19,7 @@ def test_mismatching_types_in_binary_op():
     exit_code, stderr = tools.compile_test_code(code)
 
     assert exit_code == 1
-    # TODO: fix the location of the error report
     assert (
         normalize_filename_from_output(stderr)
-        == "filename:1:1: Types for '+'-operation do not match; they should be equal but are 's32' and 'u32'\n"
+        == "filename:3:13: Types for '+'-operation do not match; they should be equal but are 's32' and 'u32'\n"
     )

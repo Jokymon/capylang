@@ -117,6 +117,20 @@ public:
         return std::nullopt;
     }
 
+    template <typename T>
+    std::tuple<source_range, T> expect_v2()
+    {
+        if (std::holds_alternative<T>(peek_token().value))
+        {
+            auto token = next_token();
+            return {token.location, std::move(std::get<T>(token.value))};
+        }
+
+        // TODO: in reality this function only produces a sensible result
+        // when the next token is as expected
+        return {peek_token().location, T{}};
+    }
+
     bool expect_symbol(token_symbol::symbol_type symbol);
 
     token next_token();

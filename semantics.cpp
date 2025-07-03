@@ -15,7 +15,7 @@ type_kind assigned_node_type(const ast_node &node)
              return n.assigned_type;
         } else {
             return type_kind::unassigned;
-        } }, node);
+        } }, node.value);
 }
 
 std::optional<node_parse_error> process(node_number &n)
@@ -38,7 +38,7 @@ std::optional<node_parse_error> process(node_function_definition &n)
     return semantic_analysis(*n.code);
 }
 
-std::optional<node_parse_error> process(node_expression &n)
+std::optional<node_parse_error> process(source_range location, node_expression &n)
 {
     auto lhs_error = semantic_analysis(*n.left);
     if (lhs_error.has_value())
@@ -61,21 +61,21 @@ std::optional<node_parse_error> process(node_expression &n)
     }
     else if (n.operation == token_operator::op_conversion)
     {
-        if (!std::holds_alternative<node_type_spec>(*n.right))
+        if (!std::holds_alternative<node_type_spec>(n.right->value))
         {
             return node_parse_error{
-                .error_location = source_position{1, 1},
+                .error_location = location.start,
                 .error_message = "Illegal parse tree"};
         }
 
-        n.assigned_type = std::get<node_type_spec>(*n.right).type_spec;
+        n.assigned_type = std::get<node_type_spec>(n.right->value).type_spec;
 
         return std::nullopt;
     }
     else
     {
         return node_parse_error{
-            .error_location = source_position{1, 1},
+            .error_location = n.op_range.start,
             .error_message = "Types for '" + repr_op(n.operation) +
                              "'-operation do not match; they should be equal but are '" +
                              repr_type(lhs_type) + "' and '" + repr_type(rhs_type) + "'",
@@ -98,9 +98,9 @@ std::optional<node_parse_error> semantic_analysis(ast_node &root)
         } else if constexpr (std::is_same_v<T, node_function_definition>) {
             return process(n);
         } else if constexpr (std::is_same_v<T, node_expression>) {
-            return process(n);
+            return process(root.location, n);
         } else {
             // TODO: This should happen, maybe return special error
             return std::nullopt;
-        } }, root);
+        } }, root.value);
 }
