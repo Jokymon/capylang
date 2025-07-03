@@ -108,17 +108,7 @@ public:
     }
 
     template <typename T>
-    std::optional<T> expect()
-    {
-        if (std::holds_alternative<T>(peek_token().value))
-        {
-            return std::get<T>(next_token().value);
-        }
-        return std::nullopt;
-    }
-
-    template <typename T>
-    std::tuple<source_range, T> expect_v2()
+    std::tuple<source_range, T> expect()
     {
         if (std::holds_alternative<T>(peek_token().value))
         {

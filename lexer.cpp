@@ -158,11 +158,11 @@ source_position lexer::current_source_position() const
 
 bool lexer::expect_symbol(token_symbol::symbol_type symbol)
 {
-    auto t = expect<token_symbol>();
-    if (!t.has_value() || t.value().sym_type != symbol)
+    if (!ahead_is<token_symbol>() || next_as<token_symbol>().sym_type != symbol)
     {
         return false;
     }
+    next_token();
     return true;
 }
 

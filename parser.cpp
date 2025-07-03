@@ -80,13 +80,13 @@ ast_node parser::parse_function_definition()
     {
         return create_error("Expecting a function definition starting with keyword 'fn'");
     }
-    auto [start_range, _] = capy_lexer.expect_v2<token_symbol>();
+    auto [start_range, _] = capy_lexer.expect<token_symbol>();
 
-    auto function_name = capy_lexer.expect<token_identifier>();
-    if (!function_name.has_value())
+    if (!capy_lexer.ahead_is<token_identifier>())
     {
         return create_error("Expecting a function name");
     }
+    auto [_, function_name] = capy_lexer.expect<token_identifier>();
 
     if (!capy_lexer.expect_symbol(token_symbol::sym_brac_open))
     {
@@ -104,16 +104,16 @@ ast_node parser::parse_function_definition()
     {
         capy_lexer.next_token();
 
-        auto return_type_id = capy_lexer.expect<token_identifier>();
-        if (!return_type_id.has_value())
+        if (!capy_lexer.ahead_is<token_identifier>())
         {
             return create_error("Expecting a return type identifier after ->");
         }
+        auto [_, return_type_id] = capy_lexer.expect<token_identifier>();
 
-        return_type = type_from_id(return_type_id.value().name);
+        return_type = type_from_id(return_type_id.name);
         if (!return_type.has_value())
         {
-            return create_error("Return type " + return_type_id.value().name + " is unknown");
+            return create_error("Return type " + return_type_id.name + " is unknown");
         }
     }
 
@@ -132,12 +132,12 @@ ast_node parser::parse_function_definition()
     {
         return create_error("Expecting a closing brace '}' after function body definition");
     }
-    auto [end_range, _] = capy_lexer.expect_v2<token_symbol>();
+    auto [end_range, _] = capy_lexer.expect<token_symbol>();
 
     return make_located<node_function_definition>(
         start_range.start,
         end_range.end,
-        function_name.value().name,
+        function_name.name,
         std::make_unique<ast_node>(std::move(function_body)),
         return_type.value());
 }
@@ -148,7 +148,7 @@ ast_node parser::parse_expression(int min_precedence)
         (capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_brac_open))
     {
         // eat up the '(' token
-        auto [start, _] = capy_lexer.expect_v2<token_symbol>();
+        auto [start, _] = capy_lexer.expect<token_symbol>();
 
         auto expression = parse_expression();
 
@@ -162,7 +162,7 @@ ast_node parser::parse_expression(int min_precedence)
         if (capy_lexer.ahead_is<token_symbol>() &&
             (capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_brac_close))
         {
-            auto [end, _] = capy_lexer.expect_v2<token_symbol>();
+            auto [end, _] = capy_lexer.expect<token_symbol>();
 
             if (capy_lexer.ahead_is<token_operator>() && (capy_lexer.next_as<token_operator>().op_type == token_operator::op_conversion))
             {
@@ -243,7 +243,7 @@ ast_node parser::parse_expression(int min_precedence)
 ast_node parser::parse_function_call(const std::string function_name)
 {
     // skip over the opening ( of the function call
-    auto [start_location, _] = capy_lexer.expect_v2<token_symbol>();
+    auto [start_location, _] = capy_lexer.expect<token_symbol>();
 
     auto parameter = parse_expression();
     if (is_error(parameter))
@@ -252,7 +252,7 @@ ast_node parser::parse_function_call(const std::string function_name)
     }
 
     // TODO: check for closing )
-    auto [end_location, _] = capy_lexer.expect_v2<token_symbol>();
+    auto [end_location, _] = capy_lexer.expect<token_symbol>();
 
     return make_located<node_function_call>(
         start_location.start,
@@ -265,12 +265,12 @@ ast_node parser::parse_primary()
 {
     if (capy_lexer.ahead_is<token_identifier>())
     {
-        auto id = capy_lexer.expect<token_identifier>();
+        auto [_, id] = capy_lexer.expect<token_identifier>();
 
         if (capy_lexer.ahead_is<token_symbol>() &&
             capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_brac_open)
         {
-            return parse_function_call(id.value().name);
+            return parse_function_call(id.name);
         }
         else
         {
@@ -293,7 +293,7 @@ ast_node parser::parse_type_reference()
     {
         return create_error("Expecting an identifier for the type specification");
     }
-    auto [token_location, type_name] = capy_lexer.expect_v2<token_identifier>();
+    auto [token_location, type_name] = capy_lexer.expect<token_identifier>();
 
     auto type_spec = type_from_id(type_name.name);
     if (!type_spec.has_value())
@@ -314,7 +314,7 @@ ast_node parser::parse_number()
         return create_error("Expected a number in the input");
     }
 
-    auto [lhs_location, lhs] = capy_lexer.expect_v2<token_integer>();
+    auto [lhs_location, lhs] = capy_lexer.expect<token_integer>();
 
     auto number_type = type_from_id(lhs.type_suffix);
     if (!number_type.has_value())
