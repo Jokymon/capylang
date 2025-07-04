@@ -83,6 +83,19 @@ std::optional<node_parse_error> process(source_range location, node_expression &
     }
 }
 
+std::optional<node_parse_error> process(node_module &n)
+{
+    for (const auto &func_def : n.functions)
+    {
+        auto result = semantic_analysis(*func_def);
+        if (result.has_value())
+        {
+            return result;
+        }
+    }
+    return std::nullopt;
+}
+
 std::optional<node_parse_error> semantic_analysis(ast_node &root)
 {
     return std::visit([&](auto &n) -> std::optional<node_parse_error>
@@ -99,6 +112,8 @@ std::optional<node_parse_error> semantic_analysis(ast_node &root)
             return process(n);
         } else if constexpr (std::is_same_v<T, node_expression>) {
             return process(root.location, n);
+        } else if constexpr (std::is_same_v<T, node_module>) {
+            return process(n);
         } else {
             // TODO: This should happen, maybe return special error
             return std::nullopt;

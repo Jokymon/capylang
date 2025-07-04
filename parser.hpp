@@ -2,6 +2,7 @@
 #include <istream>
 #include <optional>
 #include <variant>
+#include <vector>
 #include "lexer.hpp"
 
 enum class type_kind
@@ -20,9 +21,10 @@ struct node_type_spec;
 struct node_function_call;
 struct node_function_definition;
 struct node_expression;
+struct node_module;
 struct node_parse_error;
 
-using ast_node_raw = std::variant<node_number, node_type_spec, node_function_call, node_function_definition, node_expression, node_parse_error>;
+using ast_node_raw = std::variant<node_number, node_type_spec, node_function_call, node_function_definition, node_expression, node_module, node_parse_error>;
 using ast_node = located<ast_node_raw>;
 
 struct node_number
@@ -59,6 +61,11 @@ struct node_expression
     type_kind assigned_type;
 };
 
+struct node_module
+{
+    std::vector<std::unique_ptr<ast_node>> functions;
+};
+
 struct node_parse_error
 {
     // TODO: the location is now duplicated from located<ast>
@@ -79,10 +86,11 @@ public:
 private:
     lexer &capy_lexer;
 
-    ast_node create_error(const std::string& error_message);
+    ast_node create_error(const std::string &error_message);
 
+    ast_node parse_module();
     ast_node parse_function_definition();
-    ast_node parse_expression(int min_precedence=0);
+    ast_node parse_expression(int min_precedence = 0);
     ast_node parse_function_call(const std::string function_name);
     ast_node parse_primary();
     ast_node parse_type_reference();

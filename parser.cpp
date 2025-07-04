@@ -3,7 +3,7 @@
 #include <string>
 
 template <typename T, typename... Args>
-ast_node make_located(source_position start, source_position end, Args&&... args)
+ast_node make_located(source_position start, source_position end, Args &&...args)
 {
     return ast_node{
         .value = T{std::forward<Args>(args)...},
@@ -51,7 +51,7 @@ parser::parser(lexer &l)
 
 ast_node parser::parse()
 {
-    auto root = parse_function_definition();
+    auto root = parse_module();
     if (is_error(root))
     {
         return root;
@@ -74,12 +74,28 @@ ast_node parser::create_error(const std::string &error_message)
         error_message);
 }
 
+ast_node parser::parse_module()
+{
+    auto capy_module = make_located<node_module>(
+        source_position{1, 1},
+        source_position{1, 1});
+
+    while (capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_kw_fn)
+    {
+        auto function = parse_function_definition();
+        if (is_error(function))
+        {
+            return function;
+        }
+
+        std::get<node_module>(capy_module.value).functions.push_back(std::make_unique<ast_node>(std::move(function)));
+    }
+
+    return capy_module;
+}
+
 ast_node parser::parse_function_definition()
 {
-    if (!capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_kw_fn)
-    {
-        return create_error("Expecting a function definition starting with keyword 'fn'");
-    }
     auto [start_range, _] = capy_lexer.expect<token_symbol>();
 
     if (!capy_lexer.ahead_is<token_identifier>())
@@ -232,8 +248,7 @@ ast_node parser::parse_expression(int min_precedence)
                 std::make_unique<ast_node>(std::move(rhs)),
                 op_token.location,
                 op.op_type,
-                type_kind::unassigned
-            );
+                type_kind::unassigned);
         }
 
         return lhs;

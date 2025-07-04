@@ -33,7 +33,17 @@ void emitter::emit(const ast_node &node)
             this->emit(n);
         } else if constexpr (std::is_same_v<T, node_expression>) {
             this->emit(n);
+        } else if constexpr (std::is_same_v<T, node_module>) {
+            this->emit(n);
         } else {} }, node.value);
+}
+
+void emitter::emit(const node_module& module_def)
+{
+    for (const auto& func_def : module_def.functions)
+    {
+        emit(*func_def);
+    }
 }
 
 void emitter::emit(const node_function_definition& func_def)
