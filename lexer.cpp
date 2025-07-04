@@ -231,13 +231,14 @@ token lexer::parse_token()
     }
 
     char ch = input_.peek();
-    if ((ch == '/') && (peek_ahead() == '/'))
+    while ((ch == '/') && (peek_ahead() == '/'))
     {
         skip_comment();
         skip_whitespace();
+
+        ch = input_.peek();
     }
 
-    ch = input_.peek();
     if (std::isdigit(ch))
     {
         return parse_number();
