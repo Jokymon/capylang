@@ -46,6 +46,13 @@ struct node_function_call
 
 struct node_function_definition
 {
+    enum source {
+        internal,   // local defined, private or exported
+        external    // importet function
+    };
+    source source_type;
+
+    std::string namespace_name;
     std::string function_name;
     // TODO: parameter definitions;
     // TODO: code should probably be a list of expressions or similar
@@ -90,6 +97,7 @@ private:
 
     ast_node parse_module();
     ast_node parse_function_definition();
+    ast_node parse_function_import();
     ast_node parse_expression(int min_precedence = 0);
     ast_node parse_function_call(const std::string function_name);
     ast_node parse_primary();

@@ -1,4 +1,10 @@
+import wasi_snapshot_preview1::proc_exit(s32); // as proc_exit;
+
+fn $bla() {
+    4
+}
+
 // This file currently only contains some more data like parts
 fn $_start() {
-    $__imported_wasi_snapshot_preview1_proc_exit(5 + 2+2)
+    $__imported_wasi_snapshot_preview1_proc_exit(5u32 + 5u32)
 }

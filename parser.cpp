@@ -58,7 +58,7 @@ ast_node parser::parse()
     }
     if (!capy_lexer.ahead_is<token_eof>())
     {
-        return create_error("Unexpected trailing code after function definition");
+        return create_error("Unexpected trailing code after module definition");
     }
     return root;
 }
@@ -77,8 +77,19 @@ ast_node parser::create_error(const std::string &error_message)
 ast_node parser::parse_module()
 {
     auto capy_module = make_located<node_module>(
-        source_position{1, 1},
+        capy_lexer.peek_token().location.start,
         source_position{1, 1});
+
+    while (capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_kw_import)
+    {
+        auto function = parse_function_import();
+        if (is_error(function))
+        {
+            return function;
+        }
+
+        std::get<node_module>(capy_module.value).functions.push_back(std::make_unique<ast_node>(std::move(function)));
+    }
 
     while (capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_kw_fn)
     {
@@ -91,6 +102,7 @@ ast_node parser::parse_module()
         std::get<node_module>(capy_module.value).functions.push_back(std::make_unique<ast_node>(std::move(function)));
     }
 
+    capy_module.location.end = capy_lexer.current_source_position();
     return capy_module;
 }
 
@@ -153,10 +165,18 @@ ast_node parser::parse_function_definition()
     return make_located<node_function_definition>(
         start_range.start,
         end_range.end,
+        node_function_definition::internal,
+        "",
         function_name.name,
         std::make_unique<ast_node>(std::move(function_body)),
         return_type.value());
 }
+
+ast_node parser::parse_function_import()
+{
+
+}
+
 
 ast_node parser::parse_expression(int min_precedence)
 {
