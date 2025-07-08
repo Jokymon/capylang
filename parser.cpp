@@ -260,10 +260,17 @@ ast_node parser::parse_function_call(const std::string function_name)
     // skip over the opening ( of the function call
     auto [start_location, _] = capy_lexer.expect<token_symbol>();
 
-    auto parameter = parse_expression();
-    if (is_error(parameter))
-    {
-        return parameter;
+    std::unique_ptr<ast_node> function_parameters;
+    if (capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_brac_close) {
+        function_parameters = nullptr;
+    }
+    else {
+        auto parameter = parse_expression();
+        if (is_error(parameter))
+        {
+            return parameter;
+        }
+        function_parameters = std::make_unique<ast_node>(std::move(parameter));
     }
 
     // TODO: check for closing )
@@ -273,7 +280,7 @@ ast_node parser::parse_function_call(const std::string function_name)
         start_location.start,
         end_location.end,
         function_name,
-        std::make_unique<ast_node>(std::move(parameter)));
+        std::move(function_parameters));
 }
 
 ast_node parser::parse_primary()

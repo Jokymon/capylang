@@ -11,15 +11,18 @@ fn $_start() {
     assert exit_code == 2
 
 
-def test_simple_procedure_definition_with_return_type():
+def test_function_without_parameters_with_return_type_is_usable():
     code = """
-fn $_start() -> u32 {
-    $__imported_wasi_snapshot_preview1_proc_exit(2)
+fn $bla() -> s32 {
+    2 + 3
+}
+
+fn $_start() {
+    $__imported_wasi_snapshot_preview1_proc_exit($bla())
 }"""
     exit_code, _ = tools.run_test_code(code)
 
-    assert exit_code == 2
-
+    assert exit_code == 5
 
 def test_multiple_function_definitions():
     code = """

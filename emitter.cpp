@@ -1,5 +1,18 @@
 #include "emitter.hpp"
 
+std::string type_mapping(type_kind type_spec)
+{
+    switch (type_spec)
+    {
+        case type_kind::s32:
+            return "i32";
+        case type_kind::u32:
+            return "i32";
+        default:
+            return "";
+    }
+}
+
 emitter::emitter(std::ostream &output) : output_(output)
 {
 }
@@ -48,7 +61,15 @@ void emitter::emit(const node_module& module_def)
 
 void emitter::emit(const node_function_definition& func_def)
 {
-    output_ << "  (func " << func_def.function_name << "\n";
+    output_ << "  (func " << func_def.function_name;
+    if (func_def.return_type != type_kind::void_type)
+    {
+        output_ << "(result " << type_mapping(func_def.return_type) << ")\n";
+    }
+    else
+    {
+        output_ << "\n";
+    }
     
     emit(*func_def.code);
 
@@ -57,7 +78,10 @@ void emitter::emit(const node_function_definition& func_def)
 
 void emitter::emit(const node_function_call& func_call)
 {
-    emit(*func_call.parameter);
+    if (func_call.parameter)
+    {
+        emit(*func_call.parameter);
+    }
     output_ << "      call " << func_call.function_name << "\n";
 }
 
