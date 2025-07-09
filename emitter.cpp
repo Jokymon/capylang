@@ -62,9 +62,15 @@ void emitter::emit(const node_module& module_def)
 void emitter::emit(const node_function_definition& func_def)
 {
     output_ << "  (func " << func_def.function_name;
+
+    for (const auto &param : func_def.parameters)
+    {
+        output_ << " (param $" << param.name << " " << type_mapping(param.type_spec) << ")";
+    }
+
     if (func_def.return_type != type_kind::void_type)
     {
-        output_ << "(result " << type_mapping(func_def.return_type) << ")\n";
+        output_ << " (result " << type_mapping(func_def.return_type) << ")\n";
     }
     else
     {
@@ -78,9 +84,9 @@ void emitter::emit(const node_function_definition& func_def)
 
 void emitter::emit(const node_function_call& func_call)
 {
-    if (func_call.parameter)
+    for (const auto &param : func_call.parameter)
     {
-        emit(*func_call.parameter);
+        emit(*param);
     }
     output_ << "      call " << func_call.function_name << "\n";
 }

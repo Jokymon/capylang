@@ -42,6 +42,8 @@ struct token_symbol
 
         sym_arrow,
 
+        sym_colon,
+        sym_comma,
         sym_brac_open,
         sym_brac_close,
         sym_curly_open,

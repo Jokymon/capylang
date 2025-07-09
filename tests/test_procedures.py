@@ -36,3 +36,17 @@ fn $_start() {
     exit_code, _ = tools.run_test_code(code)
 
     assert exit_code == 2
+
+
+def test_function_definition_with_parameters():
+    code = """
+fn $foo(a: s32, b: s32) -> s32 {
+    4
+}
+
+fn $_start() {
+    $__imported_wasi_snapshot_preview1_proc_exit($foo(1, 2))
+}"""
+    exit_code, _ = tools.run_test_code(code)
+
+    assert exit_code == 4

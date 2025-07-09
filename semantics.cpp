@@ -30,7 +30,15 @@ std::optional<node_parse_error> process(node_type_spec &n)
 
 std::optional<node_parse_error> process(node_function_call &n)
 {
-    return semantic_analysis(*n.parameter);
+    for (const auto& param : n.parameter)
+    {
+        auto res = semantic_analysis(*param);
+        if (res.has_value())
+        {
+            return res;
+        }
+    }
+    return std::nullopt;
 }
 
 std::optional<node_parse_error> process(node_function_definition &n)

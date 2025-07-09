@@ -18,6 +18,10 @@ std::string token_symbol::to_string() const
         return "fn";
     case sym_arrow:
         return "->";
+    case sym_colon:
+        return ":";
+    case sym_comma:
+        return ",";
     case sym_brac_open:
         return "(";
     case sym_brac_close:
@@ -252,6 +256,16 @@ token lexer::parse_token()
     else if (is_operator(ch))
     {
         return parse_operator();
+    }
+    else if (ch == ':')
+    {
+        get_char();
+        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_colon);
+    }
+    else if (ch == ',')
+    {
+        get_char();
+        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_comma);
     }
     else if (ch == '(')
     {

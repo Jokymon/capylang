@@ -1,6 +1,7 @@
 #pragma once
 #include <istream>
 #include <optional>
+#include <string>
 #include <variant>
 #include <vector>
 #include "lexer.hpp"
@@ -41,13 +42,19 @@ struct node_type_spec
 struct node_function_call
 {
     std::string function_name;
-    std::unique_ptr<ast_node> parameter;
+    std::vector<std::unique_ptr<ast_node>> parameter;
+};
+
+struct param_spec
+{
+    std::string name;
+    type_kind type_spec;
 };
 
 struct node_function_definition
 {
     std::string function_name;
-    // TODO: parameter definitions;
+    std::vector<param_spec> parameters;
     // TODO: code should probably be a list of expressions or similar
     std::unique_ptr<ast_node> code;
     type_kind return_type;
@@ -89,6 +96,7 @@ private:
     ast_node create_error(const std::string &error_message);
 
     ast_node parse_module();
+    std::optional<ast_node> parse_parameters(std::vector<param_spec>& parameters);
     ast_node parse_function_definition();
     ast_node parse_expression(int min_precedence = 0);
     ast_node parse_function_call(const std::string function_name);

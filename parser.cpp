@@ -94,6 +94,34 @@ ast_node parser::parse_module()
     return capy_module;
 }
 
+std::optional<ast_node> parser::parse_parameters(std::vector<param_spec>& parameters)
+{
+    while (capy_lexer.ahead_is<token_identifier>()) {
+        auto [_, param_name] = capy_lexer.expect<token_identifier>();
+        if (!capy_lexer.expect_symbol(token_symbol::sym_colon))
+        {
+            return create_error("Expecting a colon ':' between parameter name and parameter type");
+        }
+
+        auto type_spec_node = parse_type_reference();
+        if (is_error(type_spec_node))
+        {
+            return type_spec_node;
+        }
+
+        auto type_spec = std::get<node_type_spec>(type_spec_node.value).type_spec;
+
+        parameters.emplace_back(param_name.name, type_spec);
+
+        // eat the comma between the parameters
+        if (capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_comma) {
+            capy_lexer.expect<token_symbol>();
+        }
+    }
+
+    return std::nullopt;
+}
+
 ast_node parser::parse_function_definition()
 {
     auto [start_range, _] = capy_lexer.expect<token_symbol>();
@@ -107,6 +135,13 @@ ast_node parser::parse_function_definition()
     if (!capy_lexer.expect_symbol(token_symbol::sym_brac_open))
     {
         return create_error("Expecting an opening bracket '(' for function parameters");
+    }
+
+    std::vector<param_spec> parameters;
+    auto error_result = parse_parameters(parameters);
+    if (error_result.has_value())
+    {
+        return std::move(error_result.value());
     }
 
     if (!capy_lexer.expect_symbol(token_symbol::sym_brac_close))
@@ -144,7 +179,7 @@ ast_node parser::parse_function_definition()
         return function_body;
     }
 
-    if (!capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_curly_close)
+    if (!capy_lexer.ahead_is<token_symbol>() || capy_lexer.next_as<token_symbol>().sym_type != token_symbol::sym_curly_close)
     {
         return create_error("Expecting a closing brace '}' after function body definition");
     }
@@ -154,6 +189,7 @@ ast_node parser::parse_function_definition()
         start_range.start,
         end_range.end,
         function_name.name,
+        parameters,
         std::make_unique<ast_node>(std::move(function_body)),
         return_type.value());
 }
@@ -260,17 +296,20 @@ ast_node parser::parse_function_call(const std::string function_name)
     // skip over the opening ( of the function call
     auto [start_location, _] = capy_lexer.expect<token_symbol>();
 
-    std::unique_ptr<ast_node> function_parameters;
-    if (capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_brac_close) {
-        function_parameters = nullptr;
-    }
-    else {
+    std::vector<std::unique_ptr<ast_node>> function_parameters;
+    while (!capy_lexer.ahead_is<token_symbol>() || capy_lexer.next_as<token_symbol>().sym_type != token_symbol::sym_brac_close) {
         auto parameter = parse_expression();
         if (is_error(parameter))
         {
             return parameter;
         }
-        function_parameters = std::make_unique<ast_node>(std::move(parameter));
+        function_parameters.emplace_back(make_unique<ast_node>(std::move(parameter)));
+
+        if (capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_comma)
+        {
+            // eat the separating ','
+            capy_lexer.expect_symbol(token_symbol::sym_comma);
+        }
     }
 
     // TODO: check for closing )
