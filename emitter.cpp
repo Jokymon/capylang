@@ -61,16 +61,16 @@ void emitter::emit(const node_module& module_def)
 
 void emitter::emit(const node_function_definition& func_def)
 {
-    output_ << "  (func " << func_def.function_name;
+    output_ << "  (func " << func_def.signature.function_name;
 
-    for (const auto &param : func_def.parameters)
+    for (const auto &param : func_def.signature.parameters)
     {
         output_ << " (param $" << param.name << " " << type_mapping(param.type_spec) << ")";
     }
 
-    if (func_def.return_type != type_kind::void_type)
+    if (func_def.signature.return_type != type_kind::void_type)
     {
-        output_ << " (result " << type_mapping(func_def.return_type) << ")\n";
+        output_ << " (result " << type_mapping(func_def.signature.return_type) << ")\n";
     }
     else
     {

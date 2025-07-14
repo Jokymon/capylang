@@ -94,6 +94,58 @@ ast_node parser::parse_module()
     return capy_module;
 }
 
+std::optional<ast_node> parser::parse_function_signature(function_signature& signature)
+{
+    if (!capy_lexer.ahead_is<token_identifier>())
+    {
+        return create_error("Expecting a function name");
+    }
+    auto [start_range, function_name] = capy_lexer.expect<token_identifier>();
+    signature.location.start = start_range.start;
+    signature.function_name = function_name.name;
+
+    if (!capy_lexer.expect_symbol(token_symbol::sym_brac_open))
+    {
+        return create_error("Expecting an opening bracket '(' for function parameters");
+    }
+
+    auto error_result = parse_parameters(signature.parameters);
+    if (error_result.has_value())
+    {
+        return std::move(error_result.value());
+    }
+
+    signature.location.end = capy_lexer.current_source_position();
+    if (!capy_lexer.expect_symbol(token_symbol::sym_brac_close))
+    {
+        return create_error("Expecting an closing bracket ')' for function parameters");
+    }
+
+    std::optional<type_kind> return_type = type_kind::void_type;
+
+    if (capy_lexer.ahead_is<token_symbol>() && (capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_arrow))
+    {
+        capy_lexer.next_token();
+
+        if (!capy_lexer.ahead_is<token_identifier>())
+        {
+            return create_error("Expecting a return type identifier after ->");
+        }
+        auto [end_range, return_type_id] = capy_lexer.expect<token_identifier>();
+        signature.location.end = end_range.end;
+
+        return_type = type_from_id(return_type_id.name);
+        if (!return_type.has_value())
+        {
+            return create_error("Return type " + return_type_id.name + " is unknown");
+        }
+    }
+
+    signature.return_type = return_type.value();
+
+    return std::nullopt;
+}
+
 std::optional<ast_node> parser::parse_parameters(std::vector<param_spec>& parameters)
 {
     while (capy_lexer.ahead_is<token_identifier>()) {
@@ -126,46 +178,11 @@ ast_node parser::parse_function_definition()
 {
     auto [start_range, _] = capy_lexer.expect<token_symbol>();
 
-    if (!capy_lexer.ahead_is<token_identifier>())
+    function_signature function_signature;
+    auto signature_errors = parse_function_signature(function_signature);
+    if (signature_errors.has_value())
     {
-        return create_error("Expecting a function name");
-    }
-    auto [_, function_name] = capy_lexer.expect<token_identifier>();
-
-    if (!capy_lexer.expect_symbol(token_symbol::sym_brac_open))
-    {
-        return create_error("Expecting an opening bracket '(' for function parameters");
-    }
-
-    std::vector<param_spec> parameters;
-    auto error_result = parse_parameters(parameters);
-    if (error_result.has_value())
-    {
-        return std::move(error_result.value());
-    }
-
-    if (!capy_lexer.expect_symbol(token_symbol::sym_brac_close))
-    {
-        return create_error("Expecting an closing bracket ')' for function parameters");
-    }
-
-    std::optional<type_kind> return_type = type_kind::void_type;
-
-    if (capy_lexer.ahead_is<token_symbol>() && (capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_arrow))
-    {
-        capy_lexer.next_token();
-
-        if (!capy_lexer.ahead_is<token_identifier>())
-        {
-            return create_error("Expecting a return type identifier after ->");
-        }
-        auto [_, return_type_id] = capy_lexer.expect<token_identifier>();
-
-        return_type = type_from_id(return_type_id.name);
-        if (!return_type.has_value())
-        {
-            return create_error("Return type " + return_type_id.name + " is unknown");
-        }
+        return std::move(signature_errors.value());
     }
 
     if (!capy_lexer.expect_symbol(token_symbol::sym_curly_open))
@@ -188,10 +205,8 @@ ast_node parser::parse_function_definition()
     return make_located<node_function_definition>(
         start_range.start,
         end_range.end,
-        function_name.name,
-        parameters,
-        std::make_unique<ast_node>(std::move(function_body)),
-        return_type.value());
+        function_signature,
+        std::make_unique<ast_node>(std::move(function_body)));
 }
 
 ast_node parser::parse_expression(int min_precedence)

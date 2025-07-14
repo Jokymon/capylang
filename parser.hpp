@@ -51,13 +51,20 @@ struct param_spec
     type_kind type_spec;
 };
 
-struct node_function_definition
+struct function_signature
 {
+    source_range location;
+
     std::string function_name;
     std::vector<param_spec> parameters;
+    type_kind return_type;
+};
+
+struct node_function_definition
+{
+    function_signature signature;
     // TODO: code should probably be a list of expressions or similar
     std::unique_ptr<ast_node> code;
-    type_kind return_type;
 };
 
 struct node_expression
@@ -97,6 +104,7 @@ private:
 
     ast_node parse_module();
     std::optional<ast_node> parse_parameters(std::vector<param_spec>& parameters);
+    std::optional<ast_node> parse_function_signature(function_signature& signature);
     ast_node parse_function_definition();
     ast_node parse_expression(int min_precedence = 0);
     ast_node parse_function_call(const std::string function_name);
