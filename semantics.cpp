@@ -41,6 +41,11 @@ std::optional<node_parse_error> process(node_function_call &n)
     return std::nullopt;
 }
 
+std::optional<node_parse_error> process(node_import_definition &n)
+{
+    return std::nullopt;
+}
+
 std::optional<node_parse_error> process(node_function_definition &n)
 {
     return semantic_analysis(*n.code);
@@ -115,6 +120,8 @@ std::optional<node_parse_error> semantic_analysis(ast_node &root)
         } else if constexpr (std::is_same_v<T, node_type_spec>) {
             return process(n);
         } else if constexpr (std::is_same_v<T, node_function_call>) {
+            return process(n);
+        } else if constexpr (std::is_same_v<T, node_import_definition>) {
             return process(n);
         } else if constexpr (std::is_same_v<T, node_function_definition>) {
             return process(n);

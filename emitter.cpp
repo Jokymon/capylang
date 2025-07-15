@@ -24,17 +24,7 @@ emitter::emitter(std::ostream &output) : output_(output)
 
 void emitter::generate(const ast_node &node)
 {
-    output_ << "(module\n";
-    output_ << "  (type (;0;) (func))\n";
-    output_ << "  (type (;1;) (func (param i32)))\n";
-    output_ << "  (import \"wasi_snapshot_preview1\" \"proc_exit\" (func $__imported_wasi_snapshot_preview1_proc_exit (;0;) (type 1)))\n";
-    output_ << "  (memory (;0;) 2)\n";
-    output_ << "  (export \"memory\" (memory 0))\n";
-    output_ << "  (export \"_start\" (func $_start))\n";
-
     this->emit(node);
-
-    output_ << ")\n";
 }
 
 void emitter::emit(const ast_node &node)
@@ -47,6 +37,8 @@ void emitter::emit(const ast_node &node)
             this->emit(n);
         } else if constexpr (std::is_same_v<T, node_function_call>) {
             this->emit(n);
+        } else if constexpr (std::is_same_v<T, node_import_definition>) {
+            this->emit(n);
         } else if constexpr (std::is_same_v<T, node_function_definition>) {
             this->emit(n);
         } else if constexpr (std::is_same_v<T, node_expression>) {
@@ -58,30 +50,38 @@ void emitter::emit(const ast_node &node)
 
 void emitter::emit(const node_module& module_def)
 {
+    output_ << "(module\n";
+
+    for (const auto& import_def : module_def.imports)
+    {
+        emit(*import_def);
+    }
+
+    output_ << "  (memory (;0;) 2)\n";
+    output_ << "  (export \"memory\" (memory 0))\n";
+    output_ << "  (export \"_start\" (func $_start))\n";
+
     for (const auto& func_def : module_def.functions)
     {
         emit(*func_def);
     }
+
+    output_ << ")\n";
+}
+
+void emitter::emit(const node_import_definition& import_def)
+{
+    output_ << "  (import \"" << import_def.ns_name << "\" \"" << import_def.signature.function_name << "\" ";
+    emit_function_signature(import_def.signature);
+    output_ << "))\n";
 }
 
 void emitter::emit(const node_function_definition& func_def)
 {
-    output_ << "  (func " << create_wasm_name(func_def.signature.function_name);
+    output_ << "  ";
+    emit_function_signature(func_def.signature);
+    output_ << "\n";
 
-    for (const auto &param : func_def.signature.parameters)
-    {
-        output_ << " (param $" << param.name << " " << type_mapping(param.type_spec) << ")";
-    }
-
-    if (func_def.signature.return_type != type_kind::void_type)
-    {
-        output_ << " (result " << type_mapping(func_def.signature.return_type) << ")\n";
-    }
-    else
-    {
-        output_ << "\n";
-    }
-    
     emit(*func_def.code);
 
     output_ << "  )\n";
@@ -126,4 +126,19 @@ void emitter::emit(const node_expression &root)
 void emitter::emit(const node_number &number)
 {
     output_ << "      i32.const " << number.number << "\n";
+}
+
+void emitter::emit_function_signature(const function_signature& signature)
+{
+    output_ << "(func " << create_wasm_name(signature.function_name);
+
+    for (const auto &param : signature.parameters)
+    {
+        output_ << " (param $" << param.name << " " << type_mapping(param.type_spec) << ")";
+    }
+
+    if (signature.return_type != type_kind::void_type)
+    {
+        output_ << " (result " << type_mapping(signature.return_type) << ")";
+    }
 }

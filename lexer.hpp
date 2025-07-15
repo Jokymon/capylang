@@ -39,11 +39,14 @@ struct token_symbol
     enum symbol_type
     {
         sym_kw_fn,
+        sym_kw_import,
 
         sym_arrow,
 
         sym_colon,
         sym_comma,
+        sym_dcolon,
+        sym_semicolon,
         sym_brac_open,
         sym_brac_close,
         sym_curly_open,

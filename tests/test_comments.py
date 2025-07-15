@@ -3,8 +3,9 @@ import tools
 
 def test_comments_after_code_are_ignored():
     code = """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 fn _start() {
-    __imported_wasi_snapshot_preview1_proc_exit(4) // some comment
+    proc_exit(4) // some comment
 }"""
     exit_code, _ = tools.run_test_code(code)
 
@@ -13,8 +14,10 @@ fn _start() {
 
 def test_complete_lines_of_comment_are_ignored():
     code = """// Initial line
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
 fn _start() {
-    __imported_wasi_snapshot_preview1_proc_exit(3+1)
+    proc_exit(3+1)
 }"""
     exit_code, _ = tools.run_test_code(code)
 
@@ -22,10 +25,11 @@ fn _start() {
 
 
 def test_multiple_lines_of_comments_are_ignored():
-    code = """// Line 1
+    code = """import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+// Line 1
 // Line 2
 fn _start() {
-    __imported_wasi_snapshot_preview1_proc_exit(3+1)
+    proc_exit(3+1)
 }"""
     exit_code, _ = tools.run_test_code(code)
 
@@ -34,10 +38,11 @@ fn _start() {
 
 def test_multiple_lines_of_comments_with_empties_are_ignored():
     code = """// Line 1
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 // Line 2
 fn _start() {
-    __imported_wasi_snapshot_preview1_proc_exit(3+1)
+    proc_exit(3+1)
 }"""
     exit_code, _ = tools.run_test_code(code)
 

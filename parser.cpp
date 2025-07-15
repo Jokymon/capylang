@@ -80,6 +80,17 @@ ast_node parser::parse_module()
         source_position{1, 1},
         source_position{1, 1});
 
+    while (capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_kw_import)
+    {
+        auto import_def = parse_import_definition();
+        if (is_error(import_def))
+        {
+            return import_def;
+        }
+
+        std::get<node_module>(capy_module.value).imports.push_back(std::make_unique<ast_node>(std::move(import_def)));
+    }
+
     while (capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_kw_fn)
     {
         auto function = parse_function_definition();
@@ -172,6 +183,58 @@ std::optional<ast_node> parser::parse_parameters(std::vector<param_spec>& parame
     }
 
     return std::nullopt;
+}
+
+ast_node parser::parse_import_definition()
+{
+    // Eat the 'import' keyword that we already established in
+    // the calling function
+    auto [start_range, _] = capy_lexer.expect<token_symbol>();
+
+    if (!capy_lexer.ahead_is<token_identifier>())
+    {
+        return create_error("Expecting a namespace identifier");
+    }
+    auto [_, namespace_name] = capy_lexer.expect<token_identifier>();
+
+    if (!capy_lexer.expect_symbol(token_symbol::sym_dcolon))
+    {
+        return create_error("Namespace is expected to be followed by '::' and a symbol name");
+    }
+
+    function_signature signature;
+    auto signature_result = parse_function_signature(signature);
+    if (signature_result.has_value())
+    {
+        return std::move(signature_result.value());
+    }
+
+    std::optional<std::string> alias_name;
+
+    if (capy_lexer.ahead_is<token_operator>() && (capy_lexer.next_as<token_operator>().op_type == token_operator::op_conversion))
+    {
+        capy_lexer.next_token();
+
+        if (!capy_lexer.ahead_is<token_identifier>())
+        {
+            return create_error("Expecting an alias identifier for imported symbol");
+        }
+        auto [_, alias_name] = capy_lexer.expect<token_identifier>();
+    }
+
+    if (!capy_lexer.ahead_is<token_symbol>() || capy_lexer.next_as<token_symbol>().sym_type != token_symbol::sym_semicolon)
+    {
+        return create_error("Expecting a closing ';' after import definition");
+    }
+    auto [end_range, _] = capy_lexer.expect<token_symbol>();
+
+    return make_located<node_import_definition>(
+        start_range.start,
+        end_range.end,
+        namespace_name.name,
+        signature,
+        alias_name
+    );
 }
 
 ast_node parser::parse_function_definition()
@@ -318,7 +381,7 @@ ast_node parser::parse_function_call(const std::string function_name)
         {
             return parameter;
         }
-        function_parameters.emplace_back(make_unique<ast_node>(std::move(parameter)));
+        function_parameters.emplace_back(std::make_unique<ast_node>(std::move(parameter)));
 
         if (capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_comma)
         {

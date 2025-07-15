@@ -1,3 +1,5 @@
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
 fn bla(a: s32) -> s32
 {
     2 + 3
@@ -5,5 +7,5 @@ fn bla(a: s32) -> s32
 
 // This file currently only contains some more data like parts
 fn _start() {
-    __imported_wasi_snapshot_preview1_proc_exit(bla(1))
+    proc_exit(bla(1))
 }

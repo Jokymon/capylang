@@ -21,5 +21,5 @@ def test_mismatching_types_in_binary_op():
     assert exit_code == 1
     assert (
         normalize_filename_from_output(stderr)
-        == "filename:3:13: Types for '+'-operation do not match; they should be equal but are 's32' and 'u32'\n"
+        == "filename:5:13: Types for '+'-operation do not match; they should be equal but are 's32' and 'u32'\n"
     )

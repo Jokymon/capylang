@@ -19,13 +19,14 @@ std::string repr_type(type_kind type_spec);
 
 struct node_number;
 struct node_type_spec;
+struct node_import_definition;
 struct node_function_call;
 struct node_function_definition;
 struct node_expression;
 struct node_module;
 struct node_parse_error;
 
-using ast_node_raw = std::variant<node_number, node_type_spec, node_function_call, node_function_definition, node_expression, node_module, node_parse_error>;
+using ast_node_raw = std::variant<node_number, node_type_spec, node_import_definition, node_function_call, node_function_definition, node_expression, node_module, node_parse_error>;
 using ast_node = located<ast_node_raw>;
 
 struct node_number
@@ -37,12 +38,6 @@ struct node_number
 struct node_type_spec
 {
     type_kind type_spec;
-};
-
-struct node_function_call
-{
-    std::string function_name;
-    std::vector<std::unique_ptr<ast_node>> parameter;
 };
 
 struct param_spec
@@ -58,6 +53,20 @@ struct function_signature
     std::string function_name;
     std::vector<param_spec> parameters;
     type_kind return_type;
+};
+
+struct node_import_definition
+{
+    std::string ns_name;
+    function_signature signature;
+
+    std::optional<std::string> alias;
+};
+
+struct node_function_call
+{
+    std::string function_name;
+    std::vector<std::unique_ptr<ast_node>> parameter;
 };
 
 struct node_function_definition
@@ -77,6 +86,7 @@ struct node_expression
 
 struct node_module
 {
+    std::vector<std::unique_ptr<ast_node>> imports;
     std::vector<std::unique_ptr<ast_node>> functions;
 };
 
@@ -105,6 +115,7 @@ private:
     ast_node parse_module();
     std::optional<ast_node> parse_parameters(std::vector<param_spec>& parameters);
     std::optional<ast_node> parse_function_signature(function_signature& signature);
+    ast_node parse_import_definition();
     ast_node parse_function_definition();
     ast_node parse_expression(int min_precedence = 0);
     ast_node parse_function_call(const std::string function_name);
