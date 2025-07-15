@@ -1,9 +1,9 @@
-fn $bla(a: s32) -> s32
+fn bla(a: s32) -> s32
 {
     2 + 3
 }
 
 // This file currently only contains some more data like parts
-fn $_start() {
-    $__imported_wasi_snapshot_preview1_proc_exit($bla(1))
+fn _start() {
+    __imported_wasi_snapshot_preview1_proc_exit(bla(1))
 }

@@ -1,5 +1,10 @@
 #include "emitter.hpp"
 
+std::string create_wasm_name(const std::string capy_name)
+{
+    return "$" + capy_name;
+}
+
 std::string type_mapping(type_kind type_spec)
 {
     switch (type_spec)
@@ -61,7 +66,7 @@ void emitter::emit(const node_module& module_def)
 
 void emitter::emit(const node_function_definition& func_def)
 {
-    output_ << "  (func " << func_def.signature.function_name;
+    output_ << "  (func " << create_wasm_name(func_def.signature.function_name);
 
     for (const auto &param : func_def.signature.parameters)
     {
@@ -88,7 +93,7 @@ void emitter::emit(const node_function_call& func_call)
     {
         emit(*param);
     }
-    output_ << "      call " << func_call.function_name << "\n";
+    output_ << "      call " << create_wasm_name(func_call.function_name) << "\n";
 }
 
 void emitter::emit(const node_expression &root)

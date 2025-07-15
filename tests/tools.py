@@ -87,7 +87,7 @@ def compile_test_code(source_code) -> tuple[int, str]:
 
 def expression_to_full_program(code):
     procedure_wrapper = """
-fn $_start() {{
+fn _start() {{
     {code}
 }}"""
     full_code = procedure_wrapper.format(code=code)
