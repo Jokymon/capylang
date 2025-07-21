@@ -32,7 +32,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    auto error = semantic_analysis(root_node);
+    semantic_analyser analyser;
+    auto error = analyser.semantic_analysis(root_node);
     if (error.has_value())
     {
         std::cerr << args.input_path << ":" << error.value().error_location.line << ":" << error.value().error_location.column << ": " << error.value().error_message << "\n";

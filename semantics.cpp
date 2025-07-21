@@ -18,17 +18,17 @@ type_kind assigned_node_type(const ast_node &node)
         } }, node.value);
 }
 
-std::optional<node_parse_error> process(node_number &n)
+std::optional<node_parse_error> semantic_analyser::process(node_number &n)
 {
     return std::nullopt;
 }
 
-std::optional<node_parse_error> process(node_type_spec &n)
+std::optional<node_parse_error> semantic_analyser::process(node_type_spec &n)
 {
     return std::nullopt;
 }
 
-std::optional<node_parse_error> process(node_function_call &n)
+std::optional<node_parse_error> semantic_analyser::process(node_function_call &n)
 {
     for (const auto& param : n.parameter)
     {
@@ -41,17 +41,17 @@ std::optional<node_parse_error> process(node_function_call &n)
     return std::nullopt;
 }
 
-std::optional<node_parse_error> process(node_import_definition &n)
+std::optional<node_parse_error> semantic_analyser::process(node_import_definition &n)
 {
     return std::nullopt;
 }
 
-std::optional<node_parse_error> process(node_function_definition &n)
+std::optional<node_parse_error> semantic_analyser::process(node_function_definition &n)
 {
     return semantic_analysis(*n.code);
 }
 
-std::optional<node_parse_error> process(source_range location, node_expression &n)
+std::optional<node_parse_error> semantic_analyser::process(source_range location, node_expression &n)
 {
     auto lhs_error = semantic_analysis(*n.left);
     if (lhs_error.has_value())
@@ -96,7 +96,7 @@ std::optional<node_parse_error> process(source_range location, node_expression &
     }
 }
 
-std::optional<node_parse_error> process(node_module &n)
+std::optional<node_parse_error> semantic_analyser::process(node_module &n)
 {
     for (const auto &func_def : n.functions)
     {
@@ -109,7 +109,7 @@ std::optional<node_parse_error> process(node_module &n)
     return std::nullopt;
 }
 
-std::optional<node_parse_error> semantic_analysis(ast_node &root)
+std::optional<node_parse_error> semantic_analyser::semantic_analysis(ast_node &root)
 {
     return std::visit([&](auto &n) -> std::optional<node_parse_error>
                       {
