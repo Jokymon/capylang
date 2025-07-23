@@ -9,6 +9,8 @@ type_kind assigned_node_type(const ast_node &node)
 
         if constexpr (std::is_same_v<T, node_number>) {
             return n.assigned_type;
+        } else if constexpr (std::is_same_v<T, node_var_reference>) {
+            return n.symbol_ref.symbol_type;
         } else if constexpr (std::is_same_v<T, node_type_spec>) {
             return n.type_spec;
         } else if constexpr (std::is_same_v<T, node_expression>) {
@@ -19,6 +21,11 @@ type_kind assigned_node_type(const ast_node &node)
 }
 
 std::optional<node_parse_error> semantic_analyser::process(node_number &n)
+{
+    return std::nullopt;
+}
+
+std::optional<node_parse_error> semantic_analyser::process(node_var_reference &n)
 {
     return std::nullopt;
 }
@@ -116,6 +123,8 @@ std::optional<node_parse_error> semantic_analyser::semantic_analysis(ast_node &r
         using T = std::decay_t<decltype(n)>;
 
         if constexpr (std::is_same_v<T, node_number>) {
+            return process(n);
+        } else if constexpr (std::is_same_v<T, node_var_reference>) {
             return process(n);
         } else if constexpr (std::is_same_v<T, node_type_spec>) {
             return process(n);

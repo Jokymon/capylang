@@ -1,5 +1,6 @@
 #pragma once
 #include <istream>
+#include <map>
 #include <optional>
 #include <string>
 #include <variant>
@@ -17,7 +18,27 @@ enum class type_kind
 
 std::string repr_type(type_kind type_spec);
 
+enum class symbol_kind {
+    global_var,
+    local_var,
+};
+
+struct symbol {
+    std::string name;
+    type_kind symbol_type;
+    symbol_kind kind;
+    uint32_t index_addr;
+};
+
+struct scope {
+    scope* parent;
+    std::map<std::string, symbol> symbol_table;
+
+    std::optional<symbol> lookup(const std::string& name);
+};
+
 struct node_number;
+struct node_var_reference;
 struct node_type_spec;
 struct node_import_definition;
 struct node_function_call;
@@ -26,13 +47,19 @@ struct node_expression;
 struct node_module;
 struct node_parse_error;
 
-using ast_node_raw = std::variant<node_number, node_type_spec, node_import_definition, node_function_call, node_function_definition, node_expression, node_module, node_parse_error>;
+using ast_node_raw = std::variant<node_number, node_var_reference, node_type_spec, node_import_definition, node_function_call, node_function_definition, node_expression, node_module, node_parse_error>;
 using ast_node = located<ast_node_raw>;
 
 struct node_number
 {
     long long number;
     type_kind assigned_type;
+};
+
+struct node_var_reference
+{
+    std::string name;
+    symbol symbol_ref;
 };
 
 struct node_type_spec
@@ -74,6 +101,7 @@ struct node_function_definition
     function_signature signature;
     // TODO: code should probably be a list of expressions or similar
     std::unique_ptr<ast_node> code;
+    std::unique_ptr<scope> function_scope;
 };
 
 struct node_expression
@@ -88,6 +116,8 @@ struct node_module
 {
     std::vector<std::unique_ptr<ast_node>> imports;
     std::vector<std::unique_ptr<ast_node>> functions;
+
+    std::unique_ptr<scope> module_scope;
 };
 
 struct node_parse_error
@@ -122,4 +152,6 @@ private:
     ast_node parse_primary();
     ast_node parse_type_reference();
     ast_node parse_number();
+
+    scope* current_scope;
 };

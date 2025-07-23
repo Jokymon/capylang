@@ -59,3 +59,19 @@ fn _start() {
     exit_code, _ = tools.run_test_code(code)
 
     assert exit_code == 4
+
+
+def test_function_arguments_are_usable():
+    code = """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn add2(a: u32) -> u32 {
+    a + 2u32
+}
+
+fn _start() {
+    proc_exit(add2(3))
+}"""
+    exit_code, _ = tools.run_test_code(code)
+
+    assert exit_code == 5

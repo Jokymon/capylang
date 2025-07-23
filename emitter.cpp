@@ -35,6 +35,8 @@ void emitter::emit(const ast_node &node)
 
         if constexpr (std::is_same_v<T, node_number>) {
             this->emit(n);
+        } else if constexpr (std::is_same_v<T, node_var_reference>) {
+            this->emit(n);
         } else if constexpr (std::is_same_v<T, node_function_call>) {
             this->emit(n);
         } else if constexpr (std::is_same_v<T, node_import_definition>) {
@@ -126,6 +128,11 @@ void emitter::emit(const node_expression &root)
 void emitter::emit(const node_number &number)
 {
     output_ << "      i32.const " << number.number << "\n";
+}
+
+void emitter::emit(const node_var_reference& variable)
+{
+    output_ << "      local.get " << variable.symbol_ref.index_addr << "\n";
 }
 
 void emitter::emit_function_signature(const function_signature& signature)

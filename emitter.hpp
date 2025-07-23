@@ -15,6 +15,7 @@ public:
     void emit(const node_function_definition& func_def);
     void emit(const node_function_call& func_call);
     void emit(const node_expression& root);
+    void emit(const node_var_reference& variable);
     void emit(const node_number& number);
 
 private:

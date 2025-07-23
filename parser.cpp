@@ -32,6 +32,21 @@ std::string repr_type(type_kind type_spec)
     }
 }
 
+std::optional<symbol> scope::lookup(const std::string &name)
+{
+    if (symbol_table.find(name) != symbol_table.end())
+    {
+        return symbol_table[name];
+    }
+    else if (parent != nullptr)
+    {
+        return parent->lookup(name);
+    }
+    else {
+        return std::nullopt;
+    }
+}
+
 std::optional<type_kind> type_from_id(const std::string &id)
 {
     if (id == "u32")
@@ -80,6 +95,9 @@ ast_node parser::parse_module()
         source_position{1, 1},
         source_position{1, 1});
 
+    std::get<node_module>(capy_module.value).module_scope = std::make_unique<scope>();
+    current_scope = std::get<node_module>(capy_module.value).module_scope.get();
+
     while (capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_kw_import)
     {
         auto import_def = parse_import_definition();
@@ -105,7 +123,7 @@ ast_node parser::parse_module()
     return capy_module;
 }
 
-std::optional<ast_node> parser::parse_function_signature(function_signature& signature)
+std::optional<ast_node> parser::parse_function_signature(function_signature &signature)
 {
     if (!capy_lexer.ahead_is<token_identifier>())
     {
@@ -157,9 +175,12 @@ std::optional<ast_node> parser::parse_function_signature(function_signature& sig
     return std::nullopt;
 }
 
-std::optional<ast_node> parser::parse_parameters(std::vector<param_spec>& parameters)
+std::optional<ast_node> parser::parse_parameters(std::vector<param_spec> &parameters)
 {
-    while (capy_lexer.ahead_is<token_identifier>()) {
+    uint32_t argument_index = 0;
+
+    while (capy_lexer.ahead_is<token_identifier>())
+    {
         auto [_, param_name] = capy_lexer.expect<token_identifier>();
         if (!capy_lexer.expect_symbol(token_symbol::sym_colon))
         {
@@ -174,10 +195,17 @@ std::optional<ast_node> parser::parse_parameters(std::vector<param_spec>& parame
 
         auto type_spec = std::get<node_type_spec>(type_spec_node.value).type_spec;
 
+        current_scope->symbol_table[param_name.name] = symbol{
+            .name = param_name.name,
+            .symbol_type = type_spec,
+            .kind = symbol_kind::local_var,
+            .index_addr = argument_index++};
+
         parameters.emplace_back(param_name.name, type_spec);
 
         // eat the comma between the parameters
-        if (capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_comma) {
+        if (capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_comma)
+        {
             capy_lexer.expect<token_symbol>();
         }
     }
@@ -233,12 +261,15 @@ ast_node parser::parse_import_definition()
         end_range.end,
         namespace_name.name,
         signature,
-        alias_name
-    );
+        alias_name);
 }
 
 ast_node parser::parse_function_definition()
 {
+    auto func_scope = std::make_unique<scope>();
+    func_scope->parent = current_scope;
+    current_scope = func_scope.get();
+
     auto [start_range, _] = capy_lexer.expect<token_symbol>();
 
     function_signature function_signature;
@@ -265,11 +296,14 @@ ast_node parser::parse_function_definition()
     }
     auto [end_range, _] = capy_lexer.expect<token_symbol>();
 
+    current_scope = current_scope->parent;
+
     return make_located<node_function_definition>(
         start_range.start,
         end_range.end,
         function_signature,
-        std::make_unique<ast_node>(std::move(function_body)));
+        std::make_unique<ast_node>(std::move(function_body)),
+        std::move(func_scope));
 }
 
 ast_node parser::parse_expression(int min_precedence)
@@ -375,7 +409,8 @@ ast_node parser::parse_function_call(const std::string function_name)
     auto [start_location, _] = capy_lexer.expect<token_symbol>();
 
     std::vector<std::unique_ptr<ast_node>> function_parameters;
-    while (!capy_lexer.ahead_is<token_symbol>() || capy_lexer.next_as<token_symbol>().sym_type != token_symbol::sym_brac_close) {
+    while (!capy_lexer.ahead_is<token_symbol>() || capy_lexer.next_as<token_symbol>().sym_type != token_symbol::sym_brac_close)
+    {
         auto parameter = parse_expression();
         if (is_error(parameter))
         {
@@ -404,7 +439,7 @@ ast_node parser::parse_primary()
 {
     if (capy_lexer.ahead_is<token_identifier>())
     {
-        auto [_, id] = capy_lexer.expect<token_identifier>();
+        auto [id_range, id] = capy_lexer.expect<token_identifier>();
 
         if (capy_lexer.ahead_is<token_symbol>() &&
             capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_brac_open)
@@ -413,7 +448,17 @@ ast_node parser::parse_primary()
         }
         else
         {
-            return create_error("Variables are not supported yet");
+            auto var = current_scope->lookup(id.name);
+            if (!var.has_value()) {
+                return create_error("Undefined variable");
+            }
+
+            return make_located<node_var_reference>(
+                id_range.start,
+                id_range.end,
+                id.name,
+                var.value()
+            );
         }
     }
     else if (capy_lexer.ahead_is<token_integer>())
