@@ -40,6 +40,7 @@ struct scope {
 struct node_number;
 struct node_var_reference;
 struct node_type_spec;
+struct node_function_head;
 struct node_import_definition;
 struct node_function_call;
 struct node_function_definition;
@@ -47,7 +48,7 @@ struct node_expression;
 struct node_module;
 struct node_parse_error;
 
-using ast_node_raw = std::variant<node_number, node_var_reference, node_type_spec, node_import_definition, node_function_call, node_function_definition, node_expression, node_module, node_parse_error>;
+using ast_node_raw = std::variant<node_number, node_var_reference, node_type_spec, node_function_head, node_import_definition, node_function_call, node_function_definition, node_expression, node_module, node_parse_error>;
 using ast_node = located<ast_node_raw>;
 
 struct node_number
@@ -75,17 +76,20 @@ struct param_spec
 
 struct function_signature
 {
-    source_range location;
-
-    std::string function_name;
     std::vector<param_spec> parameters;
     type_kind return_type;
+};
+
+struct node_function_head
+{
+    std::string name;
+    function_signature signature;
 };
 
 struct node_import_definition
 {
     std::string ns_name;
-    function_signature signature;
+    std::unique_ptr<ast_node> function_head;
 
     std::optional<std::string> alias;
 };
@@ -98,7 +102,7 @@ struct node_function_call
 
 struct node_function_definition
 {
-    function_signature signature;
+    std::unique_ptr<ast_node> function_head;
     // TODO: code should probably be a list of expressions or similar
     std::unique_ptr<ast_node> code;
     std::unique_ptr<scope> function_scope;
@@ -147,6 +151,7 @@ private:
     std::optional<ast_node> parse_function_signature(function_signature& signature);
     ast_node parse_import_definition();
     ast_node parse_function_definition();
+    ast_node parse_function_head();
     ast_node parse_expression(int min_precedence = 0);
     ast_node parse_function_call(const std::string function_name);
     ast_node parse_primary();

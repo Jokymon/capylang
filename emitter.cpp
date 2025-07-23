@@ -43,6 +43,8 @@ void emitter::emit(const ast_node &node)
             this->emit(n);
         } else if constexpr (std::is_same_v<T, node_function_definition>) {
             this->emit(n);
+        } else if constexpr (std::is_same_v<T, node_function_head>) {
+            this->emit(n);
         } else if constexpr (std::is_same_v<T, node_expression>) {
             this->emit(n);
         } else if constexpr (std::is_same_v<T, node_module>) {
@@ -73,15 +75,24 @@ void emitter::emit(const node_module& module_def)
 
 void emitter::emit(const node_import_definition& import_def)
 {
-    output_ << "  (import \"" << import_def.ns_name << "\" \"" << import_def.signature.function_name << "\" ";
-    emit_function_signature(import_def.signature);
+    output_ << "  (import \"" << import_def.ns_name << "\" ";
+    // TODO: this is really ugly, but unfortunately, the "plain" name is only needed
+    // in the import definition of WAT
+    output_ << "\"" << std::get<node_function_head>(import_def.function_head->value).name << "\" ";
+
+    emit(*import_def.function_head);
     output_ << "))\n";
+}
+
+void emitter::emit(const node_function_head& function_head)
+{
+    emit_function_signature(function_head.name, function_head.signature);
 }
 
 void emitter::emit(const node_function_definition& func_def)
 {
     output_ << "  ";
-    emit_function_signature(func_def.signature);
+    emit(*func_def.function_head);
     output_ << "\n";
 
     emit(*func_def.code);
@@ -135,9 +146,9 @@ void emitter::emit(const node_var_reference& variable)
     output_ << "      local.get " << variable.symbol_ref.index_addr << "\n";
 }
 
-void emitter::emit_function_signature(const function_signature& signature)
+void emitter::emit_function_signature(const std::string& function_name, const function_signature& signature)
 {
-    output_ << "(func " << create_wasm_name(signature.function_name);
+    output_ << "(func " << create_wasm_name(function_name);
 
     for (const auto &param : signature.parameters)
     {

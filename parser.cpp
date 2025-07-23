@@ -125,14 +125,7 @@ ast_node parser::parse_module()
 
 std::optional<ast_node> parser::parse_function_signature(function_signature &signature)
 {
-    if (!capy_lexer.ahead_is<token_identifier>())
-    {
-        return create_error("Expecting a function name");
-    }
-    auto [start_range, function_name] = capy_lexer.expect<token_identifier>();
-    signature.location.start = start_range.start;
-    signature.function_name = function_name.name;
-
+    // TODO: we lost how we can keep to location of the signature here :-(
     if (!capy_lexer.expect_symbol(token_symbol::sym_brac_open))
     {
         return create_error("Expecting an opening bracket '(' for function parameters");
@@ -144,7 +137,6 @@ std::optional<ast_node> parser::parse_function_signature(function_signature &sig
         return std::move(error_result.value());
     }
 
-    signature.location.end = capy_lexer.current_source_position();
     if (!capy_lexer.expect_symbol(token_symbol::sym_brac_close))
     {
         return create_error("Expecting an closing bracket ')' for function parameters");
@@ -161,7 +153,6 @@ std::optional<ast_node> parser::parse_function_signature(function_signature &sig
             return create_error("Expecting a return type identifier after ->");
         }
         auto [end_range, return_type_id] = capy_lexer.expect<token_identifier>();
-        signature.location.end = end_range.end;
 
         return_type = type_from_id(return_type_id.name);
         if (!return_type.has_value())
@@ -230,11 +221,10 @@ ast_node parser::parse_import_definition()
         return create_error("Namespace is expected to be followed by '::' and a symbol name");
     }
 
-    function_signature signature;
-    auto signature_result = parse_function_signature(signature);
-    if (signature_result.has_value())
+    auto function_head = parse_function_head();
+    if (is_error(function_head))
     {
-        return std::move(signature_result.value());
+        return function_head;
     }
 
     std::optional<std::string> alias_name;
@@ -260,7 +250,7 @@ ast_node parser::parse_import_definition()
         start_range.start,
         end_range.end,
         namespace_name.name,
-        signature,
+        std::make_unique<ast_node>(std::move(function_head)),
         alias_name);
 }
 
@@ -272,11 +262,10 @@ ast_node parser::parse_function_definition()
 
     auto [start_range, _] = capy_lexer.expect<token_symbol>();
 
-    function_signature function_signature;
-    auto signature_errors = parse_function_signature(function_signature);
-    if (signature_errors.has_value())
+    auto function_head = parse_function_head();
+    if (is_error(function_head))
     {
-        return std::move(signature_errors.value());
+        return function_head;
     }
 
     if (!capy_lexer.expect_symbol(token_symbol::sym_curly_open))
@@ -301,9 +290,32 @@ ast_node parser::parse_function_definition()
     return make_located<node_function_definition>(
         start_range.start,
         end_range.end,
-        function_signature,
+        std::make_unique<ast_node>(std::move(function_head)),
         std::make_unique<ast_node>(std::move(function_body)),
         std::move(func_scope));
+}
+
+ast_node parser::parse_function_head()
+{
+    if (!capy_lexer.ahead_is<token_identifier>())
+    {
+        return create_error("Expecting a function name");
+    }
+    auto [start_range, function_name] = capy_lexer.expect<token_identifier>();
+
+    function_signature signature;
+    auto signature_result = parse_function_signature(signature);
+    if (signature_result.has_value())
+    {
+        return std::move(signature_result.value());
+    }
+
+    return make_located<node_function_head>(
+        start_range.start,
+        start_range.end,    // TODO
+        function_name.name,
+        signature
+    );
 }
 
 ast_node parser::parse_expression(int min_precedence)

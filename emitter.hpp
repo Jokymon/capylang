@@ -12,6 +12,7 @@ public:
 
     void emit(const node_module& module_def);
     void emit(const node_import_definition& import_def);
+    void emit(const node_function_head& function_head);
     void emit(const node_function_definition& func_def);
     void emit(const node_function_call& func_call);
     void emit(const node_expression& root);
@@ -19,7 +20,7 @@ public:
     void emit(const node_number& number);
 
 private:
-    void emit_function_signature(const function_signature& signature);
+    void emit_function_signature(const std::string& function_name, const function_signature& signature);
 
     std::ostream &output_;
 };
