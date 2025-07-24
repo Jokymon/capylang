@@ -32,6 +32,42 @@ std::string repr_type(type_kind type_spec)
     }
 }
 
+bool function_signature::equals_call_signature(function_signature &other)
+{
+    if (parameters.size() != other.parameters.size())
+    {
+        return false;
+    }
+
+    for (size_t param_index = 0; param_index < parameters.size(); param_index++)
+    {
+        if (parameters[param_index].type_spec != other.parameters[param_index].type_spec)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+std::string function_signature::repr()
+{
+    std::string r = "(";
+    if (parameters.size()>0)
+    {
+        r += repr_type(parameters[0].type_spec);
+
+        size_t index = 1;
+        while (index<parameters.size())
+        {
+            r += ", " + repr_type(parameters[index].type_spec);
+            index++;
+        }
+    }
+    r += ")";
+    return r;
+}
+
 std::optional<symbol> scope::lookup(const std::string &name)
 {
     if (symbol_table.find(name) != symbol_table.end())
@@ -42,7 +78,24 @@ std::optional<symbol> scope::lookup(const std::string &name)
     {
         return parent->lookup(name);
     }
-    else {
+    else
+    {
+        return std::nullopt;
+    }
+}
+
+std::optional<func_symbol> scope::lookup_function(const std::string &name)
+{
+    if (function_table.find(name) != function_table.end())
+    {
+        return function_table[name];
+    }
+    else if (parent != nullptr)
+    {
+        return parent->lookup_function(name);
+    }
+    else
+    {
         return std::nullopt;
     }
 }
@@ -256,10 +309,6 @@ ast_node parser::parse_import_definition()
 
 ast_node parser::parse_function_definition()
 {
-    auto func_scope = std::make_unique<scope>();
-    func_scope->parent = current_scope;
-    current_scope = func_scope.get();
-
     auto [start_range, _] = capy_lexer.expect<token_symbol>();
 
     auto function_head = parse_function_head();
@@ -272,6 +321,10 @@ ast_node parser::parse_function_definition()
     {
         return create_error("Expecting an opening brace '{' for function body definition");
     }
+
+    auto func_scope = std::make_unique<scope>();
+    func_scope->parent = current_scope;
+    current_scope = func_scope.get();
 
     auto function_body = parse_expression();
     if (is_error(function_body))
@@ -310,12 +363,15 @@ ast_node parser::parse_function_head()
         return std::move(signature_result.value());
     }
 
+    current_scope->function_table[function_name.name] = func_symbol{
+        .name = function_name.name,
+        .signature = signature};
+
     return make_located<node_function_head>(
         start_range.start,
-        start_range.end,    // TODO
+        start_range.end, // TODO
         function_name.name,
-        signature
-    );
+        signature);
 }
 
 ast_node parser::parse_expression(int min_precedence)
@@ -440,10 +496,17 @@ ast_node parser::parse_function_call(const std::string function_name)
     // TODO: check for closing )
     auto [end_location, _] = capy_lexer.expect<token_symbol>();
 
+    auto func = current_scope->lookup_function(function_name);
+    if (!func.has_value())
+    {
+        return create_error("Function '" + function_name + "' is not defined");
+    }
+
     return make_located<node_function_call>(
         start_location.start,
         end_location.end,
         function_name,
+        func.value(),
         std::move(function_parameters));
 }
 
@@ -461,7 +524,8 @@ ast_node parser::parse_primary()
         else
         {
             auto var = current_scope->lookup(id.name);
-            if (!var.has_value()) {
+            if (!var.has_value())
+            {
                 return create_error("Undefined variable");
             }
 
@@ -469,8 +533,7 @@ ast_node parser::parse_primary()
                 id_range.start,
                 id_range.end,
                 id.name,
-                var.value()
-            );
+                var.value());
         }
     }
     else if (capy_lexer.ahead_is<token_integer>())

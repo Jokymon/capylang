@@ -5,7 +5,7 @@ def test_comments_after_code_are_ignored():
     code = """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 fn _start() {
-    proc_exit(4) // some comment
+    proc_exit(4u32) // some comment
 }"""
     exit_code, _ = tools.run_test_code(code)
 
@@ -17,7 +17,7 @@ def test_complete_lines_of_comment_are_ignored():
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 fn _start() {
-    proc_exit(3+1)
+    proc_exit(3u32+1u32)
 }"""
     exit_code, _ = tools.run_test_code(code)
 
@@ -29,7 +29,7 @@ def test_multiple_lines_of_comments_are_ignored():
 // Line 1
 // Line 2
 fn _start() {
-    proc_exit(3+1)
+    proc_exit(3u32+1u32)
 }"""
     exit_code, _ = tools.run_test_code(code)
 
@@ -42,7 +42,7 @@ import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 // Line 2
 fn _start() {
-    proc_exit(3+1)
+    proc_exit(3u32+1u32)
 }"""
     exit_code, _ = tools.run_test_code(code)
 

@@ -18,6 +18,21 @@ enum class type_kind
 
 std::string repr_type(type_kind type_spec);
 
+struct param_spec
+{
+    std::string name;
+    type_kind type_spec;
+};
+
+struct function_signature
+{
+    std::vector<param_spec> parameters;
+    type_kind return_type;
+
+    bool equals_call_signature(function_signature& other);
+    std::string repr();
+};
+
 enum class symbol_kind {
     global_var,
     local_var,
@@ -30,11 +45,18 @@ struct symbol {
     uint32_t index_addr;
 };
 
+struct func_symbol {
+    std::string name;
+    function_signature signature;
+};
+
 struct scope {
     scope* parent;
     std::map<std::string, symbol> symbol_table;
+    std::map<std::string, func_symbol> function_table;
 
     std::optional<symbol> lookup(const std::string& name);
+    std::optional<func_symbol> lookup_function(const std::string& name);
 };
 
 struct node_number;
@@ -68,18 +90,6 @@ struct node_type_spec
     type_kind type_spec;
 };
 
-struct param_spec
-{
-    std::string name;
-    type_kind type_spec;
-};
-
-struct function_signature
-{
-    std::vector<param_spec> parameters;
-    type_kind return_type;
-};
-
 struct node_function_head
 {
     std::string name;
@@ -97,6 +107,7 @@ struct node_import_definition
 struct node_function_call
 {
     std::string function_name;
+    func_symbol symbol_ref;
     std::vector<std::unique_ptr<ast_node>> parameter;
 };
 

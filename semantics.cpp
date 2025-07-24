@@ -11,6 +11,8 @@ type_kind assigned_node_type(const ast_node &node)
             return n.assigned_type;
         } else if constexpr (std::is_same_v<T, node_var_reference>) {
             return n.symbol_ref.symbol_type;
+        } else if constexpr (std::is_same_v<T, node_function_call>) {
+            return n.symbol_ref.signature.return_type;
         } else if constexpr (std::is_same_v<T, node_type_spec>) {
             return n.type_spec;
         } else if constexpr (std::is_same_v<T, node_expression>) {
@@ -35,16 +37,29 @@ std::optional<node_parse_error> semantic_analyser::process(node_type_spec &n)
     return std::nullopt;
 }
 
-std::optional<node_parse_error> semantic_analyser::process(node_function_call &n)
+std::optional<node_parse_error> semantic_analyser::process(source_range location, node_function_call &n)
 {
-    for (const auto& param : n.parameter)
+    function_signature actual_signature;
+
+    for (const auto &param : n.parameter)
     {
         auto res = semantic_analysis(*param);
         if (res.has_value())
         {
             return res;
         }
+        actual_signature.parameters.push_back(param_spec{.name = "_", .type_spec = assigned_node_type(*param)});
     }
+
+    if (!actual_signature.equals_call_signature(n.symbol_ref.signature))
+    {
+        return node_parse_error{
+            .error_location = location.start,
+            .error_message = "Function '"+n.symbol_ref.name+"' expects signature "
+                + n.symbol_ref.signature.repr() + "; called with signature "
+                + actual_signature.repr()};
+    }
+
     return std::nullopt;
 }
 
@@ -129,7 +144,7 @@ std::optional<node_parse_error> semantic_analyser::semantic_analysis(ast_node &r
         } else if constexpr (std::is_same_v<T, node_type_spec>) {
             return process(n);
         } else if constexpr (std::is_same_v<T, node_function_call>) {
-            return process(n);
+            return process(root.location, n);
         } else if constexpr (std::is_same_v<T, node_import_definition>) {
             return process(n);
         } else if constexpr (std::is_same_v<T, node_function_definition>) {
