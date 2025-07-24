@@ -1,18 +1,6 @@
 import tools
 
 
-def normalize_filename_from_output(stdxxx):
-    print(stdxxx)
-    if stdxxx.lower().startswith("c:/"):
-        stdxxx = stdxxx[3:]
-
-    idx = stdxxx.find(":")
-    if idx == -1:
-        return stdxxx
-    else:
-        return "filename" + stdxxx[idx:]
-
-
 def test_undefined_function():
     code = """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
@@ -25,7 +13,7 @@ fn _start() {
 
     assert exit_code == 1
     assert (
-        normalize_filename_from_output(stderr)
+        tools.normalize_filename_from_output(stderr)
         == "filename:5:27: Function 'add2' is not defined\n"
     )
 
@@ -46,6 +34,6 @@ fn _start() {
 
     assert exit_code == 1
     assert (
-        normalize_filename_from_output(stderr)
+        tools.normalize_filename_from_output(stderr)
         == "filename:9:20: Function 'add2' expects signature (u32); called with signature (s32, s32)\n"
     )

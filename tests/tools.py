@@ -94,3 +94,15 @@ fn _start() {{
 }}"""
     full_code = procedure_wrapper.format(code=code)
     return full_code
+
+
+def normalize_filename_from_output(stdxxx):
+    print(stdxxx)
+    if stdxxx.lower().startswith("c:/"):
+        stdxxx = stdxxx[3:]
+
+    idx = stdxxx.find(":")
+    if idx == -1:
+        return stdxxx
+    else:
+        return "filename" + stdxxx[idx:]
