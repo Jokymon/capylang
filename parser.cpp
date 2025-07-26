@@ -526,7 +526,7 @@ ast_node parser::parse_primary()
             auto var = current_scope->lookup(id.name);
             if (!var.has_value())
             {
-                return create_error("Undefined variable");
+                return create_error("Undefined variable: '"+id.name+"'");
             }
 
             return make_located<node_var_reference>(
