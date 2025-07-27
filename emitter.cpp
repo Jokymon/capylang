@@ -95,7 +95,10 @@ void emitter::emit(const node_function_definition& func_def)
     emit(*func_def.function_head);
     output_ << "\n";
 
-    emit(*func_def.code);
+    for (const auto& expression : func_def.code)
+    {
+        emit(*expression);
+    }
 
     output_ << "  )\n";
 }

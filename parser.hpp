@@ -114,8 +114,7 @@ struct node_function_call
 struct node_function_definition
 {
     std::unique_ptr<ast_node> function_head;
-    // TODO: code should probably be a list of expressions or similar
-    std::unique_ptr<ast_node> code;
+    std::vector<std::unique_ptr<ast_node>> code;
     std::unique_ptr<scope> function_scope;
 };
 

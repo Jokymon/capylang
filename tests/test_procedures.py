@@ -75,3 +75,20 @@ fn _start() {
     exit_code, _ = tools.run_test_code(code)
 
     assert exit_code == 5
+
+
+def test_functions_can_contain_multiple_expressions():
+    code = """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn exit_early(a: u32) {
+    proc_exit(a)
+}
+
+fn _start() {
+    exit_early(34u32);
+    proc_exit(3u32)
+}"""
+    exit_code, _ = tools.run_test_code(code)
+
+    assert exit_code == 34

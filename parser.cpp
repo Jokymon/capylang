@@ -326,10 +326,24 @@ ast_node parser::parse_function_definition()
     func_scope->parent = current_scope;
     current_scope = func_scope.get();
 
-    auto function_body = parse_expression();
-    if (is_error(function_body))
+    std::vector<std::unique_ptr<ast_node>> function_body;
+    auto expression = parse_expression();
+    if (is_error(expression))
     {
-        return function_body;
+        return expression;
+    }
+    function_body.emplace_back(std::make_unique<ast_node>(std::move(expression)));
+
+    while (capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_semicolon)
+    {
+        capy_lexer.expect_symbol(token_symbol::sym_semicolon);
+
+        expression = parse_expression();
+        if (is_error(expression))
+        {
+            return expression;
+        }
+        function_body.emplace_back(std::make_unique<ast_node>(std::move(expression)));
     }
 
     if (!capy_lexer.ahead_is<token_symbol>() || capy_lexer.next_as<token_symbol>().sym_type != token_symbol::sym_curly_close)
@@ -344,7 +358,7 @@ ast_node parser::parse_function_definition()
         start_range.start,
         end_range.end,
         std::make_unique<ast_node>(std::move(function_head)),
-        std::make_unique<ast_node>(std::move(function_body)),
+        std::move(function_body),
         std::move(func_scope));
 }
 

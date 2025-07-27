@@ -70,7 +70,15 @@ std::optional<node_parse_error> semantic_analyser::process(node_import_definitio
 
 std::optional<node_parse_error> semantic_analyser::process(node_function_definition &n)
 {
-    return semantic_analysis(*n.code);
+    for (const auto &expression : n.code)
+    {
+        auto res = semantic_analysis(*expression);
+        if (res.has_value())
+        {
+            return res;
+        }
+    }
+    return std::nullopt;
 }
 
 std::optional<node_parse_error> semantic_analyser::process(source_range location, node_expression &n)
