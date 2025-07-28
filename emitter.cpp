@@ -1,4 +1,5 @@
 #include "emitter.hpp"
+#include "semantics.hpp"
 
 std::string create_wasm_name(const std::string capy_name)
 {
@@ -9,12 +10,12 @@ std::string type_mapping(type_kind type_spec)
 {
     switch (type_spec)
     {
-        case type_kind::s32:
-            return "i32";
-        case type_kind::u32:
-            return "i32";
-        default:
-            return "";
+    case type_kind::s32:
+        return "i32";
+    case type_kind::u32:
+        return "i32";
+    default:
+        return "";
     }
 }
 
@@ -52,11 +53,11 @@ void emitter::emit(const ast_node &node)
         } else {} }, node.value);
 }
 
-void emitter::emit(const node_module& module_def)
+void emitter::emit(const node_module &module_def)
 {
     output_ << "(module\n";
 
-    for (const auto& import_def : module_def.imports)
+    for (const auto &import_def : module_def.imports)
     {
         emit(*import_def);
     }
@@ -65,7 +66,7 @@ void emitter::emit(const node_module& module_def)
     output_ << "  (export \"memory\" (memory 0))\n";
     output_ << "  (export \"_start\" (func $_start))\n";
 
-    for (const auto& func_def : module_def.functions)
+    for (const auto &func_def : module_def.functions)
     {
         emit(*func_def);
     }
@@ -73,7 +74,7 @@ void emitter::emit(const node_module& module_def)
     output_ << ")\n";
 }
 
-void emitter::emit(const node_import_definition& import_def)
+void emitter::emit(const node_import_definition &import_def)
 {
     output_ << "  (import \"" << import_def.ns_name << "\" ";
     // TODO: this is really ugly, but unfortunately, the "plain" name is only needed
@@ -84,18 +85,18 @@ void emitter::emit(const node_import_definition& import_def)
     output_ << "))\n";
 }
 
-void emitter::emit(const node_function_head& function_head)
+void emitter::emit(const node_function_head &function_head)
 {
     emit_function_signature(function_head.name, function_head.signature);
 }
 
-void emitter::emit(const node_function_definition& func_def)
+void emitter::emit(const node_function_definition &func_def)
 {
     output_ << "  ";
     emit(*func_def.function_head);
     output_ << "\n";
 
-    for (const auto& expression : func_def.code)
+    for (const auto &expression : func_def.code)
     {
         emit(*expression);
     }
@@ -103,7 +104,7 @@ void emitter::emit(const node_function_definition& func_def)
     output_ << "  )\n";
 }
 
-void emitter::emit(const node_function_call& func_call)
+void emitter::emit(const node_function_call &func_call)
 {
     for (const auto &param : func_call.parameter)
     {
@@ -134,7 +135,11 @@ void emitter::emit(const node_expression &root)
         output_ << "      i32.rem_u\n";
         break;
     case token_operator::op_conversion:
-        // TODO
+        if ((assigned_node_type(*root.right) == type_kind::void_type) &&
+            (assigned_node_type(*root.left) != type_kind::void_type))
+        {
+            output_ << "      drop\n";
+        }
         break;
     }
 }
@@ -144,12 +149,12 @@ void emitter::emit(const node_number &number)
     output_ << "      i32.const " << number.number << "\n";
 }
 
-void emitter::emit(const node_var_reference& variable)
+void emitter::emit(const node_var_reference &variable)
 {
     output_ << "      local.get " << variable.symbol_ref.index_addr << "\n";
 }
 
-void emitter::emit_function_signature(const std::string& function_name, const function_signature& signature)
+void emitter::emit_function_signature(const std::string &function_name, const function_signature &signature)
 {
     output_ << "(func " << create_wasm_name(function_name);
 

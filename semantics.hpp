@@ -2,6 +2,8 @@
 #include "parser.hpp"
 #include <optional>
 
+type_kind assigned_node_type(const ast_node &node);
+
 class semantic_analyser
 {
 public:

@@ -338,6 +338,28 @@ ast_node parser::parse_function_definition()
     {
         capy_lexer.expect_symbol(token_symbol::sym_semicolon);
 
+        // If the previous expression wasn't the last one in the function, then it
+        // will have left a value on the stack and will make the WASM validation
+        // unhappy. So we have to "convert" the type of the last expression to 'void'
+        // so the emitter can insert a 'drop' instruction
+        auto previous_expression = std::move(function_body.back());
+        function_body.pop_back();
+    
+        auto drop_wrapper = make_located<node_expression>(
+            previous_expression->location.start,
+            previous_expression->location.end,
+            std::move(previous_expression),
+            std::make_unique<ast_node>(make_located<node_type_spec>(
+                previous_expression->location.start,
+                previous_expression->location.end,
+                type_kind::void_type
+            )),
+            previous_expression->location,
+            token_operator::op_conversion,
+            type_kind::void_type
+        );
+        function_body.emplace_back(std::make_unique<ast_node>(std::move(drop_wrapper)));
+
         expression = parse_expression();
         if (is_error(expression))
         {
