@@ -18,6 +18,8 @@ std::string token_symbol::to_string() const
         return "fn";
     case sym_kw_import:
         return "import";
+    case sym_kw_let:
+        return "let";
     case sym_arrow:
         return "->";
     case sym_colon:
@@ -26,6 +28,8 @@ std::string token_symbol::to_string() const
         return ",";
     case sym_dcolon:
         return "::";
+    case sym_equal:
+        return "=";
     case sym_semicolon:
         return ";";
     case sym_brac_open:
@@ -284,6 +288,11 @@ token lexer::parse_token()
         get_char();
         return make_located<token_symbol>(current_position, current_position, token_symbol::sym_comma);
     }
+    else if (ch == '=')
+    {
+        get_char();
+        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_equal);
+    }
     else if (ch == '(')
     {
         get_char();
@@ -350,6 +359,10 @@ token lexer::parse_identifier_or_keyword()
     else if (id_name == "import")
     {
         return make_located<token_symbol>(start_position, current_position, token_symbol::sym_kw_import);
+    }
+    else if (id_name == "let")
+    {
+        return make_located<token_symbol>(start_position, current_position, token_symbol::sym_kw_let);
     }
     else if (id_name == "as")
     {

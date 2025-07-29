@@ -17,6 +17,8 @@ type_kind assigned_node_type(const ast_node &node)
             return n.signature.return_type;
         } else if constexpr (std::is_same_v<T, node_function_call>) {
             return n.symbol_ref.signature.return_type;
+        } else if constexpr (std::is_same_v<T, node_let_expression>) {
+            return type_kind::void_type;
         } else if constexpr (std::is_same_v<T, node_type_spec>) {
             return n.type_spec;
         } else if constexpr (std::is_same_v<T, node_expression>) {

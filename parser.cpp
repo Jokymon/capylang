@@ -242,7 +242,7 @@ std::optional<ast_node> parser::parse_parameters(std::vector<param_spec> &parame
         current_scope->symbol_table[param_name.name] = symbol{
             .name = param_name.name,
             .symbol_type = type_spec,
-            .kind = symbol_kind::local_var,
+            .kind = symbol_kind::argument,
             .index_addr = argument_index++};
 
         parameters.emplace_back(param_name.name, type_spec);
@@ -460,6 +460,11 @@ ast_node parser::parse_expression(int min_precedence)
 
         return create_error("Expected a closing brace ')' at the end of the expression");
     }
+    else if (capy_lexer.ahead_is<token_symbol>() &&
+        (capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_kw_let))
+    {
+        return parse_let_expression();
+    }
     else
     {
         auto lhs = parse_primary();
@@ -544,6 +549,58 @@ ast_node parser::parse_function_call(const std::string function_name)
         function_name,
         func.value(),
         std::move(function_parameters));
+}
+
+ast_node parser::parse_let_expression()
+{
+    // eat the 'let' keyword
+    auto [start_location, _] = capy_lexer.expect<token_symbol>();
+
+    if (!capy_lexer.ahead_is<token_identifier>())
+    {
+        return create_error("Expecting a variable name after 'let' keyword");
+    }
+    auto [_, variable_name] = capy_lexer.expect<token_identifier>();
+
+    if (!capy_lexer.expect_symbol(token_symbol::sym_colon))
+    {
+        return create_error("Expecting a ':' after variable name in 'let' expression");
+    }
+
+    auto type_spec_node = parse_type_reference();
+    if (is_error(type_spec_node))
+    {
+        return type_spec_node;
+    }
+    auto type_spec = std::get<node_type_spec>(type_spec_node.value).type_spec;
+
+    if (!capy_lexer.expect_symbol(token_symbol::sym_equal)) 
+    {
+        return create_error("Expecting a '=' starting the initializer expression for the new variable");
+    }
+
+    auto initializer = parse_expression();
+    if (is_error(initializer))
+    {
+        return initializer;
+    }
+
+    auto new_symbol = symbol{
+        .name = variable_name.name,
+        .symbol_type = type_spec,
+        .kind = symbol_kind::local_var,
+        .index_addr = current_scope->symbol_table.size(),
+    };
+    current_scope->symbol_table[variable_name.name] = new_symbol;
+
+    return make_located<node_let_expression>(
+        start_location.start,
+        initializer.location.end,
+        variable_name.name,
+        type_spec,
+        new_symbol,
+        std::make_unique<ast_node>(std::move(initializer))
+    );
 }
 
 ast_node parser::parse_primary()

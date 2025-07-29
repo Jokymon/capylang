@@ -46,6 +46,8 @@ void emitter::emit(const ast_node &node)
             this->emit(n);
         } else if constexpr (std::is_same_v<T, node_function_head>) {
             this->emit(n);
+        } else if constexpr (std::is_same_v<T, node_let_expression>) {
+            this->emit(n);
         } else if constexpr (std::is_same_v<T, node_expression>) {
             this->emit(n);
         } else if constexpr (std::is_same_v<T, node_module>) {
@@ -96,6 +98,14 @@ void emitter::emit(const node_function_definition &func_def)
     emit(*func_def.function_head);
     output_ << "\n";
 
+    for (auto& [identifier, symbol]: func_def.function_scope->symbol_table)
+    {
+        if (symbol.kind == symbol_kind::local_var)
+        {
+            output_ << "      (local " << create_wasm_name(identifier) << " i32)\n";
+        }
+    }
+
     for (const auto &expression : func_def.code)
     {
         emit(*expression);
@@ -111,6 +121,12 @@ void emitter::emit(const node_function_call &func_call)
         emit(*param);
     }
     output_ << "      call " << create_wasm_name(func_call.function_name) << "\n";
+}
+
+void emitter::emit(const node_let_expression& let_expression)
+{
+    emit(*let_expression.init_expression);
+    output_ << "      local.set " << let_expression.symbol_ref.index_addr << "\n";
 }
 
 void emitter::emit(const node_expression &root)
