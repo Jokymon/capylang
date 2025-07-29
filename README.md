@@ -20,6 +20,24 @@ exit codes. This is supported by `uv` and the `pytest` library.
 
  * operator precedence
  * add other operator types
+ * add other basic number types (f32, f64, s64, s16, s8, bool, ...)
+ * add dereference operation and pointer types
+ * add structured component model types (variant, list, record, result, ...)
  * Improve maintainability of emitter-visitor; shouldn't be necessary
    to add every new type to the std::visit call if possible
- * Add variable parameter count for function calls
+ * implement a simple heap management concept (check the WAMR/Emscripten memory organisation)
+
+
+
+ ### Inspiration for language design:
+
+ - Discussion about dereference operator prefix/postfix: https://www.reddit.com/r/Compilers/comments/1bl7c1m/why_is_the_dereference_operator_generally_a/
+ - The Nox language: https://codeberg.org/nox-language/nox
+ - Things hated about Rust:
+   * part 1: https://blog.yossarian.net/2020/05/20/Things-I-hate-about-rust
+   * part 2: https://blog.yossarian.net/2022/03/10/Things-I-hate-about-Rust-redux
+- Thoughts about the future of RAII: https://verdagon.dev/blog/raii-next-steps
+- You need subtyping: https://blog.polybdenum.com/2025/03/26/why-you-need-subtyping.html
+- Safe navigation operator: https://en.wikipedia.org/wiki/Safe_navigation_operator
+- Null coalescing operator: https://en.wikipedia.org/wiki/Null_coalescing_operator
+- Chocopy WASM backend: https://yangdanny97.github.io/blog/2022/10/11/chocopy-wasm-backend
