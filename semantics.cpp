@@ -11,6 +11,10 @@ type_kind assigned_node_type(const ast_node &node)
             return n.assigned_type;
         } else if constexpr (std::is_same_v<T, node_var_reference>) {
             return n.symbol_ref.symbol_type;
+        } else if constexpr (std::is_same_v<T, node_function_definition>) {
+            return assigned_node_type(*n.function_head);
+        } else if constexpr (std::is_same_v<T, node_function_head>) {
+            return n.signature.return_type;
         } else if constexpr (std::is_same_v<T, node_function_call>) {
             return n.symbol_ref.signature.return_type;
         } else if constexpr (std::is_same_v<T, node_type_spec>) {
@@ -70,6 +74,10 @@ std::optional<node_parse_error> semantic_analyser::process(node_import_definitio
 
 std::optional<node_parse_error> semantic_analyser::process(node_function_definition &n)
 {
+    auto declared_return_type = assigned_node_type(*n.function_head);
+
+    auto actual_return_type = type_kind::void_type;
+    source_range error_location;
     for (const auto &expression : n.code)
     {
         auto res = semantic_analysis(*expression);
@@ -77,6 +85,16 @@ std::optional<node_parse_error> semantic_analyser::process(node_function_definit
         {
             return res;
         }
+        actual_return_type = assigned_node_type(*expression);
+        error_location = expression->location;
+    }
+
+    if (declared_return_type != actual_return_type)
+    {
+        return node_parse_error{
+            .error_location = error_location.start,
+            .error_message = "Returned value of type "+repr_type(actual_return_type)+
+                " doesn't match the declared return type "+repr_type(declared_return_type)};
     }
     return std::nullopt;
 }
