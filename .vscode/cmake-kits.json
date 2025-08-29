@@ -1,0 +1,6 @@
+[
+    {
+        "name": "WASM",
+        "toolchainFile": "cmake/wasm-wasip-clang.cmake"
+    }
+]
