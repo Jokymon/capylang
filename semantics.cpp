@@ -3,7 +3,7 @@
 
 type_kind assigned_node_type(const ast_node &node)
 {
-    return std::visit([&](const auto &n)
+    return std::visit([&](const auto &n) -> type_kind
                       {
         using T = std::decay_t<decltype(n)>;
 
@@ -18,13 +18,13 @@ type_kind assigned_node_type(const ast_node &node)
         } else if constexpr (std::is_same_v<T, node_function_call>) {
             return n.symbol_ref.signature.return_type;
         } else if constexpr (std::is_same_v<T, node_let_expression>) {
-            return type_kind::void_type;
+            return t_t::void_type{};
         } else if constexpr (std::is_same_v<T, node_type_spec>) {
             return n.type_spec;
         } else if constexpr (std::is_same_v<T, node_expression>) {
              return n.assigned_type;
         } else {
-            return type_kind::unassigned;
+            return t_t::unassigned{};
         } }, node.value);
 }
 
@@ -78,7 +78,7 @@ std::optional<node_parse_error> semantic_analyser::process(node_function_definit
 {
     auto declared_return_type = assigned_node_type(*n.function_head);
 
-    auto actual_return_type = type_kind::void_type;
+    type_kind actual_return_type = t_t::void_type{};
     source_range error_location;
     for (const auto &expression : n.code)
     {
@@ -117,7 +117,7 @@ std::optional<node_parse_error> semantic_analyser::process(source_range location
     }
     auto rhs_type = assigned_node_type(*n.right);
 
-    if ((lhs_type == rhs_type) && (lhs_type != type_kind::unassigned))
+    if ((lhs_type == rhs_type) && (!t_t::is_of<t_t::unassigned>(lhs_type)))
     {
         n.assigned_type = lhs_type;
         return std::nullopt;

@@ -7,5 +7,5 @@ fn bla(a: s32) -> s32
 
 // This file currently only contains some more data like parts
 fn _start() {
-    proc_exit(bla(1))
+    proc_exit(bla(1) as u32)
 }

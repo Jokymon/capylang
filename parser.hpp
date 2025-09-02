@@ -7,14 +7,29 @@
 #include <vector>
 #include "lexer.hpp"
 
-enum class type_kind
+struct t_t
 {
-    unassigned,
+    struct unassigned{
+        bool operator==(const unassigned& other) const { return true; }
+    };
 
-    void_type,
-    s32,
-    u32
+    struct void_type{
+        bool operator==(const void_type& other) const { return true; }
+    };
+    struct s32{
+        bool operator==(const s32& other) const { return true; }
+    };
+    struct u32{
+        bool operator==(const u32& other) const { return true; }
+    };
+
+    template<typename T, typename V>
+    static bool is_of(V&& value) {
+        return std::holds_alternative<T>(value);
+    }
 };
+
+using type_kind = std::variant<t_t::unassigned, t_t::void_type, t_t::s32, t_t::u32>;
 
 std::string repr_type(type_kind type_spec);
 

@@ -8,15 +8,17 @@ std::string create_wasm_name(const std::string capy_name)
 
 std::string type_mapping(type_kind type_spec)
 {
-    switch (type_spec)
-    {
-    case type_kind::s32:
-        return "i32";
-    case type_kind::u32:
-        return "i32";
-    default:
-        return "";
-    }
+    return std::visit([&](const auto &t) -> std::string {
+        using T = std::decay_t<decltype(t)>;
+
+        if constexpr (std::is_same_v<T, t_t::s32>) {
+            return "i32";
+        } else if constexpr (std::is_same_v<T, t_t::u32>) {
+            return "i32";
+        } else {
+            return "";
+        }
+    }, type_spec);
 }
 
 emitter::emitter(std::ostream &output) : output_(output)
@@ -151,8 +153,8 @@ void emitter::emit(const node_expression &root)
         output_ << "      i32.rem_u\n";
         break;
     case token_operator::op_conversion:
-        if ((assigned_node_type(*root.right) == type_kind::void_type) &&
-            (assigned_node_type(*root.left) != type_kind::void_type))
+        if ((t_t::is_of<t_t::void_type>(assigned_node_type(*root.right))) &&
+            (!t_t::is_of<t_t::void_type>(assigned_node_type(*root.left))))
         {
             output_ << "      drop\n";
         }
@@ -179,7 +181,7 @@ void emitter::emit_function_signature(const std::string &function_name, const fu
         output_ << " (param $" << param.name << " " << type_mapping(param.type_spec) << ")";
     }
 
-    if (signature.return_type != type_kind::void_type)
+    if (!t_t::is_of<t_t::void_type>(signature.return_type))
     {
         output_ << " (result " << type_mapping(signature.return_type) << ")";
     }

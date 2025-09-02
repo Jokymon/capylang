@@ -19,17 +19,18 @@ bool is_error(const ast_node &node)
 
 std::string repr_type(type_kind type_spec)
 {
-    switch (type_spec)
-    {
-    case type_kind::unassigned:
-        return "!unassigned!";
-    case type_kind::void_type:
-        return "void";
-    case type_kind::s32:
-        return "s32";
-    case type_kind::u32:
-        return "u32";
-    }
+    return std::visit([&](const auto &t) -> std::string {
+        using T = std::decay_t<decltype(t)>;
+
+        if constexpr (std::is_same_v<T, t_t::unassigned>)
+            return "!unassigned";
+        else if constexpr (std::is_same_v<T, t_t::void_type>)
+            return "void";
+        else if constexpr (std::is_same_v<T, t_t::s32>)
+            return "s32";
+        else if constexpr (std::is_same_v<T, t_t::u32>)
+            return "u32";
+    }, type_spec);
 }
 
 bool function_signature::equals_call_signature(function_signature &other)
@@ -104,11 +105,11 @@ std::optional<type_kind> type_from_id(const std::string &id)
 {
     if (id == "u32")
     {
-        return type_kind::u32;
+        return t_t::u32{};
     }
     else if ((id == "s32") || (id == ""))
     {
-        return type_kind::s32;
+        return t_t::s32{};
     }
 
     return std::nullopt;
@@ -195,7 +196,7 @@ std::optional<ast_node> parser::parse_function_signature(function_signature &sig
         return create_error("Expecting an closing bracket ')' for function parameters");
     }
 
-    std::optional<type_kind> return_type = type_kind::void_type;
+    std::optional<type_kind> return_type = t_t::void_type{};
 
     if (capy_lexer.ahead_is<token_symbol>() && (capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_arrow))
     {
@@ -352,11 +353,11 @@ ast_node parser::parse_function_definition()
             std::make_unique<ast_node>(make_located<node_type_spec>(
                 previous_expression->location.start,
                 previous_expression->location.end,
-                type_kind::void_type
+                t_t::void_type{}
             )),
             previous_expression->location,
             token_operator::op_conversion,
-            type_kind::void_type
+            t_t::void_type{}
         );
         function_body.emplace_back(std::make_unique<ast_node>(std::move(drop_wrapper)));
 
@@ -450,7 +451,7 @@ ast_node parser::parse_expression(int min_precedence)
                     std::make_unique<ast_node>(std::move(type_spec)),
                     op_token.location,
                     token_operator::op_conversion,
-                    type_kind::unassigned);
+                    t_t::unassigned{});
             }
             else
             {
@@ -505,7 +506,7 @@ ast_node parser::parse_expression(int min_precedence)
                 std::make_unique<ast_node>(std::move(rhs)),
                 op_token.location,
                 op.op_type,
-                type_kind::unassigned);
+                t_t::unassigned{});
         }
 
         return lhs;
