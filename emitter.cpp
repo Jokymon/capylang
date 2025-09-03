@@ -67,6 +67,7 @@ void emitter::emit(const node_module &module_def)
     }
 
     output_ << "  (memory (;0;) 2)\n";
+    output_ << "  (data (i32.const 100) \"\\42\\10Test\")\n";
     output_ << "  (export \"memory\" (memory 0))\n";
     output_ << "  (export \"_start\" (func $_start))\n";
 
