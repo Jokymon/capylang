@@ -38,6 +38,7 @@ struct token_symbol
 {
     enum symbol_type
     {
+        sym_kw_as,
         sym_kw_fn,
         sym_kw_import,
         sym_kw_let,
@@ -47,7 +48,12 @@ struct token_symbol
         sym_comma,
         sym_dcolon,
         sym_equal,
+        sym_minus,
+        sym_percent,
+        sym_plus,
         sym_semicolon,
+        sym_slash,
+        sym_star,
 
         sym_brac_open,
         sym_brac_close,
@@ -60,24 +66,19 @@ struct token_symbol
     std::string to_string() const;
 };
 
-struct token_operator
+enum operator_type
 {
-    enum operator_type
-    {
-        op_multiply,
-        op_division,
-        op_modulus,
-        op_plus,
-        op_minus,
+    op_multiply,
+    op_division,
+    op_modulus,
+    op_plus,
+    op_minus,
 
-        op_conversion,
-    };
-    operator_type op_type;
-
-    int get_precedence() const;
-
-    std::string to_string() const;
+    op_conversion,
 };
+
+int get_precedence(operator_type op_type);
+operator_type op_from_symbol(const token_symbol& symbol);
 
 struct token_eof
 {
@@ -88,10 +89,10 @@ struct token_illegal
     std::string token_text;
 };
 
-using token_raw = std::variant<token_integer, token_identifier, token_operator, token_symbol, token_eof, token_illegal>;
+using token_raw = std::variant<token_integer, token_identifier, token_symbol, token_eof, token_illegal>;
 using token = located<token_raw>;
 
-std::string repr_op(token_operator::operator_type op);
+std::string repr_op(operator_type op);
 std::string repr_token(const token &tok);
 
 class lexer
@@ -107,6 +108,7 @@ public:
         const token &tok = peek_token();
         return std::holds_alternative<T>(tok.value);
     }
+    bool ahead_is_operator();
 
     template <typename T>
     T next_as()
@@ -147,5 +149,4 @@ private:
 
     token parse_number();
     token parse_identifier_or_keyword();
-    token parse_operator();
 };

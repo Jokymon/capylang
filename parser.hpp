@@ -147,7 +147,7 @@ struct node_expression
 {
     std::unique_ptr<ast_node> left, right;
     source_range op_range;
-    token_operator::operator_type operation;
+    operator_type operation;
     type_kind assigned_type;
 };
 

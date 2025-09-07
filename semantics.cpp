@@ -122,7 +122,7 @@ std::optional<node_parse_error> semantic_analyser::process(source_range location
         n.assigned_type = lhs_type;
         return std::nullopt;
     }
-    else if (n.operation == token_operator::op_conversion)
+    else if (n.operation == op_conversion)
     {
         if (!std::holds_alternative<node_type_spec>(n.right->value))
         {

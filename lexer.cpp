@@ -1,4 +1,5 @@
 #include "lexer.hpp"
+#include <assert.h>
 
 template <typename T, typename... Args>
 token make_located(source_position start, source_position end, Args... args)
@@ -14,6 +15,8 @@ std::string token_symbol::to_string() const
 {
     switch (sym_type)
     {
+    case sym_kw_as:
+        return "as";
     case sym_kw_fn:
         return "fn";
     case sym_kw_import:
@@ -30,8 +33,18 @@ std::string token_symbol::to_string() const
         return "::";
     case sym_equal:
         return "=";
+    case sym_minus:
+        return "-";
+    case sym_percent:
+        return "%";
+    case sym_plus:
+        return "+";
     case sym_semicolon:
         return ";";
+    case sym_slash:
+        return "/";
+    case sym_star:
+        return "*";
     case sym_brac_open:
         return "(";
     case sym_brac_close:
@@ -43,7 +56,7 @@ std::string token_symbol::to_string() const
     }
 }
 
-int token_operator::get_precedence() const
+int get_precedence(operator_type op_type)
 {
     switch (op_type) {
         case op_conversion:
@@ -60,23 +73,24 @@ int token_operator::get_precedence() const
     }
 }
 
-std::string token_operator::to_string() const
+operator_type op_from_symbol(const token_symbol& symbol)
 {
-    return repr_op(op_type);
-}
-
-bool is_operator(char ch)
-{
-    switch (ch)
-    {
-    case '-':
-    case '+':
-    case '*':
-    case '/':
-    case '%':
-        return true;
-    default:
-        return false;
+    switch (symbol.sym_type) {
+        case token_symbol::sym_minus:
+            return op_minus;
+        case token_symbol::sym_plus:
+            return op_plus;
+        case token_symbol::sym_star:
+            return op_multiply;
+        case token_symbol::sym_slash:
+            return op_division;
+        case token_symbol::sym_percent:
+            return op_modulus;
+        case token_symbol::sym_kw_as:
+            return op_conversion;
+        default:
+            assert(false && "Unexpected operator symbol");
+            return op_conversion;
     }
 }
 
@@ -110,21 +124,21 @@ bool is_id_character(char ch)
     return false;
 }
 
-std::string repr_op(token_operator::operator_type op)
+std::string repr_op(operator_type op)
 {
     switch (op)
     {
-    case token_operator::op_division:
+    case op_division:
         return "/";
-    case token_operator::op_multiply:
+    case op_multiply:
         return "*";
-    case token_operator::op_modulus:
+    case op_modulus:
         return "%";
-    case token_operator::op_minus:
+    case op_minus:
         return "-";
-    case token_operator::op_plus:
+    case op_plus:
         return "+";
-    case token_operator::op_conversion:
+    case op_conversion:
         return "as";
     }
 }
@@ -143,8 +157,6 @@ std::string repr_token(const token &tok)
                             return "<TOK_ILLEGAL: "+n.token_text+">";
                           } else if constexpr (std::is_same_v<T, token_integer>) {
                             return "<TOK_INT: "+std::to_string(n.number)+">";
-                          } else if constexpr (std::is_same_v<T, token_operator>) {
-                            return "<TOK_OP: "+n.to_string()+">";
                           } else if constexpr (std::is_same_v<T, token_symbol>) {
                             return "<TOK_SYM: "+n.to_string()+">";
                           } else {
@@ -168,6 +180,30 @@ const token &lexer::peek_token()
 source_position lexer::current_source_position() const
 {
     return current_position;
+}
+
+bool lexer::ahead_is_operator()
+{
+    const auto &tok = peek_token();
+    return std::visit([&](const auto &tok) -> bool {
+        using T = std::decay_t<decltype(tok)>;
+
+        if constexpr (std::is_same_v<T, token_symbol>) {
+            switch (tok.sym_type) {
+                case token_symbol::sym_minus:
+                case token_symbol::sym_plus:
+                case token_symbol::sym_star:
+                case token_symbol::sym_slash:
+                case token_symbol::sym_percent:
+                case token_symbol::sym_kw_as:
+                    return true;
+                default:
+                    return false;
+            }
+        } else {
+            return false;
+        }
+    }, tok.value);
 }
 
 bool lexer::expect_symbol(token_symbol::symbol_type symbol)
@@ -263,9 +299,30 @@ token lexer::parse_token()
         get_char(); get_char();
         return make_located<token_symbol>(start_position, current_position, token_symbol::sym_arrow);
     }
-    else if (is_operator(ch))
+    else if (ch=='/')
     {
-        return parse_operator();
+        get_char();
+        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_slash);
+    }
+    else if (ch=='*')
+    {
+        get_char();
+        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_star);
+    }
+    else if (ch=='%')
+    {
+        get_char();
+        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_percent);
+    }
+    else if (ch=='-')
+    {
+        get_char();
+        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_minus);
+    }
+    else if (ch=='+')
+    {
+        get_char();
+        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_plus);
     }
     else if ((ch == ':') && (peek_ahead() == ':'))
     {
@@ -366,31 +423,10 @@ token lexer::parse_identifier_or_keyword()
     }
     else if (id_name == "as")
     {
-        return make_located<token_operator>(start_position, current_position, token_operator::op_conversion);
+        return make_located<token_symbol>(start_position, current_position, token_symbol::sym_kw_as);
     }
     else
     {
         return make_located<token_identifier>(start_position, current_position, id_name);
-    }
-}
-
-token lexer::parse_operator()
-{
-    char ch = get_char();
-    switch (ch)
-    {
-    case '/':
-        return make_located<token_operator>(current_position, current_position, token_operator::op_division);
-    case '*':
-        return make_located<token_operator>(current_position, current_position, token_operator::op_multiply);
-    case '%':
-        return make_located<token_operator>(current_position, current_position, token_operator::op_modulus);
-    case '-':
-        return make_located<token_operator>(current_position, current_position, token_operator::op_minus);
-    case '+':
-        return make_located<token_operator>(current_position, current_position, token_operator::op_plus);
-    default:
-        // This shouldn't really happen
-        return make_located<token_illegal>(current_position, current_position, "Unknown operator");
     }
 }

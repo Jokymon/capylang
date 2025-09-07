@@ -283,7 +283,7 @@ ast_node parser::parse_import_definition()
 
     std::optional<std::string> alias_name;
 
-    if (capy_lexer.ahead_is<token_operator>() && (capy_lexer.next_as<token_operator>().op_type == token_operator::op_conversion))
+    if (capy_lexer.ahead_is<token_symbol>() && (capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_kw_as))
     {
         capy_lexer.next_token();
 
@@ -356,7 +356,7 @@ ast_node parser::parse_function_definition()
                 t_t::void_type{}
             )),
             previous_expression->location,
-            token_operator::op_conversion,
+            op_conversion,
             t_t::void_type{}
         );
         function_body.emplace_back(std::make_unique<ast_node>(std::move(drop_wrapper)));
@@ -433,7 +433,7 @@ ast_node parser::parse_expression(int min_precedence)
         {
             auto [end, _] = capy_lexer.expect<token_symbol>();
 
-            if (capy_lexer.ahead_is<token_operator>() && (capy_lexer.next_as<token_operator>().op_type == token_operator::op_conversion))
+            if (capy_lexer.ahead_is<token_symbol>() && (capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_kw_as))
             {
                 // next token is a conversion operator, skip it
                 auto op_token = capy_lexer.next_token();
@@ -450,7 +450,7 @@ ast_node parser::parse_expression(int min_precedence)
                     std::make_unique<ast_node>(std::move(expression)),
                     std::make_unique<ast_node>(std::move(type_spec)),
                     op_token.location,
-                    token_operator::op_conversion,
+                    op_conversion,
                     t_t::unassigned{});
             }
             else
@@ -475,16 +475,16 @@ ast_node parser::parse_expression(int min_precedence)
         }
         source_range start = lhs.location;
 
-        while (capy_lexer.ahead_is<token_operator>())
+        while (capy_lexer.ahead_is_operator())
         {
-            auto op = capy_lexer.next_as<token_operator>();
-            int prec = op.get_precedence();
+            auto op = op_from_symbol(capy_lexer.next_as<token_symbol>());
+            int prec = get_precedence(op);
             if (prec < min_precedence)
                 break;
             auto op_token = capy_lexer.next_token();
 
             ast_node rhs;
-            if (op.op_type == token_operator::op_conversion)
+            if (op == op_conversion)
             {
                 rhs = parse_type_reference();
             }
@@ -505,7 +505,7 @@ ast_node parser::parse_expression(int min_precedence)
                 std::make_unique<ast_node>(std::move(lhs)),
                 std::make_unique<ast_node>(std::move(rhs)),
                 op_token.location,
-                op.op_type,
+                op,
                 t_t::unassigned{});
         }
 

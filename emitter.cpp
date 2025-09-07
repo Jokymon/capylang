@@ -138,22 +138,22 @@ void emitter::emit(const node_expression &root)
     emit(*root.right);
     switch (root.operation)
     {
-    case token_operator::op_minus:
+    case op_minus:
         output_ << "      i32.sub\n";
         break;
-    case token_operator::op_plus:
+    case op_plus:
         output_ << "      i32.add\n";
         break;
-    case token_operator::op_multiply:
+    case op_multiply:
         output_ << "      i32.mul\n";
         break;
-    case token_operator::op_division:
+    case op_division:
         output_ << "      i32.div_u\n";
         break;
-    case token_operator::op_modulus:
+    case op_modulus:
         output_ << "      i32.rem_u\n";
         break;
-    case token_operator::op_conversion:
+    case op_conversion:
         if ((t_t::is_of<t_t::void_type>(assigned_node_type(*root.right))) &&
             (!t_t::is_of<t_t::void_type>(assigned_node_type(*root.left))))
         {
