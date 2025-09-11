@@ -1,4 +1,5 @@
 #include "parser.hpp"
+#include <iostream>
 #include <memory>
 #include <string>
 
@@ -17,7 +18,28 @@ bool is_error(const ast_node &node)
     return std::holds_alternative<node_parse_error>(node.value);
 }
 
-std::string repr_type(type_kind type_spec)
+t_t::pointer::pointer(const type_kind& base_type)
+: base_type(make_unique<type_kind>(base_type))
+{
+}
+
+t_t::pointer::pointer(const t_t::pointer& other)
+: base_type(make_unique<type_kind>(*other.base_type))
+{
+}
+
+t_t::pointer& t_t::pointer::operator=(const t_t::pointer& other)
+{
+    base_type = make_unique<type_kind>(*other.base_type);
+    return *this;
+}
+
+bool t_t::pointer::operator==(const pointer& other) const
+{
+    return *base_type == *other.base_type;
+}
+
+std::string repr_type(const type_kind& type_spec)
 {
     return std::visit([&](const auto &t) -> std::string {
         using T = std::decay_t<decltype(t)>;
@@ -30,6 +52,16 @@ std::string repr_type(type_kind type_spec)
             return "s32";
         else if constexpr (std::is_same_v<T, t_t::u32>)
             return "u32";
+        else if constexpr (std::is_same_v<T, t_t::pointer>) {
+            if (!t.base_type) {
+                std::cout << "   Uh oh, null base_type in pointer\n";
+                return "*null*";
+            }
+            return repr_type(*t.base_type) + "*";
+        }
+        else {
+            return "UNEXPECTED BRANCH";
+        }
     }, type_spec);
 }
 
@@ -630,6 +662,24 @@ ast_node parser::parse_primary()
                 var.value());
         }
     }
+    else if (capy_lexer.ahead_is<token_symbol>() &&
+             capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_star)
+    {
+        auto op_token = capy_lexer.next_token();
+
+        auto pointer_expr = parse_primary();
+        if (is_error(pointer_expr))
+        {
+            return pointer_expr;
+        }
+
+        return make_located<node_pointer_deref>(
+            op_token.location.start,
+            pointer_expr.location.end,
+            std::make_unique<ast_node>(std::move(pointer_expr)),
+            t_t::unassigned{}
+        );
+    }
     else if (capy_lexer.ahead_is<token_integer>())
     {
         return parse_number();
@@ -642,6 +692,13 @@ ast_node parser::parse_primary()
 
 ast_node parser::parse_type_reference()
 {
+    bool is_pointer = false;
+    if (capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_star)
+    {
+        is_pointer = true;
+        capy_lexer.next_token();
+    }
+
     if (!capy_lexer.ahead_is<token_identifier>())
     {
         return create_error("Expecting an identifier for the type specification");
@@ -652,6 +709,11 @@ ast_node parser::parse_type_reference()
     if (!type_spec.has_value())
     {
         return create_error("Unknown type specification: " + type_name.name);
+    }
+
+    if (is_pointer)
+    {
+        type_spec = t_t::pointer{type_spec.value()};
     }
 
     return make_located<node_type_spec>(

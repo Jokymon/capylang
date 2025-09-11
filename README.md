@@ -26,8 +26,12 @@ exit codes. This is supported by `uv` and the `pytest` library.
  * Improve maintainability of emitter-visitor; shouldn't be necessary
    to add every new type to the std::visit call if possible
  * implement a simple heap management concept (check the WAMR/Emscripten memory organisation)
-
-
+ * Add variable parameter count for function calls
+ * Add structured types (struct, list, enum/unions)
+ * Add pointers
+ * Add some form of memory management
+ * Add intrinsics
+ * Make sure pointer types are correctly dereferenced; special checks for u8, u16, since we dereference u32 normally
 
  ### Inspiration for language design:
 

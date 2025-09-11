@@ -7,7 +7,17 @@
 #include <vector>
 #include "lexer.hpp"
 
-struct t_t
+namespace t_t
+{
+    struct unassigned;
+    struct void_type;
+    struct s32;
+    struct u32;
+    struct pointer;
+};
+using type_kind = std::variant<t_t::unassigned, t_t::void_type, t_t::s32, t_t::u32, t_t::pointer>;
+
+namespace t_t
 {
     struct unassigned{
         bool operator==(const unassigned& other) const { return true; }
@@ -23,15 +33,23 @@ struct t_t
         bool operator==(const u32& other) const { return true; }
     };
 
+    struct pointer{
+        pointer(const type_kind& base_type);
+        pointer(const pointer& other);
+        pointer& operator=(const pointer& other);
+
+        bool operator==(const pointer& other) const;
+
+        std::unique_ptr<type_kind> base_type;
+    };
+
     template<typename T, typename V>
     static bool is_of(V&& value) {
         return std::holds_alternative<T>(value);
     }
 };
 
-using type_kind = std::variant<t_t::unassigned, t_t::void_type, t_t::s32, t_t::u32>;
-
-std::string repr_type(type_kind type_spec);
+std::string repr_type(const type_kind& type_spec);
 
 struct param_spec
 {
@@ -77,6 +95,7 @@ struct scope {
 
 struct node_number;
 struct node_var_reference;
+struct node_pointer_deref;
 struct node_let_expression;
 struct node_type_spec;
 struct node_function_head;
@@ -87,7 +106,7 @@ struct node_expression;
 struct node_module;
 struct node_parse_error;
 
-using ast_node_raw = std::variant<node_number, node_var_reference, node_let_expression, node_type_spec, node_function_head, node_import_definition, node_function_call, node_function_definition, node_expression, node_module, node_parse_error>;
+using ast_node_raw = std::variant<node_number, node_var_reference, node_pointer_deref, node_let_expression, node_type_spec, node_function_head, node_import_definition, node_function_call, node_function_definition, node_expression, node_module, node_parse_error>;
 using ast_node = located<ast_node_raw>;
 
 struct node_number
@@ -100,6 +119,12 @@ struct node_var_reference
 {
     std::string name;
     symbol symbol_ref;
+};
+
+struct node_pointer_deref
+{
+    std::unique_ptr<ast_node> pointer_expression;
+    type_kind assigned_type;
 };
 
 struct node_let_expression

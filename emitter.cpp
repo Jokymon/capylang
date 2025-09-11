@@ -6,7 +6,7 @@ std::string create_wasm_name(const std::string capy_name)
     return "$" + capy_name;
 }
 
-std::string type_mapping(type_kind type_spec)
+std::string type_mapping(const type_kind& type_spec)
 {
     return std::visit([&](const auto &t) -> std::string {
         using T = std::decay_t<decltype(t)>;
@@ -40,6 +40,8 @@ void emitter::emit(const ast_node &node)
             this->emit(n);
         } else if constexpr (std::is_same_v<T, node_var_reference>) {
             this->emit(n);
+        } else if constexpr (std::is_same_v<T, node_pointer_deref>) {
+            this->emit(n);
         } else if constexpr (std::is_same_v<T, node_function_call>) {
             this->emit(n);
         } else if constexpr (std::is_same_v<T, node_import_definition>) {
@@ -67,7 +69,7 @@ void emitter::emit(const node_module &module_def)
     }
 
     output_ << "  (memory (;0;) 2)\n";
-    output_ << "  (data (i32.const 100) \"\\42\\10Test\")\n";
+    output_ << "  (data (i32.const 100) \"\\42\\00\\00\\00\\10\\00\\00\\00Test\")\n";
     output_ << "  (export \"memory\" (memory 0))\n";
     output_ << "  (export \"_start\" (func $_start))\n";
 
@@ -171,6 +173,12 @@ void emitter::emit(const node_number &number)
 void emitter::emit(const node_var_reference &variable)
 {
     output_ << "      local.get " << variable.symbol_ref.index_addr << "\n";
+}
+
+void emitter::emit(const node_pointer_deref& ptr_deref)
+{
+    emit(*ptr_deref.pointer_expression);
+    output_ << "      i32.load\n";
 }
 
 void emitter::emit_function_signature(const std::string &function_name, const function_signature &signature)

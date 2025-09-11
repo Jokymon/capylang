@@ -11,6 +11,8 @@ type_kind assigned_node_type(const ast_node &node)
             return n.assigned_type;
         } else if constexpr (std::is_same_v<T, node_var_reference>) {
             return n.symbol_ref.symbol_type;
+        } else if constexpr (std::is_same_v<T, node_pointer_deref>) {
+            return n.assigned_type;
         } else if constexpr (std::is_same_v<T, node_function_definition>) {
             return assigned_node_type(*n.function_head);
         } else if constexpr (std::is_same_v<T, node_function_head>) {
@@ -35,6 +37,25 @@ std::optional<node_parse_error> semantic_analyser::process(node_number &n)
 
 std::optional<node_parse_error> semantic_analyser::process(node_var_reference &n)
 {
+    return std::nullopt;
+}
+
+std::optional<node_parse_error> semantic_analyser::process(node_pointer_deref &n)
+{
+    auto res = semantic_analysis(*n.pointer_expression);
+    if (res.has_value())
+    {
+        return res;
+    }
+
+    type_kind expression_type = assigned_node_type(*n.pointer_expression);
+    if (!std::holds_alternative<t_t::pointer>(expression_type))
+    {
+        return node_parse_error{
+            .error_location = source_position{0, 0},
+            .error_message = "Can't dereference non-pointer type "+repr_type(expression_type)};
+    }
+    n.assigned_type = *std::get<t_t::pointer>(expression_type).base_type;
     return std::nullopt;
 }
 
@@ -168,6 +189,8 @@ std::optional<node_parse_error> semantic_analyser::semantic_analysis(ast_node &r
         if constexpr (std::is_same_v<T, node_number>) {
             return process(n);
         } else if constexpr (std::is_same_v<T, node_var_reference>) {
+            return process(n);
+        } else if constexpr (std::is_same_v<T, node_pointer_deref>) {
             return process(n);
         } else if constexpr (std::is_same_v<T, node_type_spec>) {
             return process(n);
