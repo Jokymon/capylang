@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
 {
     auto args = parse_args(argc, argv);
 
-    if (args.output_path == "")
+    if ((args.output_path == "") && !args.dump_ast)
     {
         std::cerr << "Argument required: -o\n";
         return 1;
@@ -30,6 +30,11 @@ int main(int argc, char *argv[])
         auto error = std::get<node_parse_error>(root_node.value);
         std::cerr << args.input_path << ":" << error.error_location.line << ":" << error.error_location.column << ": " << error.error_message << "\n";
         return 1;
+    }
+
+    if (args.dump_ast) {
+        dump_ast(root_node);
+        return 0;
     }
 
     semantic_analyser analyser;

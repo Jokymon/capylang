@@ -68,9 +68,18 @@ void parse_option(const char *option, ArgvIterator &start, const ArgvIterator &e
     }
 }
 
+void parse_flag(const char *option, ArgvIterator &start, const ArgvIterator &end, bool &output_flag)
+{
+    if ((*start) == std::string(option))
+    {
+        output_flag = true;
+    }
+}
+
 Args parse_args(int argc, char *argv[])
 {
     Args arguments;
+    arguments.dump_ast = false;
 
     ArgvRange args{argc, argv};
     auto args_start = args.begin();
@@ -80,6 +89,7 @@ Args parse_args(int argc, char *argv[])
     {
         parse_option("-o", args_start, args_end, arguments.output_path);
         parse_option("-i", args_start, args_end, arguments.input_path);
+        parse_flag("--dump-ast", args_start, args_end, arguments.dump_ast);
     }
     return arguments;
 }

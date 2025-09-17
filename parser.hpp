@@ -109,6 +109,8 @@ struct node_parse_error;
 using ast_node_raw = std::variant<node_number, node_var_reference, node_pointer_deref, node_let_expression, node_type_spec, node_function_head, node_import_definition, node_function_call, node_function_definition, node_expression, node_module, node_parse_error>;
 using ast_node = located<ast_node_raw>;
 
+void dump_ast(const ast_node& root, size_t indent=0);
+
 struct node_number
 {
     long long number;
