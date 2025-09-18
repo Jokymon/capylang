@@ -60,13 +60,15 @@ int get_precedence(operator_type op_type)
 {
     switch (op_type) {
         case op_conversion:
-            return 3;
+            return 4;
         case op_multiply:
         case op_division:
         case op_modulus:
-            return 2;
+            return 3;
         case op_minus:
         case op_plus:
+            return 2;
+        case op_assignment:
             return 1;
         default:
             return 0;
@@ -86,6 +88,8 @@ operator_type op_from_symbol(const token_symbol& symbol)
             return op_division;
         case token_symbol::sym_percent:
             return op_modulus;
+        case token_symbol::sym_equal:
+            return op_assignment;
         case token_symbol::sym_kw_as:
             return op_conversion;
         default:
@@ -138,6 +142,8 @@ std::string repr_op(operator_type op)
         return "-";
     case op_plus:
         return "+";
+    case op_assignment:
+        return "=";
     case op_conversion:
         return "as";
     }
@@ -195,6 +201,7 @@ bool lexer::ahead_is_operator()
                 case token_symbol::sym_star:
                 case token_symbol::sym_slash:
                 case token_symbol::sym_percent:
+                case token_symbol::sym_equal:
                 case token_symbol::sym_kw_as:
                     return true;
                 default:

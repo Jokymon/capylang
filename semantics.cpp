@@ -30,6 +30,11 @@ type_kind assigned_node_type(const ast_node &node)
         } }, node.value);
 }
 
+semantic_analyser::semantic_analyser()
+    : current_context{assign_context::rhs}
+{
+}
+
 std::optional<node_parse_error> semantic_analyser::process(node_number &n)
 {
     return std::nullopt;
@@ -37,11 +42,14 @@ std::optional<node_parse_error> semantic_analyser::process(node_number &n)
 
 std::optional<node_parse_error> semantic_analyser::process(node_var_reference &n)
 {
+    n.context = current_context;
     return std::nullopt;
 }
 
 std::optional<node_parse_error> semantic_analyser::process(node_pointer_deref &n)
 {
+    n.context = current_context;
+
     auto res = semantic_analysis(*n.pointer_expression);
     if (res.has_value())
     {
@@ -53,7 +61,7 @@ std::optional<node_parse_error> semantic_analyser::process(node_pointer_deref &n
     {
         return node_parse_error{
             .error_location = source_position{0, 0},
-            .error_message = "Can't dereference non-pointer type "+repr_type(expression_type)};
+            .error_message = "Can't dereference non-pointer type " + repr_type(expression_type)};
     }
     n.assigned_type = *std::get<t_t::pointer>(expression_type).base_type;
     return std::nullopt;
@@ -82,7 +90,7 @@ std::optional<node_parse_error> semantic_analyser::process(source_range location
     {
         return node_parse_error{
             .error_location = location.start,
-            .error_message = "Function '"+n.symbol_ref.name+"' expects signature "
+            .error_message = "Function '" + n.symbol_ref.name + "' expects signature "
                 + n.symbol_ref.signature.repr() + "; called with signature "
                 + actual_signature.repr()};
     }
@@ -116,14 +124,21 @@ std::optional<node_parse_error> semantic_analyser::process(node_function_definit
     {
         return node_parse_error{
             .error_location = error_location.start,
-            .error_message = "Returned value of type "+repr_type(actual_return_type)+
-                " doesn't match the declared return type "+repr_type(declared_return_type)};
+            .error_message = "Returned value of type " + repr_type(actual_return_type) +
+                             " doesn't match the declared return type " + repr_type(declared_return_type)};
     }
     return std::nullopt;
 }
 
 std::optional<node_parse_error> semantic_analyser::process(source_range location, node_expression &n)
 {
+    if (n.operation == op_assignment) {
+        current_context = assign_context::lhs;
+    }
+    else {
+        current_context = assign_context::rhs;
+    }
+
     auto lhs_error = semantic_analysis(*n.left);
     if (lhs_error.has_value())
     {
@@ -131,6 +146,7 @@ std::optional<node_parse_error> semantic_analyser::process(source_range location
     }
     auto lhs_type = assigned_node_type(*n.left);
 
+    current_context = assign_context::rhs;
     auto rhs_error = semantic_analysis(*n.right);
     if (rhs_error.has_value())
     {
@@ -138,7 +154,23 @@ std::optional<node_parse_error> semantic_analyser::process(source_range location
     }
     auto rhs_type = assigned_node_type(*n.right);
 
-    if ((lhs_type == rhs_type) && (!t_t::is_of<t_t::unassigned>(lhs_type)))
+    // propagate the type upwards based on the operands
+    if (n.operation == op_assignment)
+    {
+        if (std::holds_alternative<node_pointer_deref>(n.left->value) ||
+            std::holds_alternative<node_var_reference>(n.left->value))
+        {
+            n.assigned_type = t_t::void_type{};
+            return std::nullopt;
+        }
+        else
+        {
+            return node_parse_error{
+                .error_location = location.start,
+                .error_message = "Trying to assign to non-lvalue expression"};
+        }
+    }
+    else if ((lhs_type == rhs_type) && (!t_t::is_of<t_t::unassigned>(lhs_type)))
     {
         n.assigned_type = lhs_type;
         return std::nullopt;

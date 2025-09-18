@@ -73,6 +73,7 @@ enum operator_type
     op_modulus,
     op_plus,
     op_minus,
+    op_assignment,
 
     op_conversion,
 };

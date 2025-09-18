@@ -601,7 +601,8 @@ ast_node parser::parse_expression(int min_precedence)
                     std::make_unique<ast_node>(std::move(type_spec)),
                     op_token.location,
                     op_conversion,
-                    t_t::unassigned{});
+                    t_t::unassigned{}
+                );
             }
             else
             {
@@ -656,7 +657,8 @@ ast_node parser::parse_expression(int min_precedence)
                 std::make_unique<ast_node>(std::move(rhs)),
                 op_token.location,
                 op,
-                t_t::unassigned{});
+                t_t::unassigned{}
+            );
         }
 
         return lhs;
@@ -777,7 +779,8 @@ ast_node parser::parse_primary()
                 id_range.start,
                 id_range.end,
                 id.name,
-                var.value());
+                var.value(),
+                assign_context::rhs);
         }
     }
     else if (capy_lexer.ahead_is<token_symbol>() &&
@@ -795,7 +798,8 @@ ast_node parser::parse_primary()
             op_token.location.start,
             pointer_expr.location.end,
             std::make_unique<ast_node>(std::move(pointer_expr)),
-            t_t::unassigned{}
+            t_t::unassigned{},
+            assign_context::rhs
         );
     }
     else if (capy_lexer.ahead_is<token_integer>())

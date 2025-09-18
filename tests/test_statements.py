@@ -27,3 +27,31 @@ fn _start() {
     exit_code, _ = tools.run_test_code(code)
 
     assert exit_code == 0x10
+
+
+def test_pointer_deref_on_lhs():
+    code = """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn _start() {
+    let a: *u32 = 100u32;
+    *a = 45u32;
+    proc_exit(*a)
+}"""
+    exit_code, _ = tools.run_test_code(code)
+
+    assert exit_code == 45
+
+
+def test_non_pointer_deref_on_lhs():
+    code = """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn _start() {
+    let a: u32 = 100u32;
+    a = 45u32;
+    proc_exit(a)
+}"""
+    exit_code, _ = tools.run_test_code(code)
+
+    assert exit_code == 45

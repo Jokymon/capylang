@@ -155,6 +155,17 @@ void emitter::emit(const node_expression &root)
     case op_modulus:
         output_ << "      i32.rem_u\n";
         break;
+    case op_assignment:
+        if (std::holds_alternative<node_pointer_deref>(root.left->value))
+        {
+            output_ << "      i32.store\n";
+            break;
+        }
+        else
+        {
+            output_ << "      local.set " << std::get<node_var_reference>(root.left->value).symbol_ref.index_addr << "\n";
+            break;
+        }
     case op_conversion:
         if ((t_t::is_of<t_t::void_type>(assigned_node_type(*root.right))) &&
             (!t_t::is_of<t_t::void_type>(assigned_node_type(*root.left))))
@@ -172,13 +183,25 @@ void emitter::emit(const node_number &number)
 
 void emitter::emit(const node_var_reference &variable)
 {
-    output_ << "      local.get " << variable.symbol_ref.index_addr << "\n";
+    // When the variable is used in an LHS context, then we need to
+    // handle the storing of the value differently
+    if (variable.context == assign_context::rhs) {
+        output_ << "      local.get " << variable.symbol_ref.index_addr << "\n";
+    }
 }
 
 void emitter::emit(const node_pointer_deref& ptr_deref)
 {
     emit(*ptr_deref.pointer_expression);
-    output_ << "      i32.load\n";
+    if (ptr_deref.context == assign_context::rhs) {
+        output_ << "      i32.load\n";
+    }
+    else {
+        // in LHS context we have to get address, which in our
+        // case means to get the index of the variable
+        auto var_index = std::get<node_var_reference>(ptr_deref.pointer_expression->value).symbol_ref.index_addr;
+        output_ << "      local.get " << var_index << "\n";
+    }
 }
 
 void emitter::emit_function_signature(const std::string &function_name, const function_signature &signature)

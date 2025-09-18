@@ -111,6 +111,11 @@ using ast_node = located<ast_node_raw>;
 
 void dump_ast(const ast_node& root, size_t indent=0);
 
+enum class assign_context {
+    lhs,
+    rhs
+};
+
 struct node_number
 {
     long long number;
@@ -121,12 +126,14 @@ struct node_var_reference
 {
     std::string name;
     symbol symbol_ref;
+    assign_context context;
 };
 
 struct node_pointer_deref
 {
     std::unique_ptr<ast_node> pointer_expression;
     type_kind assigned_type;
+    assign_context context;
 };
 
 struct node_let_expression
