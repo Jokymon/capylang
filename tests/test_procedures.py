@@ -29,6 +29,23 @@ fn _start() {
     assert exit_code == 5
 
 
+def test_function_returning_pointer_type_works():
+    code = """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn bla() -> *u32 {
+    100u32 as *u32
+}
+
+fn _start() {
+    let a: *u32 = bla();
+    proc_exit(*a)
+}"""
+    exit_code, _ = tools.run_test_code(code)
+
+    assert exit_code == 0x42
+
+
 def test_multiple_function_definitions():
     code = """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;

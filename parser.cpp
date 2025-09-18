@@ -352,17 +352,12 @@ std::optional<ast_node> parser::parse_function_signature(function_signature &sig
     {
         capy_lexer.next_token();
 
-        if (!capy_lexer.ahead_is<token_identifier>())
+        auto type_spec_node = parse_type_reference();
+        if (is_error(type_spec_node))
         {
-            return create_error("Expecting a return type identifier after ->");
+            return type_spec_node;
         }
-        auto [end_range, return_type_id] = capy_lexer.expect<token_identifier>();
-
-        return_type = type_from_id(return_type_id.name);
-        if (!return_type.has_value())
-        {
-            return create_error("Return type " + return_type_id.name + " is unknown");
-        }
+        return_type = std::get<node_type_spec>(type_spec_node.value).type_spec;
     }
 
     signature.return_type = return_type.value();

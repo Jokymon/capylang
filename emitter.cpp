@@ -15,6 +15,8 @@ std::string type_mapping(const type_kind& type_spec)
             return "i32";
         } else if constexpr (std::is_same_v<T, t_t::u32>) {
             return "i32";
+        } else if constexpr (std::is_same_v<T, t_t::pointer>) {
+            return "i32";
         } else {
             return "";
         }
