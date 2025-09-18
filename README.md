@@ -18,20 +18,16 @@ exit codes. This is supported by `uv` and the `pytest` library.
    --> Wasm tools
    --> Wasmtime or other WASM runtimes
 
- * operator precedence
- * add other operator types
- * add other basic number types (f32, f64, s64, s16, s8, bool, ...)
- * add dereference operation and pointer types
+ * add other basic number types (f32, f64, s64, s16, s8, ...)
  * add structured component model types (variant, list, record, result, ...)
  * Improve maintainability of emitter-visitor; shouldn't be necessary
    to add every new type to the std::visit call if possible
  * implement a simple heap management concept (check the WAMR/Emscripten memory organisation)
- * Add variable parameter count for function calls
  * Add structured types (struct, list, enum/unions)
- * Add pointers
  * Add some form of memory management
  * Add intrinsics
  * Make sure pointer types are correctly dereferenced; special checks for u8, u16, since we dereference u32 normally
+ * Comparison operators and bool type
 
  ### Inspiration for language design:
 
