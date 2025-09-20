@@ -13,6 +13,8 @@ std::string type_mapping(const type_kind& type_spec)
 
         if constexpr (std::is_same_v<T, t_t::s32>) {
             return "i32";
+        } else if constexpr (std::is_same_v<T, t_t::u8>) {
+            return "i32";
         } else if constexpr (std::is_same_v<T, t_t::u32>) {
             return "i32";
         } else if constexpr (std::is_same_v<T, t_t::pointer>) {
@@ -71,7 +73,7 @@ void emitter::emit(const node_module &module_def)
     }
 
     output_ << "  (memory (;0;) 2)\n";
-    output_ << "  (data (i32.const 100) \"\\42\\00\\00\\00\\10\\00\\00\\00Test\")\n";
+    output_ << "  (data (i32.const 100) \"\\42\\00\\00\\00\\10\\00\\00\\00\\10\\20\\30\\40Test\")\n";
     output_ << "  (export \"memory\" (memory 0))\n";
     output_ << "  (export \"_start\" (func $_start))\n";
 
@@ -160,8 +162,15 @@ void emitter::emit(const node_expression &root)
     case op_assignment:
         if (std::holds_alternative<node_pointer_deref>(root.left->value))
         {
-            output_ << "      i32.store\n";
-            break;
+            if (t_t::is_of<t_t::u8>(assigned_node_type(*root.left))) {
+                output_ << "      i32.store8\n";
+                break;
+            }
+            else
+            {
+                output_ << "      i32.store\n";
+                break;
+            }
         }
         else
         {
@@ -196,7 +205,12 @@ void emitter::emit(const node_pointer_deref& ptr_deref)
 {
     emit(*ptr_deref.pointer_expression);
     if (ptr_deref.context == assign_context::rhs) {
-        output_ << "      i32.load\n";
+        if (t_t::is_of<t_t::u8>(ptr_deref.assigned_type)) {
+            output_ << "      i32.load8_u\n";
+        }
+        else {
+            output_ << "      i32.load\n";
+        }
     }
     else {
         // in LHS context we have to get address, which in our

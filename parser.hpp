@@ -11,11 +11,12 @@ namespace t_t
 {
     struct unassigned;
     struct void_type;
+    struct u8;
     struct s32;
     struct u32;
     struct pointer;
 };
-using type_kind = std::variant<t_t::unassigned, t_t::void_type, t_t::s32, t_t::u32, t_t::pointer>;
+using type_kind = std::variant<t_t::unassigned, t_t::void_type, t_t::s32, t_t::u8, t_t::u32, t_t::pointer>;
 
 namespace t_t
 {
@@ -28,6 +29,9 @@ namespace t_t
     };
     struct s32{
         bool operator==(const s32& other) const { return true; }
+    };
+    struct u8{
+        bool operator==(const u8& other) const { return true; }
     };
     struct u32{
         bool operator==(const u32& other) const { return true; }

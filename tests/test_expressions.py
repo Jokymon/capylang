@@ -95,3 +95,26 @@ def test_correct_priority_of_plus_and_multiply():
     exit_code, _ = tools.run_test_code(code)
 
     assert exit_code == 15
+
+
+def test_u8_deref_on_rhs():
+    code = """let addr: *u8 = 108u32;
+proc_exit(*addr as u32)"""
+    code = tools.expression_to_full_program(code)
+    exit_code, _ = tools.run_test_code(code)
+
+    assert exit_code == 0x10
+
+
+def test_u8_deref_on_lhs():
+    code = """let addr1: *u8 = 108u32;
+    let addr2: *u8 = 109u32;
+    *addr2 = 40;
+    // the following assignment shouldn't change addr2 because
+    // it is only changing a u8
+    *addr1 = 11;
+proc_exit(*addr2 as u32)"""
+    code = tools.expression_to_full_program(code)
+    exit_code, _ = tools.run_test_code(code)
+
+    assert exit_code == 40
