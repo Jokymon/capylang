@@ -109,6 +109,7 @@ public:
         const token &tok = peek_token();
         return std::holds_alternative<T>(tok.value);
     }
+    bool ahead_is_sym(token_symbol::symbol_type symbol);
     bool ahead_is_operator();
 
     template <typename T>

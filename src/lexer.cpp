@@ -188,6 +188,11 @@ source_position lexer::current_source_position() const
     return current_position;
 }
 
+bool lexer::ahead_is_sym(token_symbol::symbol_type symbol)
+{
+    return ahead_is<token_symbol>() && (next_as<token_symbol>().sym_type == symbol);
+}
+
 bool lexer::ahead_is_operator()
 {
     const auto &tok = peek_token();

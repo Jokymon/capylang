@@ -306,7 +306,7 @@ ast_node parser::parse_module()
     std::get<node_module>(capy_module.value).module_scope = std::make_unique<scope>();
     current_scope = std::get<node_module>(capy_module.value).module_scope.get();
 
-    while (capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_kw_import)
+    while (capy_lexer.ahead_is_sym(token_symbol::sym_kw_import))
     {
         auto import_def = parse_import_definition();
         if (is_error(import_def))
@@ -317,7 +317,7 @@ ast_node parser::parse_module()
         std::get<node_module>(capy_module.value).imports.push_back(std::make_unique<ast_node>(std::move(import_def)));
     }
 
-    while (capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_kw_fn)
+    while (capy_lexer.ahead_is_sym(token_symbol::sym_kw_fn))
     {
         auto function = parse_function_definition();
         if (is_error(function))
@@ -352,7 +352,7 @@ std::optional<ast_node> parser::parse_function_signature(function_signature &sig
 
     std::optional<type_kind> return_type = t_t::void_type{};
 
-    if (capy_lexer.ahead_is<token_symbol>() && (capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_arrow))
+    if (capy_lexer.ahead_is_sym(token_symbol::sym_arrow))
     {
         capy_lexer.next_token();
 
@@ -398,7 +398,7 @@ std::optional<ast_node> parser::parse_parameters(std::vector<param_spec> &parame
         parameters.emplace_back(param_name.name, type_spec);
 
         // eat the comma between the parameters
-        if (capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_comma)
+        if (capy_lexer.ahead_is_sym(token_symbol::sym_comma))
         {
             capy_lexer.expect<token_symbol>();
         }
@@ -432,7 +432,7 @@ ast_node parser::parse_import_definition()
 
     std::optional<std::string> alias_name;
 
-    if (capy_lexer.ahead_is<token_symbol>() && (capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_kw_as))
+    if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_as))
     {
         capy_lexer.next_token();
 
@@ -443,7 +443,7 @@ ast_node parser::parse_import_definition()
         auto [_, alias_name] = capy_lexer.expect<token_identifier>();
     }
 
-    if (!capy_lexer.ahead_is<token_symbol>() || capy_lexer.next_as<token_symbol>().sym_type != token_symbol::sym_semicolon)
+    if (!capy_lexer.ahead_is_sym(token_symbol::sym_semicolon))
     {
         return create_error("Expecting a closing ';' after import definition");
     }
@@ -484,7 +484,7 @@ ast_node parser::parse_function_definition()
     }
     function_body.emplace_back(std::make_unique<ast_node>(std::move(expression)));
 
-    while (capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_semicolon)
+    while (capy_lexer.ahead_is_sym(token_symbol::sym_semicolon))
     {
         capy_lexer.expect_symbol(token_symbol::sym_semicolon);
 
@@ -518,7 +518,7 @@ ast_node parser::parse_function_definition()
         function_body.emplace_back(std::make_unique<ast_node>(std::move(expression)));
     }
 
-    if (!capy_lexer.ahead_is<token_symbol>() || capy_lexer.next_as<token_symbol>().sym_type != token_symbol::sym_curly_close)
+    if (!capy_lexer.ahead_is_sym(token_symbol::sym_curly_close))
     {
         return create_error("Expecting a closing brace '}' after function body definition");
     }
@@ -562,8 +562,7 @@ ast_node parser::parse_function_head()
 
 ast_node parser::parse_expression(int min_precedence)
 {
-    if (capy_lexer.ahead_is<token_symbol>() &&
-        (capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_brac_open))
+    if (capy_lexer.ahead_is_sym(token_symbol::sym_brac_open))
     {
         // eat up the '(' token
         auto [start, _] = capy_lexer.expect<token_symbol>();
@@ -577,12 +576,11 @@ ast_node parser::parse_expression(int min_precedence)
         }
 
         // check for a closing )
-        if (capy_lexer.ahead_is<token_symbol>() &&
-            (capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_brac_close))
+        if (capy_lexer.ahead_is_sym(token_symbol::sym_brac_close))
         {
             auto [end, _] = capy_lexer.expect<token_symbol>();
 
-            if (capy_lexer.ahead_is<token_symbol>() && (capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_kw_as))
+            if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_as))
             {
                 // next token is a conversion operator, skip it
                 auto op_token = capy_lexer.next_token();
@@ -611,8 +609,7 @@ ast_node parser::parse_expression(int min_precedence)
 
         return create_error("Expected a closing brace ')' at the end of the expression");
     }
-    else if (capy_lexer.ahead_is<token_symbol>() &&
-        (capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_kw_let))
+    else if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_let))
     {
         return parse_let_expression();
     }
@@ -670,7 +667,7 @@ ast_node parser::parse_function_call(const std::string function_name)
     auto [start_location, _] = capy_lexer.expect<token_symbol>();
 
     std::vector<std::unique_ptr<ast_node>> function_parameters;
-    while (!capy_lexer.ahead_is<token_symbol>() || capy_lexer.next_as<token_symbol>().sym_type != token_symbol::sym_brac_close)
+    while (!capy_lexer.ahead_is_sym(token_symbol::sym_brac_close))
     {
         auto parameter = parse_expression();
         if (is_error(parameter))
@@ -679,7 +676,7 @@ ast_node parser::parse_function_call(const std::string function_name)
         }
         function_parameters.emplace_back(std::make_unique<ast_node>(std::move(parameter)));
 
-        if (capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_comma)
+        if (capy_lexer.ahead_is_sym(token_symbol::sym_comma))
         {
             // eat the separating ','
             capy_lexer.expect_symbol(token_symbol::sym_comma);
@@ -761,8 +758,7 @@ ast_node parser::parse_primary()
     {
         auto [id_range, id] = capy_lexer.expect<token_identifier>();
 
-        if (capy_lexer.ahead_is<token_symbol>() &&
-            capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_brac_open)
+        if (capy_lexer.ahead_is_sym(token_symbol::sym_brac_open))
         {
             return parse_function_call(id.name);
         }
@@ -782,8 +778,7 @@ ast_node parser::parse_primary()
                 assign_context::rhs);
         }
     }
-    else if (capy_lexer.ahead_is<token_symbol>() &&
-             capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_star)
+    else if (capy_lexer.ahead_is_sym(token_symbol::sym_star))
     {
         auto op_token = capy_lexer.next_token();
 
@@ -814,7 +809,7 @@ ast_node parser::parse_primary()
 ast_node parser::parse_type_reference()
 {
     bool is_pointer = false;
-    if (capy_lexer.ahead_is<token_symbol>() && capy_lexer.next_as<token_symbol>().sym_type == token_symbol::sym_star)
+    if (capy_lexer.ahead_is_sym(token_symbol::sym_star))
     {
         is_pointer = true;
         capy_lexer.next_token();
