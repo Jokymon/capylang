@@ -25,6 +25,31 @@ std::string type_mapping(const type_kind& type_spec)
     }, type_spec);
 }
 
+size_t type_size(const type_kind& type_spec)
+{
+    return std::visit([&](const auto &t) -> size_t {
+        using T = std::decay_t<decltype(t)>;
+
+        if constexpr (std::is_same_v<T, t_t::s32>) {
+            return 4;
+        } else if constexpr (std::is_same_v<T, t_t::u8>) {
+            return 1;
+        } else if constexpr (std::is_same_v<T, t_t::u32>) {
+            return 4;
+        } else if constexpr (std::is_same_v<T, t_t::pointer>) {
+            return 4;
+        } else if constexpr (std::is_same_v<T, t_t::record>) {
+            size_t size = 0;
+            for (const auto& field : t.fields) {
+                size += type_size(*field.type_spec);
+            }
+            return size;
+        } else {
+            return 0;
+        }
+    }, type_spec);
+}
+
 emitter::emitter(std::ostream &output) : output_(output)
 {
 }
@@ -56,6 +81,8 @@ void emitter::emit(const ast_node &node)
             this->emit(n);
         } else if constexpr (std::is_same_v<T, node_let_expression>) {
             this->emit(n);
+        } else if constexpr (std::is_same_v<T, node_struct_initialisation>) {
+            this->emit(n);
         } else if constexpr (std::is_same_v<T, node_expression>) {
             this->emit(n);
         } else if constexpr (std::is_same_v<T, node_module>) {
@@ -74,6 +101,7 @@ void emitter::emit(const node_module &module_def)
 
     output_ << "  (memory (;0;) 2)\n";
     output_ << "  (data (i32.const 100) \"\\42\\00\\00\\00\\10\\00\\00\\00\\10\\20\\30\\40Test\")\n";
+    output_ << "  (global $heap_ptr (mut i32) (i32.const 1024))\n";
     output_ << "  (export \"memory\" (memory 0))\n";
     output_ << "  (export \"_start\" (func $_start))\n";
 
@@ -136,6 +164,48 @@ void emitter::emit(const node_let_expression& let_expression)
 {
     emit(*let_expression.init_expression);
     output_ << "      local.set " << let_expression.symbol_ref.index_addr << "\n";
+}
+
+void emitter::emit(const node_struct_initialisation& struct_init)
+{
+    size_t struct_size = type_size(struct_init.type_spec);
+    // TODO: semantic check should make sure, that the type_spec really is a struct
+    auto& struct_type = std::get<t_t::record>(struct_init.type_spec);
+
+    size_t offset = 0;
+    // TODO: make the inverse check if any field init tries to init a field that isn't
+    // in the definition
+    for (const auto& field : struct_type.fields)
+    {
+        // We go through the struct definition to keep the order of the fields as given
+        // in the definition; we assume, that field initialisations can be out of the
+        // definition order, so we need to match initialisations with the field definitions
+        for (const auto& field_init : struct_init.initialisations)
+        {
+            if (field_init.field_name == field.name)
+            {
+                // generate code to calculate the initialisation value of this field
+                emit(*field_init.init_expression);
+                break;
+            }
+        }
+        // TODO: Make sure that every field of the type definition is initialised
+
+        // save the value in the struct at the current offset
+        output_ << "      global.get $heap_ptr\n";
+        output_ << "      i32.const " << offset << "\n";
+        output_ << "      i32.add\n";
+        output_ << "      i32.store\n";
+
+        offset += type_size(*field.type_spec);
+    }   
+
+    output_ << "      global.get $heap_ptr\n"; // leave the initial heap pointer on the stack
+    // Using a very simple allocation-only heap management for the moment
+    output_ << "      global.get $heap_ptr\n";
+    output_ << "      i32.const " << struct_size << "\n";
+    output_ << "      i32.add\n";
+    output_ << "      global.set $heap_ptr\n";
 }
 
 void emitter::emit(const node_expression &root)

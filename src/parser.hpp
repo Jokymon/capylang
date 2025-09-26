@@ -15,8 +15,9 @@ namespace t_t
     struct s32;
     struct u32;
     struct pointer;
+    struct record;
 };
-using type_kind = std::variant<t_t::unassigned, t_t::void_type, t_t::s32, t_t::u8, t_t::u32, t_t::pointer>;
+using type_kind = std::variant<t_t::unassigned, t_t::void_type, t_t::s32, t_t::u8, t_t::u32, t_t::pointer, t_t::record>;
 
 namespace t_t
 {
@@ -45,6 +46,25 @@ namespace t_t
         bool operator==(const pointer& other) const;
 
         std::unique_ptr<type_kind> base_type;
+    };
+
+    struct record{
+        struct field_spec {
+            field_spec(const std::string& name, std::unique_ptr<type_kind> type_spec);
+            field_spec(const field_spec& other);
+            field_spec& operator=(const field_spec& other);
+
+            std::string name;
+            std::unique_ptr<type_kind> type_spec;
+        };
+
+        record(const std::vector<field_spec>& fields);
+        record(const record& other);
+        record& operator=(const record& other);
+
+        bool operator==(const record& other) const;
+
+        std::vector<field_spec> fields;
     };
 
     template<typename T, typename V>
@@ -91,9 +111,13 @@ struct func_symbol {
 struct scope {
     scope* parent;
     std::map<std::string, symbol> symbol_table;
+    std::map<std::string, type_kind> type_table;
     std::map<std::string, func_symbol> function_table;
 
+    scope* get_global_scope() const;
+
     std::optional<symbol> lookup(const std::string& name);
+    std::optional<type_kind> lookup_type(const std::string& name);
     std::optional<func_symbol> lookup_function(const std::string& name);
 };
 
@@ -102,6 +126,8 @@ struct node_var_reference;
 struct node_pointer_deref;
 struct node_let_expression;
 struct node_type_spec;
+struct node_struct_definition;
+struct node_struct_initialisation;
 struct node_function_head;
 struct node_import_definition;
 struct node_function_call;
@@ -110,7 +136,7 @@ struct node_expression;
 struct node_module;
 struct node_parse_error;
 
-using ast_node_raw = std::variant<node_number, node_var_reference, node_pointer_deref, node_let_expression, node_type_spec, node_function_head, node_import_definition, node_function_call, node_function_definition, node_expression, node_module, node_parse_error>;
+using ast_node_raw = std::variant<node_number, node_var_reference, node_pointer_deref, node_let_expression, node_type_spec, node_struct_definition, node_struct_initialisation, node_function_head, node_import_definition, node_function_call, node_function_definition, node_expression, node_module, node_parse_error>;
 using ast_node = located<ast_node_raw>;
 
 void dump_ast(const ast_node& root, size_t indent=0);
@@ -153,6 +179,24 @@ struct node_type_spec
     type_kind type_spec;
 };
 
+struct node_struct_definition
+{
+    std::string name;
+    std::vector<t_t::record::field_spec> fields;
+};
+
+struct field_initialisation
+{
+    std::string field_name;
+    std::unique_ptr<ast_node> init_expression;
+};
+
+struct node_struct_initialisation
+{
+    type_kind type_spec;
+    std::vector<field_initialisation> initialisations;
+};
+
 struct node_function_head
 {
     std::string name;
@@ -193,6 +237,7 @@ struct node_module
 {
     std::vector<std::unique_ptr<ast_node>> imports;
     std::vector<std::unique_ptr<ast_node>> functions;
+    std::vector<std::unique_ptr<ast_node>> typedefs;
 
     std::unique_ptr<scope> module_scope;
 };
@@ -228,6 +273,8 @@ private:
     ast_node parse_expression(int min_precedence = 0);
     ast_node parse_function_call(const std::string function_name);
     ast_node parse_let_expression();
+    ast_node parse_struct_definition();
+    ast_node parse_struct_initialisation(const std::string struct_name);
     ast_node parse_primary();
     ast_node parse_type_reference();
     ast_node parse_number();

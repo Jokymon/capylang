@@ -56,6 +56,29 @@ void dump_node(const node_type_spec& n, size_t indent)
     std::cout << ind << "Type: " << repr_type(n.type_spec) << "\n";
 }
 
+void dump_node(const node_struct_definition& n, size_t indent)
+{
+    std::string ind = std::string(indent, ' ');
+
+    std::cout << ind << "Struct definition " << n.name << ":\n";
+    for (const auto& field : n.fields)
+    {
+        std::cout << ind << "  " << field.name << ": " << repr_type(*field.type_spec) << "\n";
+    }
+}
+
+void dump_node(const node_struct_initialisation& n, size_t indent)
+{
+    std::string ind = std::string(indent, ' ');
+
+    std::cout << ind << "Struct init\n";
+    for (const auto& field_init : n.initialisations)
+    {
+        std::cout << ind << "  " << field_init.field_name << "=\n";
+        dump_ast(*field_init.init_expression, indent+6);
+    }
+}
+
 void dump_node(const node_function_head& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
@@ -115,6 +138,10 @@ void dump_node(const node_module& n, size_t indent)
     {
         dump_ast(*import, indent+4);
     }
+    for (const auto& type_def : n.typedefs)
+    {
+        dump_ast(*type_def, indent+4);
+    }
     for (const auto& function : n.functions)
     {
         dump_ast(*function, indent+4);
@@ -155,6 +182,46 @@ t_t::pointer& t_t::pointer::operator=(const t_t::pointer& other)
 bool t_t::pointer::operator==(const pointer& other) const
 {
     return *base_type == *other.base_type;
+}
+
+t_t::record::field_spec::field_spec(const std::string& name, std::unique_ptr<type_kind> type_spec)
+: name(name)
+, type_spec(std::make_unique<type_kind>(*type_spec))
+{
+}
+
+t_t::record::field_spec::field_spec(const t_t::record::field_spec& other)
+: name(other.name)
+, type_spec(std::make_unique<type_kind>(*other.type_spec))
+{
+}
+
+t_t::record::field_spec& t_t::record::field_spec::operator=(const t_t::record::field_spec& other)
+{
+    name = other.name;
+    type_spec = make_unique<type_kind>(*other.type_spec);
+    return *this;
+}
+
+t_t::record::record(const std::vector<t_t::record::field_spec>& fields)
+: fields(fields)
+{
+}
+
+t_t::record::record(const t_t::record& other)
+: fields(other.fields)
+{
+}
+
+t_t::record& t_t::record::operator=(const record& other)
+{
+    fields = other.fields;
+    return *this;
+}
+
+bool t_t::record::operator==(const record& other) const
+{
+    return true;
 }
 
 std::string repr_type(const type_kind& type_spec)
@@ -219,6 +286,16 @@ std::string function_signature::repr()
     return r;
 }
 
+scope* scope::get_global_scope() const
+{
+    scope* scope_iter = const_cast<scope*>(this);
+    while (scope_iter->parent != nullptr)
+    {
+        scope_iter = scope_iter->parent;
+    }
+    return scope_iter;
+}
+
 std::optional<symbol> scope::lookup(const std::string &name)
 {
     if (symbol_table.find(name) != symbol_table.end())
@@ -228,6 +305,22 @@ std::optional<symbol> scope::lookup(const std::string &name)
     else if (parent != nullptr)
     {
         return parent->lookup(name);
+    }
+    else
+    {
+        return std::nullopt;
+    }
+}
+
+std::optional<type_kind> scope::lookup_type(const std::string& name)
+{
+    if (type_table.find(name) != type_table.end())
+    {
+        return type_table[name];
+    }
+    else if (parent != nullptr)
+    {
+        return parent->lookup_type(name);
     }
     else
     {
@@ -315,6 +408,17 @@ ast_node parser::parse_module()
         }
 
         std::get<node_module>(capy_module.value).imports.push_back(std::make_unique<ast_node>(std::move(import_def)));
+    }
+
+    while (capy_lexer.ahead_is_sym(token_symbol::sym_kw_struct))
+    {
+        auto struct_def = parse_struct_definition();
+        if (is_error(struct_def))
+        {
+            return struct_def;
+        }
+
+        std::get<node_module>(capy_module.value).typedefs.push_back(std::make_unique<ast_node>(std::move(struct_def)));
     }
 
     while (capy_lexer.ahead_is_sym(token_symbol::sym_kw_fn))
@@ -752,6 +856,117 @@ ast_node parser::parse_let_expression()
     );
 }
 
+ast_node parser::parse_struct_definition()
+{
+    // eat the 'struct' keyword
+    auto [start_range, _] = capy_lexer.expect<token_symbol>();
+
+    if (!capy_lexer.ahead_is<token_identifier>())
+    {
+        return create_error("'struct' definition requires an identifier for the struct");
+    }
+
+    auto  [_, struct_id] = capy_lexer.expect<token_identifier>();
+
+    if (!capy_lexer.expect_symbol(token_symbol::sym_curly_open))
+    {
+        return create_error("Expecting an opening brace '{' starting the struct definition");
+    }
+    
+    std::vector<t_t::record::field_spec> new_struct_fields;
+    while (capy_lexer.ahead_is<token_identifier>())
+    {
+        auto [_, field_id] = capy_lexer.expect<token_identifier>();
+        if (!capy_lexer.expect_symbol(token_symbol::sym_colon))
+        {
+            return create_error("Expecting a colon ':' after field name and before type specification");
+        }
+
+        auto type_spec_node = parse_type_reference();
+        if (is_error(type_spec_node))
+        {
+            return type_spec_node;
+        }
+        auto type_spec = std::get<node_type_spec>(type_spec_node.value).type_spec;
+
+        new_struct_fields.emplace_back(t_t::record::field_spec{field_id.name, std::make_unique<type_kind>(type_spec)});
+
+        if (!capy_lexer.expect_symbol(token_symbol::sym_comma))
+        {
+            return create_error("Struct field definitions must be terminated with a ','");
+        }
+    }
+
+    if (!capy_lexer.ahead_is_sym(token_symbol::sym_curly_close))
+    {
+        return create_error("Struct definition must be closed with a matching '}'");
+    }
+    capy_lexer.expect<token_symbol>();
+    if (!capy_lexer.ahead_is_sym(token_symbol::sym_semicolon))
+    {
+        return create_error("Struct definition must be terminated with a semicolon");
+    }
+    auto [end_range, _] = capy_lexer.expect<token_symbol>();
+
+    auto* global_scope = current_scope->get_global_scope();
+    global_scope->type_table[struct_id.name] = t_t::record(new_struct_fields);
+
+    return make_located<node_struct_definition>(
+        start_range.start,
+        end_range.end,
+        struct_id.name,
+        new_struct_fields
+    );
+}
+
+ast_node parser::parse_struct_initialisation(const std::string struct_name)
+{
+    auto struct_type = current_scope->lookup_type(struct_name);
+    if (!struct_type.has_value())
+    {
+        return create_error("Trying to initialise struct of unknown type '"+struct_name+"'");
+    }
+
+    // skipping the opening '{'
+    auto [start_range, _] = capy_lexer.expect<token_symbol>();
+
+    std::vector<field_initialisation> fields;
+
+    while (capy_lexer.ahead_is<token_identifier>())
+    {
+        auto [_, field_name] = capy_lexer.expect<token_identifier>();
+
+        if (!capy_lexer.ahead_is_sym(token_symbol::sym_equal))
+        {
+            return create_error("For field initialisation, field name must be followed by a '=' and an initialisation expression");
+        }
+        capy_lexer.expect<token_symbol>();
+
+        ast_node init_expression = parse_expression();
+
+        if (!capy_lexer.ahead_is_sym(token_symbol::sym_comma))
+        {
+            return create_error("Field initialisations must be terminated by a comma");
+        }
+        capy_lexer.expect<token_symbol>();
+        
+        fields.emplace_back(field_initialisation{field_name.name, std::make_unique<ast_node>(std::move(init_expression))});
+    }
+
+    if (!capy_lexer.ahead_is_sym(token_symbol::sym_curly_close))
+    {
+        return create_error("Struct initialisation must be finished with a closing '}'");
+    }
+    auto [end_range, _] = capy_lexer.expect<token_symbol>();
+
+    return make_located<node_struct_initialisation>(
+        start_range.start,
+        end_range.end,
+        struct_type.value(),
+        std::move(fields)
+    );
+}
+
 ast_node parser::parse_primary()
 {
     if (capy_lexer.ahead_is<token_identifier>())
@@ -761,6 +976,10 @@ ast_node parser::parse_primary()
         if (capy_lexer.ahead_is_sym(token_symbol::sym_brac_open))
         {
             return parse_function_call(id.name);
+        }
+        else if (capy_lexer.ahead_is_sym(token_symbol::sym_curly_open))
+        {
+            return parse_struct_initialisation(id.name);
         }
         else
         {
@@ -824,7 +1043,11 @@ ast_node parser::parse_type_reference()
     auto type_spec = type_from_id(type_name.name);
     if (!type_spec.has_value())
     {
-        return create_error("Unknown type specification: " + type_name.name);
+        type_spec = current_scope->lookup_type(type_name.name);
+        if (!type_spec.has_value())
+        {
+            return create_error("Unknown type specification: " + type_name.name);
+        }
     }
 
     if (is_pointer)

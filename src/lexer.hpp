@@ -42,6 +42,7 @@ struct token_symbol
         sym_kw_fn,
         sym_kw_import,
         sym_kw_let,
+        sym_kw_struct,
 
         sym_arrow,
         sym_colon,
