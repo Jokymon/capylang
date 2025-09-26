@@ -765,10 +765,10 @@ ast_node parser::parse_expression(int min_precedence)
     }
 }
 
-ast_node parser::parse_function_call(const std::string function_name)
+ast_node parser::parse_function_call(source_range name_range, const std::string function_name)
 {
     // skip over the opening ( of the function call
-    auto [start_location, _] = capy_lexer.expect<token_symbol>();
+    capy_lexer.expect<token_symbol>();
 
     std::vector<std::unique_ptr<ast_node>> function_parameters;
     while (!capy_lexer.ahead_is_sym(token_symbol::sym_brac_close))
@@ -797,7 +797,7 @@ ast_node parser::parse_function_call(const std::string function_name)
     }
 
     return make_located<node_function_call>(
-        start_location.start,
+        name_range.start,
         end_location.end,
         function_name,
         func.value(),
@@ -919,7 +919,7 @@ ast_node parser::parse_struct_definition()
     );
 }
 
-ast_node parser::parse_struct_initialisation(const std::string struct_name)
+ast_node parser::parse_struct_initialisation(source_range name_range, const std::string struct_name)
 {
     auto struct_type = current_scope->lookup_type(struct_name);
     if (!struct_type.has_value())
@@ -928,7 +928,7 @@ ast_node parser::parse_struct_initialisation(const std::string struct_name)
     }
 
     // skipping the opening '{'
-    auto [start_range, _] = capy_lexer.expect<token_symbol>();
+    capy_lexer.expect<token_symbol>();
 
     std::vector<field_initialisation> fields;
 
@@ -960,7 +960,7 @@ ast_node parser::parse_struct_initialisation(const std::string struct_name)
     auto [end_range, _] = capy_lexer.expect<token_symbol>();
 
     return make_located<node_struct_initialisation>(
-        start_range.start,
+        name_range.start,
         end_range.end,
         struct_type.value(),
         std::move(fields)
@@ -975,11 +975,11 @@ ast_node parser::parse_primary()
 
         if (capy_lexer.ahead_is_sym(token_symbol::sym_brac_open))
         {
-            return parse_function_call(id.name);
+            return parse_function_call(id_range, id.name);
         }
         else if (capy_lexer.ahead_is_sym(token_symbol::sym_curly_open))
         {
-            return parse_struct_initialisation(id.name);
+            return parse_struct_initialisation(id_range, id.name);
         }
         else
         {

@@ -271,10 +271,10 @@ private:
     ast_node parse_function_definition();
     ast_node parse_function_head();
     ast_node parse_expression(int min_precedence = 0);
-    ast_node parse_function_call(const std::string function_name);
+    ast_node parse_function_call(source_range name_range, const std::string function_name);
     ast_node parse_let_expression();
     ast_node parse_struct_definition();
-    ast_node parse_struct_initialisation(const std::string struct_name);
+    ast_node parse_struct_initialisation(source_range name_range, const std::string struct_name);
     ast_node parse_primary();
     ast_node parse_type_reference();
     ast_node parse_number();

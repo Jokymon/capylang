@@ -35,7 +35,7 @@ fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:9:20: Function 'add2' expects signature (u32); called with signature (s32, s32)\n"
+        == "filename:9:15: Function 'add2' expects signature (u32); called with signature (s32, s32)\n"
     )
 
 
