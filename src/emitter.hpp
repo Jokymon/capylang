@@ -17,6 +17,7 @@ public:
     void emit(const node_function_call& func_call);
     void emit(const node_let_expression& let_expression);
     void emit(const node_struct_initialisation& struct_init);
+    void emit(const node_field_deref& field_deref);
     void emit(const node_expression& root);
     void emit(const node_var_reference& variable);
     void emit(const node_pointer_deref& ptr_deref);

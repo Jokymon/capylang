@@ -1,6 +1,26 @@
 #include "semantics.hpp"
 #include <iostream>
 
+std::optional<type_kind> record_field_type(const type_kind& record, const std::string& field_name)
+{
+    if (!std::holds_alternative<t_t::record>(record))
+    {
+        return std::nullopt;
+    }
+
+    const t_t::record& r = std::get<t_t::record>(record);
+
+    for (const auto& field_definition : r.fields) {
+        if (field_definition.name == field_name)
+        {
+            return *field_definition.type_spec;
+        }
+    }
+
+    // we didn't find a field with the given name yet, so it doesn't exist in this definition
+    return std::nullopt;
+}
+
 type_kind assigned_node_type(const ast_node &node)
 {
     return std::visit([&](const auto &n) -> type_kind
@@ -23,6 +43,13 @@ type_kind assigned_node_type(const ast_node &node)
             return t_t::void_type{};
         } else if constexpr (std::is_same_v<T, node_type_spec>) {
             return n.type_spec;
+        } else if constexpr (std::is_same_v<T, node_field_deref>) {
+            auto field_type = record_field_type(n.object_type, n.fieldname);
+            if (field_type.has_value())
+            {
+                return field_type.value();
+            }
+            return t_t::unassigned{};
         } else if constexpr (std::is_same_v<T, node_expression>) {
              return n.assigned_type;
         } else {
@@ -71,6 +98,20 @@ std::optional<node_parse_error> semantic_analyser::process(node_type_spec &n)
 {
     return std::nullopt;
 }
+
+std::optional<node_parse_error> semantic_analyser::process(node_field_deref &n)
+{
+    auto field_type = record_field_type(n.object_type, n.fieldname);
+
+    if (!field_type.has_value())
+    {
+        return node_parse_error{
+            .error_location = source_position{0, 0},
+            .error_message = "Unknown record field '"+n.fieldname+"'"};
+    }
+    return std::nullopt;
+}
+
 
 std::optional<node_parse_error> semantic_analyser::process(source_range location, node_function_call &n)
 {

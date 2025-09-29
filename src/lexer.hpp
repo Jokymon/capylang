@@ -51,6 +51,7 @@ struct token_symbol
         sym_equal,
         sym_minus,
         sym_percent,
+        sym_period,
         sym_plus,
         sym_semicolon,
         sym_slash,

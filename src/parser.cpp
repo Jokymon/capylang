@@ -79,6 +79,16 @@ void dump_node(const node_struct_initialisation& n, size_t indent)
     }
 }
 
+void dump_node(const node_field_deref& n, size_t indent)
+{
+    std::string ind = std::string(indent, ' ');
+
+    std::cout << ind << "Deref:\n";
+    std::cout << ind << "  object:\n";
+    dump_ast(*n.object, indent+4);
+    std::cout << ind << "  field: " << n.fieldname << "\n";
+}
+
 void dump_node(const node_function_head& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
@@ -224,6 +234,18 @@ bool t_t::record::operator==(const record& other) const
     return true;
 }
 
+std::optional<type_kind> t_t::record::field_type(const std::string& name)
+{
+    for (const auto& field : fields)
+    {
+        if (field.name == name)
+        {
+            return *field.type_spec;
+        }
+    }
+    return std::nullopt;
+}
+
 std::string repr_type(const type_kind& type_spec)
 {
     return std::visit([&](const auto &t) -> std::string {
@@ -235,6 +257,8 @@ std::string repr_type(const type_kind& type_spec)
             return "void";
         else if constexpr (std::is_same_v<T, t_t::s32>)
             return "s32";
+        else if constexpr (std::is_same_v<T, t_t::u8>)
+            return "u8";
         else if constexpr (std::is_same_v<T, t_t::u32>)
             return "u32";
         else if constexpr (std::is_same_v<T, t_t::pointer>) {
@@ -243,6 +267,10 @@ std::string repr_type(const type_kind& type_spec)
                 return "*null*";
             }
             return repr_type(*t.base_type) + "*";
+        }
+        else if constexpr (std::is_same_v<T, t_t::record>) {
+            // TODO: add output of field types
+            return "record";
         }
         else {
             return "UNEXPECTED BRANCH";
@@ -919,7 +947,7 @@ ast_node parser::parse_struct_definition()
     );
 }
 
-ast_node parser::parse_struct_initialisation(source_range name_range, const std::string struct_name)
+ast_node parser::parse_struct_initialisation(source_range name_range, const std::string& struct_name)
 {
     auto struct_type = current_scope->lookup_type(struct_name);
     if (!struct_type.has_value())
@@ -967,6 +995,41 @@ ast_node parser::parse_struct_initialisation(source_range name_range, const std:
     );
 }
 
+ast_node parser::parse_field_deref(type_kind base_type, ast_node object)
+{
+    // eat the dot '.'
+    capy_lexer.expect<token_symbol>();
+
+    // TODO: still have to check that there actually is an identifier after the dot
+    auto [field_range, field_name] = capy_lexer.expect<token_identifier>();
+
+    auto node = make_located<node_field_deref>(
+        object.location.start,
+        field_range.end,
+        std::make_unique<ast_node>(std::move(object)),
+        field_name.name,
+        base_type
+    );
+
+    if (capy_lexer.ahead_is_sym(token_symbol::sym_period))
+    {
+        if (!std::holds_alternative<t_t::record>(base_type))
+        {
+            return create_error("Can't dereference field '"+field_name.name+"'");
+        }
+        t_t::record base_record_type = std::get<t_t::record>(base_type);
+        auto field_type = base_record_type.field_type(field_name.name);
+        if (!field_type.has_value())
+        {
+            return create_error("Record doesn't contain a field named '"+field_name.name+"'");
+        }
+
+        node = parse_field_deref(field_type.value(), std::move(node));
+    }
+
+    return node;
+}
+
 ast_node parser::parse_primary()
 {
     if (capy_lexer.ahead_is<token_identifier>())
@@ -980,6 +1043,24 @@ ast_node parser::parse_primary()
         else if (capy_lexer.ahead_is_sym(token_symbol::sym_curly_open))
         {
             return parse_struct_initialisation(id_range, id.name);
+        }
+        else if (capy_lexer.ahead_is_sym(token_symbol::sym_period))
+        {
+            auto var = current_scope->lookup(id.name);
+            if (!var.has_value())
+            {
+                return create_error("Undefined variable: '"+id.name+"'");
+            }
+
+            ast_node object = make_located<node_var_reference>(
+                id_range.start,
+                id_range.end,
+                id.name,
+                var.value(),
+                assign_context::rhs);
+            auto var_type = var.value().symbol_type;
+
+            return parse_field_deref(var_type, std::move(object));
         }
         else
         {

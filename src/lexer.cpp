@@ -39,6 +39,8 @@ std::string token_symbol::to_string() const
         return "-";
     case sym_percent:
         return "%";
+    case sym_period:
+        return ".";
     case sym_plus:
         return "+";
     case sym_semicolon:
@@ -337,6 +339,11 @@ token lexer::parse_token()
     {
         get_char();
         return make_located<token_symbol>(current_position, current_position, token_symbol::sym_plus);
+    }
+    else if (ch=='.')
+    {
+        get_char();
+        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_period);
     }
     else if ((ch == ':') && (peek_ahead() == ':'))
     {

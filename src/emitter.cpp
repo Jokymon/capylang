@@ -50,6 +50,28 @@ size_t type_size(const type_kind& type_spec)
     }, type_spec);
 }
 
+std::optional<size_t> record_field_offset(const type_kind& record, const std::string& field_name)
+{
+    if (!std::holds_alternative<t_t::record>(record))
+    {
+        return std::nullopt;
+    }
+
+    const t_t::record& r = std::get<t_t::record>(record);
+
+    size_t offset = 0;
+    for (const auto& field_definition : r.fields) {
+        if (field_definition.name == field_name)
+        {
+            return offset;
+        }
+        offset += type_size(*field_definition.type_spec);
+    }
+
+    // we didn't find a field with the given name yet, so it doesn't exist in this definition
+    return std::nullopt;
+}
+
 emitter::emitter(std::ostream &output) : output_(output)
 {
 }
@@ -82,6 +104,8 @@ void emitter::emit(const ast_node &node)
         } else if constexpr (std::is_same_v<T, node_let_expression>) {
             this->emit(n);
         } else if constexpr (std::is_same_v<T, node_struct_initialisation>) {
+            this->emit(n);
+        } else if constexpr (std::is_same_v<T, node_field_deref>) {
             this->emit(n);
         } else if constexpr (std::is_same_v<T, node_expression>) {
             this->emit(n);
@@ -177,6 +201,11 @@ void emitter::emit(const node_struct_initialisation& struct_init)
     // in the definition
     for (const auto& field : struct_type.fields)
     {
+        // get the address for the field to initialise
+        output_ << "      global.get $heap_ptr\n";
+        output_ << "      i32.const " << offset << "\n";
+        output_ << "      i32.add\n";
+
         // We go through the struct definition to keep the order of the fields as given
         // in the definition; we assume, that field initialisations can be out of the
         // definition order, so we need to match initialisations with the field definitions
@@ -192,9 +221,6 @@ void emitter::emit(const node_struct_initialisation& struct_init)
         // TODO: Make sure that every field of the type definition is initialised
 
         // save the value in the struct at the current offset
-        output_ << "      global.get $heap_ptr\n";
-        output_ << "      i32.const " << offset << "\n";
-        output_ << "      i32.add\n";
         output_ << "      i32.store\n";
 
         offset += type_size(*field.type_spec);
@@ -206,6 +232,20 @@ void emitter::emit(const node_struct_initialisation& struct_init)
     output_ << "      i32.const " << struct_size << "\n";
     output_ << "      i32.add\n";
     output_ << "      global.set $heap_ptr\n";
+}
+
+void emitter::emit(const node_field_deref& field_deref)
+{
+    emit(*field_deref.object);
+    auto maybe_size = record_field_offset(field_deref.object_type, field_deref.fieldname);
+    if (!maybe_size.has_value())
+    {
+        // TODO: panic! this should have been taken care of in the semantic step
+    }
+
+    output_ << "      i32.const " << maybe_size.value() << "\n";
+    output_ << "      i32.add\n";
+    output_ << "      i32.load\n";
 }
 
 void emitter::emit(const node_expression &root)
