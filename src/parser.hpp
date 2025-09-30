@@ -193,10 +193,15 @@ struct node_field_deref
     std::unique_ptr<ast_node> object;
     std::string fieldname;
     type_kind object_type;
+
+    // give a textual representation of the object for this dereferencing AST node
+    // without including the field name
+    std::string repr_obj() const;
 };
 
 struct field_initialisation
 {
+    source_position location;
     std::string field_name;
     std::unique_ptr<ast_node> init_expression;
 };

@@ -162,7 +162,7 @@ void dump_node(const node_parse_error& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "PARSE ERROR\n";
+    std::cout << ind << "PARSE ERROR:"+n.error_message+"'\n";
 }
 
 void dump_ast(const ast_node& root, size_t indent)
@@ -171,6 +171,22 @@ void dump_ast(const ast_node& root, size_t indent)
         {
             dump_node(n, indent);
         }, root.value);
+}
+
+std::string node_field_deref::repr_obj() const
+{
+    return std::visit([&](const auto &n) -> std::string {
+        using T = std::decay_t<decltype(n)>;
+
+        if constexpr (std::is_same_v<T, node_field_deref>) {
+            return n.repr_obj() + "." + n.fieldname;
+        } else if constexpr (std::is_same_v<T, node_var_reference>) {
+            return n.name;
+        } else {
+            // this branch actually shouldn't happen
+            return "";
+        }
+    }, object->value);
 }
 
 t_t::pointer::pointer(const type_kind& base_type)
@@ -269,8 +285,13 @@ std::string repr_type(const type_kind& type_spec)
             return repr_type(*t.base_type) + "*";
         }
         else if constexpr (std::is_same_v<T, t_t::record>) {
-            // TODO: add output of field types
-            return "record";
+            std::string repr = "record(";
+            for (const auto& field: t.fields) {
+                repr += field.name + ":";
+                repr += repr_type(*field.type_spec) + ",";
+            }
+            repr += ")";
+            return repr;
         }
         else {
             return "UNEXPECTED BRANCH";
@@ -962,7 +983,7 @@ ast_node parser::parse_struct_initialisation(source_range name_range, const std:
 
     while (capy_lexer.ahead_is<token_identifier>())
     {
-        auto [_, field_name] = capy_lexer.expect<token_identifier>();
+        auto [field_position, field_name] = capy_lexer.expect<token_identifier>();
 
         if (!capy_lexer.ahead_is_sym(token_symbol::sym_equal))
         {
@@ -971,6 +992,10 @@ ast_node parser::parse_struct_initialisation(source_range name_range, const std:
         capy_lexer.expect<token_symbol>();
 
         ast_node init_expression = parse_expression();
+        if (is_error(init_expression))
+        {
+            return init_expression;
+        }
 
         if (!capy_lexer.ahead_is_sym(token_symbol::sym_comma))
         {
@@ -978,7 +1003,7 @@ ast_node parser::parse_struct_initialisation(source_range name_range, const std:
         }
         capy_lexer.expect<token_symbol>();
         
-        fields.emplace_back(field_initialisation{field_name.name, std::make_unique<ast_node>(std::move(init_expression))});
+        fields.emplace_back(field_initialisation{field_position.start, field_name.name, std::make_unique<ast_node>(std::move(init_expression))});
     }
 
     if (!capy_lexer.ahead_is_sym(token_symbol::sym_curly_close))
@@ -1000,7 +1025,10 @@ ast_node parser::parse_field_deref(type_kind base_type, ast_node object)
     // eat the dot '.'
     capy_lexer.expect<token_symbol>();
 
-    // TODO: still have to check that there actually is an identifier after the dot
+    if (!capy_lexer.ahead_is<token_identifier>())
+    {
+        return create_error("Missing field name after '.'");
+    }
     auto [field_range, field_name] = capy_lexer.expect<token_identifier>();
 
     auto node = make_located<node_field_deref>(

@@ -99,14 +99,67 @@ std::optional<node_parse_error> semantic_analyser::process(node_type_spec &n)
     return std::nullopt;
 }
 
-std::optional<node_parse_error> semantic_analyser::process(node_field_deref &n)
+std::optional<node_parse_error> semantic_analyser::process(source_range location, node_struct_initialisation &n)
 {
+    t_t::record& r = std::get<t_t::record>(n.type_spec);
+    for (const auto& field : r.fields)
+    {
+        bool is_initialised = false;
+        for (const auto& init : n.initialisations)
+        {
+            if (field.name == init.field_name)
+            {
+                is_initialised = true;
+                break;
+            }
+        }
+        if (!is_initialised)
+        {
+            return node_parse_error{
+                .error_location = location.start,
+                .error_message = "Struct field '"+field.name+"' not initialised"
+            };
+        }
+    }
+
+    for (const auto& init : n.initialisations)
+    {
+        bool is_actual_field = false;
+        for (const auto& field : r.fields)
+        {
+            if (field.name == init.field_name)
+            {
+                is_actual_field = true;
+                break;
+            }
+        }
+        if (!is_actual_field)
+        {
+            return node_parse_error{
+                .error_location = init.location,
+                .error_message = "Unknown record field '"+init.field_name+"'"
+            };
+        }
+    }
+
+    return std::nullopt;
+}
+
+std::optional<node_parse_error> semantic_analyser::process(source_range location, node_field_deref &n)
+{
+    if (!std::holds_alternative<t_t::record>(n.object_type))
+    {
+        return node_parse_error{
+            .error_location = location.start,
+            .error_message = "Dereferencing non-record variable or field '"+n.repr_obj()+"'"
+        };
+    }
     auto field_type = record_field_type(n.object_type, n.fieldname);
 
     if (!field_type.has_value())
     {
         return node_parse_error{
-            .error_location = source_position{0, 0},
+            .error_location = location.start,
             .error_message = "Unknown record field '"+n.fieldname+"'"};
     }
     return std::nullopt;
@@ -137,6 +190,11 @@ std::optional<node_parse_error> semantic_analyser::process(source_range location
     }
 
     return std::nullopt;
+}
+
+std::optional<node_parse_error> semantic_analyser::process(node_let_expression &n)
+{
+    return semantic_analysis(*n.init_expression);
 }
 
 std::optional<node_parse_error> semantic_analyser::process(node_import_definition &n)
@@ -265,10 +323,16 @@ std::optional<node_parse_error> semantic_analyser::semantic_analysis(ast_node &r
             return process(n);
         } else if constexpr (std::is_same_v<T, node_pointer_deref>) {
             return process(n);
+        } else if constexpr (std::is_same_v<T, node_field_deref>) {
+            return process(root.location, n);
+        } else if constexpr (std::is_same_v<T, node_struct_initialisation>) {
+            return process(root.location, n);
         } else if constexpr (std::is_same_v<T, node_type_spec>) {
             return process(n);
         } else if constexpr (std::is_same_v<T, node_function_call>) {
             return process(root.location, n);
+        } else if constexpr (std::is_same_v<T, node_let_expression>) {
+            return process(n);
         } else if constexpr (std::is_same_v<T, node_import_definition>) {
             return process(n);
         } else if constexpr (std::is_same_v<T, node_function_definition>) {
