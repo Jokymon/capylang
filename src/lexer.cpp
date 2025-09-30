@@ -23,8 +23,8 @@ std::string token_symbol::to_string() const
         return "import";
     case sym_kw_let:
         return "let";
-    case sym_kw_struct:
-        return "struct";
+    case sym_kw_record:
+        return "record";
     case sym_arrow:
         return "->";
     case sym_colon:
@@ -442,9 +442,9 @@ token lexer::parse_identifier_or_keyword()
     {
         return make_located<token_symbol>(start_position, current_position, token_symbol::sym_kw_let);
     }
-    else if (id_name == "struct")
+    else if (id_name == "record")
     {
-        return make_located<token_symbol>(start_position, current_position, token_symbol::sym_kw_struct);
+        return make_located<token_symbol>(start_position, current_position, token_symbol::sym_kw_record);
     }
     else if (id_name == "as")
     {

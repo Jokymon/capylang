@@ -56,22 +56,22 @@ void dump_node(const node_type_spec& n, size_t indent)
     std::cout << ind << "Type: " << repr_type(n.type_spec) << "\n";
 }
 
-void dump_node(const node_struct_definition& n, size_t indent)
+void dump_node(const node_record_definition& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Struct definition " << n.name << ":\n";
+    std::cout << ind << "Record definition " << n.name << ":\n";
     for (const auto& field : n.fields)
     {
         std::cout << ind << "  " << field.name << ": " << repr_type(*field.type_spec) << "\n";
     }
 }
 
-void dump_node(const node_struct_initialisation& n, size_t indent)
+void dump_node(const node_record_initialisation& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Struct init\n";
+    std::cout << ind << "Record init\n";
     for (const auto& field_init : n.initialisations)
     {
         std::cout << ind << "  " << field_init.field_name << "=\n";
@@ -459,15 +459,15 @@ ast_node parser::parse_module()
         std::get<node_module>(capy_module.value).imports.push_back(std::make_unique<ast_node>(std::move(import_def)));
     }
 
-    while (capy_lexer.ahead_is_sym(token_symbol::sym_kw_struct))
+    while (capy_lexer.ahead_is_sym(token_symbol::sym_kw_record))
     {
-        auto struct_def = parse_struct_definition();
-        if (is_error(struct_def))
+        auto record_def = parse_record_definition();
+        if (is_error(record_def))
         {
-            return struct_def;
+            return record_def;
         }
 
-        std::get<node_module>(capy_module.value).typedefs.push_back(std::make_unique<ast_node>(std::move(struct_def)));
+        std::get<node_module>(capy_module.value).typedefs.push_back(std::make_unique<ast_node>(std::move(record_def)));
     }
 
     while (capy_lexer.ahead_is_sym(token_symbol::sym_kw_fn))
@@ -905,24 +905,24 @@ ast_node parser::parse_let_expression()
     );
 }
 
-ast_node parser::parse_struct_definition()
+ast_node parser::parse_record_definition()
 {
-    // eat the 'struct' keyword
+    // eat the 'record' keyword
     auto [start_range, _] = capy_lexer.expect<token_symbol>();
 
     if (!capy_lexer.ahead_is<token_identifier>())
     {
-        return create_error("'struct' definition requires an identifier for the struct");
+        return create_error("'record' definition requires an identifier for the record");
     }
 
-    auto  [_, struct_id] = capy_lexer.expect<token_identifier>();
+    auto  [_, record_id] = capy_lexer.expect<token_identifier>();
 
     if (!capy_lexer.expect_symbol(token_symbol::sym_curly_open))
     {
-        return create_error("Expecting an opening brace '{' starting the struct definition");
+        return create_error("Expecting an opening brace '{' starting the record definition");
     }
     
-    std::vector<t_t::record::field_spec> new_struct_fields;
+    std::vector<t_t::record::field_spec> new_record_fields;
     while (capy_lexer.ahead_is<token_identifier>())
     {
         auto [_, field_id] = capy_lexer.expect<token_identifier>();
@@ -938,42 +938,42 @@ ast_node parser::parse_struct_definition()
         }
         auto type_spec = std::get<node_type_spec>(type_spec_node.value).type_spec;
 
-        new_struct_fields.emplace_back(t_t::record::field_spec{field_id.name, std::make_unique<type_kind>(type_spec)});
+        new_record_fields.emplace_back(t_t::record::field_spec{field_id.name, std::make_unique<type_kind>(type_spec)});
 
         if (!capy_lexer.expect_symbol(token_symbol::sym_comma))
         {
-            return create_error("Struct field definitions must be terminated with a ','");
+            return create_error("Record field definitions must be terminated with a ','");
         }
     }
 
     if (!capy_lexer.ahead_is_sym(token_symbol::sym_curly_close))
     {
-        return create_error("Struct definition must be closed with a matching '}'");
+        return create_error("Record definition must be closed with a matching '}'");
     }
     capy_lexer.expect<token_symbol>();
     if (!capy_lexer.ahead_is_sym(token_symbol::sym_semicolon))
     {
-        return create_error("Struct definition must be terminated with a semicolon");
+        return create_error("Record definition must be terminated with a semicolon");
     }
     auto [end_range, _] = capy_lexer.expect<token_symbol>();
 
     auto* global_scope = current_scope->get_global_scope();
-    global_scope->type_table[struct_id.name] = t_t::record(new_struct_fields);
+    global_scope->type_table[record_id.name] = t_t::record(new_record_fields);
 
-    return make_located<node_struct_definition>(
+    return make_located<node_record_definition>(
         start_range.start,
         end_range.end,
-        struct_id.name,
-        new_struct_fields
+        record_id.name,
+        new_record_fields
     );
 }
 
-ast_node parser::parse_struct_initialisation(source_range name_range, const std::string& struct_name)
+ast_node parser::parse_record_initialisation(source_range name_range, const std::string& record_name)
 {
-    auto struct_type = current_scope->lookup_type(struct_name);
-    if (!struct_type.has_value())
+    auto record_type = current_scope->lookup_type(record_name);
+    if (!record_type.has_value())
     {
-        return create_error("Trying to initialise struct of unknown type '"+struct_name+"'");
+        return create_error("Trying to initialise record of unknown type '"+record_name+"'");
     }
 
     // skipping the opening '{'
@@ -1008,14 +1008,14 @@ ast_node parser::parse_struct_initialisation(source_range name_range, const std:
 
     if (!capy_lexer.ahead_is_sym(token_symbol::sym_curly_close))
     {
-        return create_error("Struct initialisation must be finished with a closing '}'");
+        return create_error("Record initialisation must be finished with a closing '}'");
     }
     auto [end_range, _] = capy_lexer.expect<token_symbol>();
 
-    return make_located<node_struct_initialisation>(
+    return make_located<node_record_initialisation>(
         name_range.start,
         end_range.end,
-        struct_type.value(),
+        record_type.value(),
         std::move(fields)
     );
 }
@@ -1070,7 +1070,7 @@ ast_node parser::parse_primary()
         }
         else if (capy_lexer.ahead_is_sym(token_symbol::sym_curly_open))
         {
-            return parse_struct_initialisation(id_range, id.name);
+            return parse_record_initialisation(id_range, id.name);
         }
         else if (capy_lexer.ahead_is_sym(token_symbol::sym_period))
         {

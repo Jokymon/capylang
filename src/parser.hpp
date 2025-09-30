@@ -128,8 +128,8 @@ struct node_var_reference;
 struct node_pointer_deref;
 struct node_let_expression;
 struct node_type_spec;
-struct node_struct_definition;
-struct node_struct_initialisation;
+struct node_record_definition;
+struct node_record_initialisation;
 struct node_field_deref;
 struct node_function_head;
 struct node_import_definition;
@@ -139,7 +139,7 @@ struct node_expression;
 struct node_module;
 struct node_parse_error;
 
-using ast_node_raw = std::variant<node_number, node_var_reference, node_pointer_deref, node_let_expression, node_type_spec, node_struct_definition, node_struct_initialisation, node_field_deref, node_function_head, node_import_definition, node_function_call, node_function_definition, node_expression, node_module, node_parse_error>;
+using ast_node_raw = std::variant<node_number, node_var_reference, node_pointer_deref, node_let_expression, node_type_spec, node_record_definition, node_record_initialisation, node_field_deref, node_function_head, node_import_definition, node_function_call, node_function_definition, node_expression, node_module, node_parse_error>;
 using ast_node = located<ast_node_raw>;
 
 void dump_ast(const ast_node& root, size_t indent=0);
@@ -182,7 +182,7 @@ struct node_type_spec
     type_kind type_spec;
 };
 
-struct node_struct_definition
+struct node_record_definition
 {
     std::string name;
     std::vector<t_t::record::field_spec> fields;
@@ -206,7 +206,7 @@ struct field_initialisation
     std::unique_ptr<ast_node> init_expression;
 };
 
-struct node_struct_initialisation
+struct node_record_initialisation
 {
     type_kind type_spec;
     std::vector<field_initialisation> initialisations;
@@ -288,8 +288,8 @@ private:
     ast_node parse_expression(int min_precedence = 0);
     ast_node parse_function_call(source_range name_range, const std::string function_name);
     ast_node parse_let_expression();
-    ast_node parse_struct_definition();
-    ast_node parse_struct_initialisation(source_range name_range, const std::string& struct_name);
+    ast_node parse_record_definition();
+    ast_node parse_record_initialisation(source_range name_range, const std::string& record_name);
     ast_node parse_field_deref(type_kind base_type, ast_node object);
     ast_node parse_primary();
     ast_node parse_type_reference();

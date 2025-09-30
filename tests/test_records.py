@@ -5,7 +5,7 @@ def test_simple_u32_field_access():
     code = """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-struct s {
+record s {
     field1: u32,
 };
 
@@ -25,11 +25,11 @@ def test_nested_record_access():
     code = """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-struct s2 {
+record s2 {
     field1: u32,
 };
 
-struct s1 {
+record s1 {
     sub: s2,
 };
 
@@ -53,7 +53,7 @@ def test_failure_illegal_deref_syntax():
     code = """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-struct s {
+record s {
     field1: u32,
 };
 
@@ -95,7 +95,7 @@ def test_failure_unknown_variable_in_initialisation():
     code = """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-struct s {
+record s {
     field1: u32,
 };
 
@@ -119,7 +119,7 @@ def test_failure_accessing_unknown_field_in_dereferencing():
     code = """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-struct s {
+record s {
     field1: u32,
 };
 
@@ -143,7 +143,7 @@ def test_failure_accessing_unknown_field_in_initialisation():
     code = """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-struct s {
+record s {
     field1: u32,
 };
 
@@ -168,7 +168,7 @@ def test_failure_missing_field_in_initialisation():
     code = """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-struct s {
+record s {
     field1: u32,
 };
 
@@ -183,5 +183,5 @@ fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:9:16: Struct field 'field1' not initialised\n"
+        == "filename:9:16: Record field 'field1' not initialised\n"
     )

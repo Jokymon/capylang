@@ -15,7 +15,7 @@ private:
     std::optional<node_parse_error> process(node_var_reference &n);
     std::optional<node_parse_error> process(node_pointer_deref &n);
     std::optional<node_parse_error> process(node_type_spec &n);
-    std::optional<node_parse_error> process(source_range location, node_struct_initialisation &n);
+    std::optional<node_parse_error> process(source_range location, node_record_initialisation &n);
     std::optional<node_parse_error> process(source_range location, node_field_deref &n);
     std::optional<node_parse_error> process(source_range location, node_function_call &n);
     std::optional<node_parse_error> process(node_let_expression &n);

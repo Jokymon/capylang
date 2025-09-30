@@ -99,7 +99,7 @@ std::optional<node_parse_error> semantic_analyser::process(node_type_spec &n)
     return std::nullopt;
 }
 
-std::optional<node_parse_error> semantic_analyser::process(source_range location, node_struct_initialisation &n)
+std::optional<node_parse_error> semantic_analyser::process(source_range location, node_record_initialisation &n)
 {
     t_t::record& r = std::get<t_t::record>(n.type_spec);
     for (const auto& field : r.fields)
@@ -117,7 +117,7 @@ std::optional<node_parse_error> semantic_analyser::process(source_range location
         {
             return node_parse_error{
                 .error_location = location.start,
-                .error_message = "Struct field '"+field.name+"' not initialised"
+                .error_message = "Record field '"+field.name+"' not initialised"
             };
         }
     }
@@ -325,7 +325,7 @@ std::optional<node_parse_error> semantic_analyser::semantic_analysis(ast_node &r
             return process(n);
         } else if constexpr (std::is_same_v<T, node_field_deref>) {
             return process(root.location, n);
-        } else if constexpr (std::is_same_v<T, node_struct_initialisation>) {
+        } else if constexpr (std::is_same_v<T, node_record_initialisation>) {
             return process(root.location, n);
         } else if constexpr (std::is_same_v<T, node_type_spec>) {
             return process(n);

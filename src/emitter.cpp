@@ -103,7 +103,7 @@ void emitter::emit(const ast_node &node)
             this->emit(n);
         } else if constexpr (std::is_same_v<T, node_let_expression>) {
             this->emit(n);
-        } else if constexpr (std::is_same_v<T, node_struct_initialisation>) {
+        } else if constexpr (std::is_same_v<T, node_record_initialisation>) {
             this->emit(n);
         } else if constexpr (std::is_same_v<T, node_field_deref>) {
             this->emit(n);
@@ -190,26 +190,26 @@ void emitter::emit(const node_let_expression& let_expression)
     output_ << "      local.set " << let_expression.symbol_ref.index_addr << "\n";
 }
 
-void emitter::emit(const node_struct_initialisation& struct_init)
+void emitter::emit(const node_record_initialisation& record_init)
 {
-    size_t struct_size = type_size(struct_init.type_spec);
-    // TODO: semantic check should make sure, that the type_spec really is a struct
-    auto& struct_type = std::get<t_t::record>(struct_init.type_spec);
+    size_t record_size = type_size(record_init.type_spec);
+    // TODO: semantic check should make sure, that the type_spec really is a record
+    auto& record_type = std::get<t_t::record>(record_init.type_spec);
 
     size_t offset = 0;
     // TODO: make the inverse check if any field init tries to init a field that isn't
     // in the definition
-    for (const auto& field : struct_type.fields)
+    for (const auto& field : record_type.fields)
     {
         // get the address for the field to initialise
         output_ << "      global.get $heap_ptr\n";
         output_ << "      i32.const " << offset << "\n";
         output_ << "      i32.add\n";
 
-        // We go through the struct definition to keep the order of the fields as given
+        // We go through the record definition to keep the order of the fields as given
         // in the definition; we assume, that field initialisations can be out of the
         // definition order, so we need to match initialisations with the field definitions
-        for (const auto& field_init : struct_init.initialisations)
+        for (const auto& field_init : record_init.initialisations)
         {
             if (field_init.field_name == field.name)
             {
@@ -220,7 +220,7 @@ void emitter::emit(const node_struct_initialisation& struct_init)
         }
         // TODO: Make sure that every field of the type definition is initialised
 
-        // save the value in the struct at the current offset
+        // save the value in the record at the current offset
         output_ << "      i32.store\n";
 
         offset += type_size(*field.type_spec);
@@ -229,7 +229,7 @@ void emitter::emit(const node_struct_initialisation& struct_init)
     output_ << "      global.get $heap_ptr\n"; // leave the initial heap pointer on the stack
     // Using a very simple allocation-only heap management for the moment
     output_ << "      global.get $heap_ptr\n";
-    output_ << "      i32.const " << struct_size << "\n";
+    output_ << "      i32.const " << record_size << "\n";
     output_ << "      i32.add\n";
     output_ << "      global.set $heap_ptr\n";
 }
