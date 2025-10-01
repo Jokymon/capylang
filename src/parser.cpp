@@ -1,4 +1,5 @@
 #include "parser.hpp"
+#include <assert.h>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -1181,17 +1182,21 @@ ast_node parser::parse_type_reference()
 
 ast_node parser::parse_number()
 {
-    if (!capy_lexer.ahead_is<token_integer>())
-    {
-        return create_error("Expected a number in the input");
-    }
+    // We expect to only end up here, when we are already sure
+    // that the next token is an integer
+    assert(capy_lexer.ahead_is<token_integer>());
 
     auto [lhs_location, lhs] = capy_lexer.expect<token_integer>();
 
     auto number_type = type_from_id(lhs.type_suffix);
     if (!number_type.has_value())
     {
-        return create_error("Number has an illegal suffix");
+        append_error("Number has an illegal suffix");
+        return make_located<node_number>(
+            capy_lexer.current_source_position(),
+            lhs_location.end,
+            0,
+            t_t::u32{});
     }
 
     return make_located<node_number>(

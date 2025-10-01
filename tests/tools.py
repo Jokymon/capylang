@@ -97,12 +97,16 @@ fn _start() {{
 
 
 def normalize_filename_from_output(stdxxx):
-    print(stdxxx)
-    if stdxxx.lower().startswith("c:/"):
-        stdxxx = stdxxx[3:]
+    def cleanupline(s):
+        if s.lower().startswith("c:/"):
+            s = s[3:]
+        idx = s.find(":")
+        if idx == -1:
+            return s
+        else:
+            return "filename" + s[idx:]
 
-    idx = stdxxx.find(":")
-    if idx == -1:
-        return stdxxx
-    else:
-        return "filename" + stdxxx[idx:]
+    print(stdxxx)
+    lines = stdxxx.split("\n")
+    lines = map(cleanupline, lines)
+    return "\n".join(lines)
