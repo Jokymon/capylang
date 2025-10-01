@@ -272,12 +272,14 @@ class parser
 public:
     explicit parser(lexer &l);
 
+    std::vector<node_parse_error> errors;
     ast_node parse();
 
 private:
     lexer &capy_lexer;
 
     ast_node create_error(const std::string &error_message);
+    void append_error(const std::string &error_message);
 
     ast_node parse_module();
     std::optional<ast_node> parse_parameters(std::vector<param_spec>& parameters);

@@ -423,7 +423,7 @@ ast_node parser::parse()
     }
     if (!capy_lexer.ahead_is<token_eof>())
     {
-        return create_error("Unexpected trailing code after function definition");
+        append_error("Unexpected trailing code after function definition");
     }
     return root;
 }
@@ -437,6 +437,15 @@ ast_node parser::create_error(const std::string &error_message)
         current_pos,
         current_pos,
         error_message);
+}
+
+void parser::append_error(const std::string &error_message)
+{
+    auto current_pos = capy_lexer.current_source_position();
+
+    errors.emplace_back(node_parse_error(
+        current_pos,
+        error_message));
 }
 
 ast_node parser::parse_module()
