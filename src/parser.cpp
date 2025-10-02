@@ -1162,11 +1162,21 @@ ast_node parser::parse_type_reference()
         capy_lexer.next_token();
     }
 
-    if (!capy_lexer.ahead_is<token_identifier>())
+    source_range token_location;
+    token_location.start = capy_lexer.current_source_position();
+    token_location.end = capy_lexer.current_source_position();
+    token_identifier type_name = {""};
+
+    if (capy_lexer.ahead_is<token_identifier>())
     {
-        return create_error("Expecting an identifier for the type specification");
+        auto pos_token = capy_lexer.expect<token_identifier>();
+        token_location = std::get<0>(pos_token);
+        type_name = std::get<1>(pos_token);
     }
-    auto [token_location, type_name] = capy_lexer.expect<token_identifier>();
+    else
+    {
+        append_error("Expecting an identifier for the type specification");
+    }
 
     auto type_spec = type_from_id(type_name.name);
     if (!type_spec.has_value())
@@ -1174,7 +1184,8 @@ ast_node parser::parse_type_reference()
         type_spec = current_scope->lookup_type(type_name.name);
         if (!type_spec.has_value())
         {
-            return create_error("Unknown type specification: " + type_name.name);
+            append_error("Unknown type specification: " + type_name.name);
+            type_spec = t_t::unassigned{};
         }
     }
 

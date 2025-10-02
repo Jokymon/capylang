@@ -55,3 +55,22 @@ fn _start() {
     exit_code, _ = tools.run_test_code(code)
 
     assert exit_code == 45
+
+
+# ######## FAILURE HANDLING ###########
+def test_missing_type_spec_for_let():
+    code = """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn _start() {
+    let a: = 100u32;
+    a = 45u32;
+    proc_exit(a)
+}"""
+    exit_code, stderr = tools.compile_test_code(code)
+
+    assert exit_code == 1
+    assert (
+        tools.normalize_filename_from_output(stderr)
+        == "filename:5:11: Expecting an identifier for the type specification\n"
+    )
