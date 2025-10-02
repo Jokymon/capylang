@@ -69,7 +69,7 @@ fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:12:18: Missing field name after '.'\n"
+        == "filename:12:17: Missing field name after '.'\n"
     )
 
 
@@ -111,7 +111,7 @@ fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:10:18: Undefined variable: 'w'\n"
+        == "filename:10:16: Undefined variable: 'w'\n"
     )
 
 

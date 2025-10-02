@@ -176,7 +176,9 @@ std::string repr_token(const token &tok)
 }
 
 lexer::lexer(std::istream &input)
-    : input_(input), lookahead_(std::nullopt), current_position{} {}
+    : input_(input), lookahead_(std::nullopt), look_ahead_position{}, current_position{}
+{
+}
 
 const token &lexer::peek_token()
 {
@@ -234,13 +236,18 @@ bool lexer::expect_symbol(token_symbol::symbol_type symbol)
 
 token lexer::next_token()
 {
+    token temp;
     if (lookahead_)
     {
-        token temp = std::move(*lookahead_);
+        temp = std::move(*lookahead_);
         lookahead_.reset();
-        return temp;
     }
-    return parse_token();
+    else
+    {
+        temp = parse_token();
+    }
+    current_position = look_ahead_position;
+    return temp;
 }
 
 int lexer::peek_ahead()
@@ -257,12 +264,12 @@ int lexer::get_char()
     char ch = input_.get();
 
     if (ch == '\n') {
-        current_position.line += 1;
-        current_position.column = 1;
+        look_ahead_position.line += 1;
+        look_ahead_position.column = 1;
     }
     else
     {
-        current_position.column += 1;
+        look_ahead_position.column += 1;
     }
 
     return ch;
@@ -293,7 +300,7 @@ token lexer::parse_token()
 
     if (input_.eof())
     {
-        return make_located<token_eof>(current_position, current_position);
+        return make_located<token_eof>(look_ahead_position, look_ahead_position);
     }
 
     char ch = input_.peek();
@@ -311,85 +318,85 @@ token lexer::parse_token()
     }
     else if ((ch=='-') && (peek_ahead() == '>'))
     {
-        auto start_position = current_position;
+        auto start_position = look_ahead_position;
         get_char(); get_char();
-        return make_located<token_symbol>(start_position, current_position, token_symbol::sym_arrow);
+        return make_located<token_symbol>(start_position, look_ahead_position, token_symbol::sym_arrow);
     }
     else if (ch=='/')
     {
         get_char();
-        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_slash);
+        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_slash);
     }
     else if (ch=='*')
     {
         get_char();
-        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_star);
+        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_star);
     }
     else if (ch=='%')
     {
         get_char();
-        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_percent);
+        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_percent);
     }
     else if (ch=='-')
     {
         get_char();
-        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_minus);
+        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_minus);
     }
     else if (ch=='+')
     {
         get_char();
-        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_plus);
+        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_plus);
     }
     else if (ch=='.')
     {
         get_char();
-        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_period);
+        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_period);
     }
     else if ((ch == ':') && (peek_ahead() == ':'))
     {
-        auto start_position = current_position;
+        auto start_position = look_ahead_position;
         get_char(); get_char();
-        return make_located<token_symbol>(start_position, current_position, token_symbol::sym_dcolon);
+        return make_located<token_symbol>(start_position, look_ahead_position, token_symbol::sym_dcolon);
     }
     else if (ch == ';')
     {
         get_char();
-        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_semicolon);
+        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_semicolon);
     }
     else if (ch == ':')
     {
         get_char();
-        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_colon);
+        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_colon);
     }
     else if (ch == ',')
     {
         get_char();
-        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_comma);
+        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_comma);
     }
     else if (ch == '=')
     {
         get_char();
-        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_equal);
+        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_equal);
     }
     else if (ch == '(')
     {
         get_char();
-        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_brac_open);
+        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_brac_open);
     }
     else if (ch == ')')
     {
         get_char();
-        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_brac_close);
+        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_brac_close);
     }
     else if (ch == '{')
     {
         get_char();
-        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_curly_open);
+        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_curly_open);
     }
     else if (ch == '}')
     {
         get_char();
-        return make_located<token_symbol>(current_position, current_position, token_symbol::sym_curly_close);
+        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_curly_close);
     }
     else if (is_id_start_character(ch))
     {
@@ -397,12 +404,12 @@ token lexer::parse_token()
     }
 
     get_char();
-    return make_located<token_illegal>(current_position, current_position, std::to_string(ch));
+    return make_located<token_illegal>(look_ahead_position, look_ahead_position, std::to_string(ch));
 }
 
 token lexer::parse_number()
 {
-    auto start_position = current_position;
+    auto start_position = look_ahead_position;
     std::string num;
     while (std::isdigit(input_.peek()))
     {
@@ -418,12 +425,12 @@ token lexer::parse_number()
         suffix += get_char();
     }
 
-    return make_located<token_integer>(start_position, current_position, std::stoi(num), suffix);
+    return make_located<token_integer>(start_position, look_ahead_position, std::stoi(num), suffix);
 }
 
 token lexer::parse_identifier_or_keyword()
 {
-    auto start_position = current_position;
+    auto start_position = look_ahead_position;
     std::string id_name;
     while (is_id_character(input_.peek()))
     {
@@ -432,26 +439,26 @@ token lexer::parse_identifier_or_keyword()
 
     if (id_name == "fn")
     {
-        return make_located<token_symbol>(start_position, current_position, token_symbol::sym_kw_fn);
+        return make_located<token_symbol>(start_position, look_ahead_position, token_symbol::sym_kw_fn);
     }
     else if (id_name == "import")
     {
-        return make_located<token_symbol>(start_position, current_position, token_symbol::sym_kw_import);
+        return make_located<token_symbol>(start_position, look_ahead_position, token_symbol::sym_kw_import);
     }
     else if (id_name == "let")
     {
-        return make_located<token_symbol>(start_position, current_position, token_symbol::sym_kw_let);
+        return make_located<token_symbol>(start_position, look_ahead_position, token_symbol::sym_kw_let);
     }
     else if (id_name == "record")
     {
-        return make_located<token_symbol>(start_position, current_position, token_symbol::sym_kw_record);
+        return make_located<token_symbol>(start_position, look_ahead_position, token_symbol::sym_kw_record);
     }
     else if (id_name == "as")
     {
-        return make_located<token_symbol>(start_position, current_position, token_symbol::sym_kw_as);
+        return make_located<token_symbol>(start_position, look_ahead_position, token_symbol::sym_kw_as);
     }
     else
     {
-        return make_located<token_identifier>(start_position, current_position, id_name);
+        return make_located<token_identifier>(start_position, look_ahead_position, id_name);
     }
 }

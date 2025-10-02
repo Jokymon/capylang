@@ -15,5 +15,5 @@ fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:7:2: Unexpected trailing code after function definition\n"
+        == "filename:6:2: Unexpected trailing code after function definition\n"
     )

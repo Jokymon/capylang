@@ -142,6 +142,7 @@ public:
 private:
     std::istream &input_;
     std::optional<token> lookahead_;
+    source_position look_ahead_position;
     source_position current_position;
 
     int peek_ahead();

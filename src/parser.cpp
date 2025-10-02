@@ -440,6 +440,15 @@ ast_node parser::create_error(const std::string &error_message)
         error_message);
 }
 
+ast_node parser::create_error_at(source_position location, const std::string &error_message)
+{
+    return make_located<node_parse_error>(
+        location,
+        location,
+        location,
+        error_message);
+}
+
 void parser::append_error(const std::string &error_message)
 {
     auto current_pos = capy_lexer.current_source_position();
@@ -1087,7 +1096,7 @@ ast_node parser::parse_primary()
             auto var = current_scope->lookup(id.name);
             if (!var.has_value())
             {
-                return create_error("Undefined variable: '"+id.name+"'");
+                return create_error_at(id_range.start, "Undefined variable: '"+id.name+"'");
             }
 
             ast_node object = make_located<node_var_reference>(
@@ -1105,7 +1114,7 @@ ast_node parser::parse_primary()
             auto var = current_scope->lookup(id.name);
             if (!var.has_value())
             {
-                return create_error("Undefined variable: '"+id.name+"'");
+                return create_error_at(id_range.start, "Undefined variable: '"+id.name+"'");
             }
 
             return make_located<node_var_reference>(

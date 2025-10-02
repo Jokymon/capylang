@@ -279,6 +279,7 @@ private:
     lexer &capy_lexer;
 
     ast_node create_error(const std::string &error_message);
+    ast_node create_error_at(source_position location, const std::string &error_message);
     void append_error(const std::string &error_message);
 
     ast_node parse_module();

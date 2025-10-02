@@ -9,7 +9,7 @@ def test_location_of_incomplete_expression():
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:5:10: Expected a primary (function call, number, variable)\n"
+        == "filename:5:9: Expected a primary (function call, number, variable)\n"
     )
 
 
@@ -25,5 +25,5 @@ fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:5:22: Undefined variable: 'a_name'\n"
+        == "filename:5:15: Undefined variable: 'a_name'\n"
     )
