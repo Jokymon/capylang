@@ -458,6 +458,13 @@ void parser::append_error(const std::string &error_message)
         error_message));
 }
 
+void parser::append_error_at(source_position location, const std::string &error_message)
+{
+    errors.emplace_back(node_parse_error(
+        location,
+        error_message));
+}
+
 ast_node parser::parse_module()
 {
     auto capy_module = make_located<node_module>(
@@ -788,10 +795,6 @@ ast_node parser::parse_expression(int min_precedence)
     else
     {
         auto lhs = parse_primary();
-        if (is_error(lhs))
-        {
-            return lhs;
-        }
         source_range start = lhs.location;
 
         while (capy_lexer.ahead_is_operator())
@@ -1096,7 +1099,13 @@ ast_node parser::parse_primary()
             auto var = current_scope->lookup(id.name);
             if (!var.has_value())
             {
-                return create_error_at(id_range.start, "Undefined variable: '"+id.name+"'");
+                append_error_at(id_range.start, "Undefined variable: '"+id.name+"'");
+                var = symbol{
+                    "_",
+                    t_t::u32{},
+                    symbol_kind::global_var,
+                    0
+                };
             }
 
             ast_node object = make_located<node_var_reference>(
@@ -1114,7 +1123,13 @@ ast_node parser::parse_primary()
             auto var = current_scope->lookup(id.name);
             if (!var.has_value())
             {
-                return create_error_at(id_range.start, "Undefined variable: '"+id.name+"'");
+                append_error_at(id_range.start, "Undefined variable: '"+id.name+"'");
+                var = symbol{
+                    "_",
+                    t_t::u32{},
+                    symbol_kind::global_var,
+                    0
+                };
             }
 
             return make_located<node_var_reference>(
@@ -1130,10 +1145,6 @@ ast_node parser::parse_primary()
         auto op_token = capy_lexer.next_token();
 
         auto pointer_expr = parse_primary();
-        if (is_error(pointer_expr))
-        {
-            return pointer_expr;
-        }
 
         return make_located<node_pointer_deref>(
             op_token.location.start,
@@ -1149,7 +1160,13 @@ ast_node parser::parse_primary()
     }
     else
     {
-        return create_error("Expected a primary (function call, number, variable)");
+        append_error("Expected a primary (function call, number, variable)");
+        // just create one of the simplest primaries in case we couldn't parse one
+        return make_located<node_number>(
+            capy_lexer.current_source_position(),
+            capy_lexer.current_source_position(),
+            0,
+            t_t::u32{});
     }
 }
 

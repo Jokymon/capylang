@@ -281,6 +281,7 @@ private:
     ast_node create_error(const std::string &error_message);
     ast_node create_error_at(source_position location, const std::string &error_message);
     void append_error(const std::string &error_message);
+    void append_error_at(source_position location, const std::string &error_message);
 
     ast_node parse_module();
     std::optional<ast_node> parse_parameters(std::vector<param_spec>& parameters);

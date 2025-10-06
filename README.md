@@ -28,6 +28,9 @@ exit codes. This is supported by `uv` and the `pytest` library.
  * Add intrinsics
  * Make sure pointer types are correctly dereferenced; special checks for u8, u16, since we dereference u32 normally
  * Comparison operators and bool type
+ * Check error messages when a function has it's last statement terminated with a ;
+   --> this probably has to be checked with the return type and be made sure that the part after the ;
+       is treated as a void return
 
  ### Inspiration for language design:
 
