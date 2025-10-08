@@ -1,0 +1,25 @@
+{
+  "name": "capylang",
+  "displayName": "Capylang",
+  "description": "Syntax highlighting for the Capybara language",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.104.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "capy",
+      "aliases": ["CapyLang", "capy"],
+      "extensions": [".capy"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "capy",
+      "scopeName": "source.capy",
+      "path": "./syntaxes/capy.tmLanguage.json"
+    }]
+  }
+}
