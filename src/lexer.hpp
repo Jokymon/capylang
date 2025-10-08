@@ -134,6 +134,20 @@ public:
         return {peek_token().location, T{}};
     }
 
+    /* This is an expect<>()-variant that will try to get a token based on the expectation
+       but will otherwise just return a default constructed token */
+    template <typename T>
+    std::tuple<source_range, T> parse_or_default()
+    {
+        if (std::holds_alternative<T>(peek_token().value))
+        {
+            auto token = next_token();
+            return {token.location, std::move(std::get<T>(token.value))};
+        }
+
+        return {{current_position, current_position}, T{}};
+    }
+
     bool expect_symbol(token_symbol::symbol_type symbol);
 
     token next_token();

@@ -805,11 +805,6 @@ ast_node parser::parse_expression(int min_precedence)
             {
                 rhs = parse_expression(prec + 1);
             }
-
-            if (is_error(rhs))
-            {
-                return rhs;
-            }
             source_range end = rhs.location;
 
             lhs = make_located<node_expression>(
@@ -873,32 +868,24 @@ ast_node parser::parse_let_expression()
 
     if (!capy_lexer.ahead_is<token_identifier>())
     {
-        return create_error("Expecting a variable name after 'let' keyword");
+        append_error("Expecting a variable name after 'let' keyword");
     }
-    auto [_, variable_name] = capy_lexer.expect<token_identifier>();
+    auto [_, variable_name] = capy_lexer.parse_or_default<token_identifier>();
 
     if (!capy_lexer.expect_symbol(token_symbol::sym_colon))
     {
-        return create_error("Expecting a ':' after variable name in 'let' expression");
+        append_error("Expecting a ':' after variable name in 'let' expression");
     }
 
     auto type_spec_node = parse_type_reference();
-    if (is_error(type_spec_node))
-    {
-        return type_spec_node;
-    }
     auto type_spec = std::get<node_type_spec>(type_spec_node.value).type_spec;
 
     if (!capy_lexer.expect_symbol(token_symbol::sym_equal)) 
     {
-        return create_error("Expecting a '=' starting the initializer expression for the new variable");
+        append_error("Expecting a '=' starting the initializer expression for the new variable");
     }
 
     auto initializer = parse_expression();
-    if (is_error(initializer))
-    {
-        return initializer;
-    }
 
     auto new_symbol = symbol{
         .name = variable_name.name,
