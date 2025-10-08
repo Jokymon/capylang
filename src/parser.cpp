@@ -440,15 +440,6 @@ ast_node parser::create_error(const std::string &error_message)
         error_message);
 }
 
-ast_node parser::create_error_at(source_position location, const std::string &error_message)
-{
-    return make_located<node_parse_error>(
-        location,
-        location,
-        location,
-        error_message);
-}
-
 void parser::append_error(const std::string &error_message)
 {
     auto current_pos = capy_lexer.current_source_position();
