@@ -128,6 +128,19 @@ void emitter::emit(const node_module &module_def)
     output_ << "  (global $heap_ptr (mut i32) (i32.const 1024))\n";
     output_ << "  (export \"memory\" (memory 0))\n";
     output_ << "  (export \"_start\" (func $_start))\n";
+    output_ << "  (func $cabi_realloc (param $originalPtr i32)\n";
+    output_ << "                      (param $originalSize i32)\n";
+    output_ << "                      (param $alignment i32)\n";
+    output_ << "                      (param $newSize i32)\n";
+    output_ << "    (result i32)\n";
+
+    output_ << "      global.get $heap_ptr\n";
+    output_ << "      global.get $heap_ptr\n";
+    output_ << "      local.get $newSize\n";
+    output_ << "      i32.add\n";
+    output_ << "      global.set $heap_ptr\n";
+
+    output_ << "  )\n";
 
     for (const auto &func_def : module_def.functions)
     {
@@ -166,6 +179,7 @@ void emitter::emit(const node_function_definition &func_def)
             output_ << "      (local " << create_wasm_name(identifier) << " i32)\n";
         }
     }
+    output_ << "      (local $_rec_ptr i32)\n";  // Pointer used during record initialisations
 
     for (const auto &expression : func_def.code)
     {
@@ -193,6 +207,13 @@ void emitter::emit(const node_let_expression& let_expression)
 void emitter::emit(const node_record_initialisation& record_init)
 {
     size_t record_size = type_size(record_init.type_spec);
+    output_ << "      i32.const 0\n";   // originalPtr
+    output_ << "      i32.const 0\n";   // originalSize
+    output_ << "      i32.const 4\n";   // alignment
+    output_ << "      i32.const " << record_size << "\n";   // newSize
+    output_ << "      call $cabi_realloc\n";
+    output_ << "      local.set $_rec_ptr\n";
+
     // TODO: semantic check should make sure, that the type_spec really is a record
     auto& record_type = std::get<t_t::record>(record_init.type_spec);
 
@@ -202,7 +223,7 @@ void emitter::emit(const node_record_initialisation& record_init)
     for (const auto& field : record_type.fields)
     {
         // get the address for the field to initialise
-        output_ << "      global.get $heap_ptr\n";
+        output_ << "      local.get $_rec_ptr\n";
         output_ << "      i32.const " << offset << "\n";
         output_ << "      i32.add\n";
 
@@ -226,12 +247,9 @@ void emitter::emit(const node_record_initialisation& record_init)
         offset += type_size(*field.type_spec);
     }   
 
-    output_ << "      global.get $heap_ptr\n"; // leave the initial heap pointer on the stack
-    // Using a very simple allocation-only heap management for the moment
-    output_ << "      global.get $heap_ptr\n";
-    output_ << "      i32.const " << record_size << "\n";
-    output_ << "      i32.add\n";
-    output_ << "      global.set $heap_ptr\n";
+    // after record initialisation, leave the pointer of the newly created record
+    // on the stack
+    output_ << "      local.get $_rec_ptr\n";
 }
 
 void emitter::emit(const node_field_deref& field_deref)
