@@ -224,8 +224,6 @@ void emitter::emit(const node_record_initialisation& record_init)
     {
         // get the address for the field to initialise
         output_ << "      local.get $_rec_ptr\n";
-        output_ << "      i32.const " << offset << "\n";
-        output_ << "      i32.add\n";
 
         // We go through the record definition to keep the order of the fields as given
         // in the definition; we assume, that field initialisations can be out of the
@@ -242,7 +240,7 @@ void emitter::emit(const node_record_initialisation& record_init)
         // TODO: Make sure that every field of the type definition is initialised
 
         // save the value in the record at the current offset
-        output_ << "      i32.store\n";
+        output_ << "      i32.store offset=" << offset << "\n";
 
         offset += type_size(*field.type_spec);
     }   
@@ -261,9 +259,7 @@ void emitter::emit(const node_field_deref& field_deref)
         // TODO: panic! this should have been taken care of in the semantic step
     }
 
-    output_ << "      i32.const " << maybe_size.value() << "\n";
-    output_ << "      i32.add\n";
-    output_ << "      i32.load\n";
+    output_ << "      i32.load offset=" << maybe_size.value() << "\n";
 }
 
 void emitter::emit(const node_expression &root)
