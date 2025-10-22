@@ -639,10 +639,6 @@ ast_node parser::parse_function_definition()
 
     std::vector<std::unique_ptr<ast_node>> function_body;
     auto expression = parse_expression();
-    if (is_error(expression))
-    {
-        return expression;
-    }
     function_body.emplace_back(std::make_unique<ast_node>(std::move(expression)));
 
     while (capy_lexer.ahead_is_sym(token_symbol::sym_semicolon))
@@ -672,10 +668,6 @@ ast_node parser::parse_function_definition()
         function_body.emplace_back(std::make_unique<ast_node>(std::move(drop_wrapper)));
 
         expression = parse_expression();
-        if (is_error(expression))
-        {
-            return expression;
-        }
         function_body.emplace_back(std::make_unique<ast_node>(std::move(expression)));
     }
 
@@ -730,12 +722,6 @@ ast_node parser::parse_expression(int min_precedence)
 
         auto expression = parse_expression();
 
-        if (is_error(expression))
-        {
-            // Expression parsing already failed, so early return
-            return expression;
-        }
-
         // check for a closing )
         if (capy_lexer.ahead_is_sym(token_symbol::sym_brac_close))
         {
@@ -764,7 +750,18 @@ ast_node parser::parse_expression(int min_precedence)
             }
         }
 
-        return create_error("Expected a closing brace ')' at the end of the expression");
+        append_error("Expected a closing brace ')' at the end of the expression");
+
+        // return a dummy expression so we can continue parsing
+        return make_located<node_expression>(
+            start.start,
+            start.end,
+            std::unique_ptr<ast_node>(nullptr),
+            std::unique_ptr<ast_node>(nullptr),
+            source_range{start.start, start.end},
+            op_multiply,
+            t_t::unassigned{}
+        );
     }
     else if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_let))
     {
@@ -818,10 +815,6 @@ ast_node parser::parse_function_call(source_range name_range, const std::string 
     while (!capy_lexer.ahead_is_sym(token_symbol::sym_brac_close))
     {
         auto parameter = parse_expression();
-        if (is_error(parameter))
-        {
-            return parameter;
-        }
         function_parameters.emplace_back(std::make_unique<ast_node>(std::move(parameter)));
 
         if (capy_lexer.ahead_is_sym(token_symbol::sym_comma))
@@ -837,7 +830,15 @@ ast_node parser::parse_function_call(source_range name_range, const std::string 
     auto func = current_scope->lookup_function(function_name);
     if (!func.has_value())
     {
-        return create_error("Function '" + function_name + "' is not defined");
+        append_error("Function '" + function_name + "' is not defined");
+
+        func_symbol dummy_symbol;
+        return make_located<node_function_call>(
+            name_range.start,
+            end_location.end,
+            function_name,
+            dummy_symbol,
+            std::move(function_parameters));
     }
 
     return make_located<node_function_call>(
@@ -975,10 +976,6 @@ ast_node parser::parse_record_initialisation(source_range name_range, const std:
         capy_lexer.expect<token_symbol>();
 
         ast_node init_expression = parse_expression();
-        if (is_error(init_expression))
-        {
-            return init_expression;
-        }
 
         if (!capy_lexer.ahead_is_sym(token_symbol::sym_comma))
         {
@@ -1010,7 +1007,14 @@ ast_node parser::parse_field_deref(type_kind base_type, ast_node object)
 
     if (!capy_lexer.ahead_is<token_identifier>())
     {
-        return create_error("Missing field name after '.'");
+        append_error("Missing field name after '.'");
+        return make_located<node_field_deref>(
+            object.location.start,
+            object.location.end,
+            std::make_unique<ast_node>(std::move(object)),
+            "",
+            base_type
+        );
     }
     auto [field_range, field_name] = capy_lexer.expect<token_identifier>();
 
@@ -1026,13 +1030,20 @@ ast_node parser::parse_field_deref(type_kind base_type, ast_node object)
     {
         if (!std::holds_alternative<t_t::record>(base_type))
         {
-            return create_error("Can't dereference field '"+field_name.name+"'");
+            // TODO: when are these errors even triggered? In the current tests
+            // such errors are only reported from semantic checks
+            append_error("Can't dereference field '"+field_name.name+"'");
+            // After the error, just return what we have so far
+            return node;
         }
         t_t::record base_record_type = std::get<t_t::record>(base_type);
         auto field_type = base_record_type.field_type(field_name.name);
         if (!field_type.has_value())
         {
-            return create_error("Record doesn't contain a field named '"+field_name.name+"'");
+            // TODO: when are these errors even triggered? In the current tests
+            // such errors are only reported from semantic checks
+            append_error("Record doesn't contain a field named '"+field_name.name+"'");
+            return node;
         }
 
         node = parse_field_deref(field_type.value(), std::move(node));
