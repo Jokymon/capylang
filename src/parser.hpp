@@ -283,7 +283,7 @@ private:
     void append_error_at(source_position location, const std::string &error_message);
 
     ast_node parse_module();
-    std::optional<ast_node> parse_parameters(std::vector<param_spec>& parameters);
+    void parse_parameters(std::vector<param_spec>& parameters);
     std::optional<ast_node> parse_function_signature(function_signature& signature);
     ast_node parse_import_definition();
     ast_node parse_function_definition();

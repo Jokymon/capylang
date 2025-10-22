@@ -1,5 +1,29 @@
 import tools
 
+# ----------------------------------------
+# syntactic errors
+
+
+def test_missing_colon_for_parameter_types():
+    code = """
+import wasi_snapshot_preview1::proc_exit(exit_code u32) as proc_exit;
+
+fn _start() {
+    proc_exit(10)
+}
+"""
+    exit_code, stderr = tools.compile_test_code(code)
+
+    assert exit_code == 1
+    assert (
+        tools.normalize_filename_from_output(stderr)
+        == "filename:2:51: Expecting a colon ':' between parameter name and parameter type\n"
+    )
+
+
+# ----------------------------------------
+# semantic errors
+
 
 def test_undefined_function():
     code = """

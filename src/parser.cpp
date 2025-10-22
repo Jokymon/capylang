@@ -509,11 +509,7 @@ std::optional<ast_node> parser::parse_function_signature(function_signature &sig
         return create_error("Expecting an opening bracket '(' for function parameters");
     }
 
-    auto error_result = parse_parameters(signature.parameters);
-    if (error_result.has_value())
-    {
-        return std::move(error_result.value());
-    }
+    parse_parameters(signature.parameters);
 
     if (!capy_lexer.expect_symbol(token_symbol::sym_brac_close))
     {
@@ -535,7 +531,7 @@ std::optional<ast_node> parser::parse_function_signature(function_signature &sig
     return std::nullopt;
 }
 
-std::optional<ast_node> parser::parse_parameters(std::vector<param_spec> &parameters)
+void parser::parse_parameters(std::vector<param_spec> &parameters)
 {
     uint32_t argument_index = 0;
 
@@ -544,7 +540,7 @@ std::optional<ast_node> parser::parse_parameters(std::vector<param_spec> &parame
         auto [_, param_name] = capy_lexer.expect<token_identifier>();
         if (!capy_lexer.expect_symbol(token_symbol::sym_colon))
         {
-            return create_error("Expecting a colon ':' between parameter name and parameter type");
+            append_error("Expecting a colon ':' between parameter name and parameter type");
         }
 
         auto type_spec_node = parse_type_reference();
@@ -564,8 +560,6 @@ std::optional<ast_node> parser::parse_parameters(std::vector<param_spec> &parame
             capy_lexer.expect<token_symbol>();
         }
     }
-
-    return std::nullopt;
 }
 
 ast_node parser::parse_import_definition()
