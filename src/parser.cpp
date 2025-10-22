@@ -527,10 +527,6 @@ std::optional<ast_node> parser::parse_function_signature(function_signature &sig
         capy_lexer.next_token();
 
         auto type_spec_node = parse_type_reference();
-        if (is_error(type_spec_node))
-        {
-            return type_spec_node;
-        }
         return_type = std::get<node_type_spec>(type_spec_node.value).type_spec;
     }
 
@@ -552,11 +548,6 @@ std::optional<ast_node> parser::parse_parameters(std::vector<param_spec> &parame
         }
 
         auto type_spec_node = parse_type_reference();
-        if (is_error(type_spec_node))
-        {
-            return type_spec_node;
-        }
-
         auto type_spec = std::get<node_type_spec>(type_spec_node.value).type_spec;
 
         current_scope->symbol_table[param_name.name] = symbol{
@@ -756,10 +747,6 @@ ast_node parser::parse_expression(int min_precedence)
                 auto op_token = capy_lexer.next_token();
 
                 auto type_spec = parse_type_reference();
-                if (is_error(type_spec))
-                {
-                    return type_spec;
-                }
 
                 return make_located<node_expression>(
                     start.start,
@@ -932,10 +919,6 @@ ast_node parser::parse_record_definition()
         }
 
         auto type_spec_node = parse_type_reference();
-        if (is_error(type_spec_node))
-        {
-            return type_spec_node;
-        }
         auto type_spec = std::get<node_type_spec>(type_spec_node.value).type_spec;
 
         new_record_fields.emplace_back(t_t::record::field_spec{field_id.name, std::make_unique<type_kind>(type_spec)});
