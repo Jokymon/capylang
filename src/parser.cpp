@@ -577,10 +577,6 @@ ast_node parser::parse_import_definition()
     }
 
     auto function_head = parse_function_head();
-    if (is_error(function_head))
-    {
-        return function_head;
-    }
 
     std::optional<std::string> alias_name;
 
@@ -614,10 +610,6 @@ ast_node parser::parse_function_definition()
     auto [start_range, _] = capy_lexer.expect<token_symbol>();
 
     auto function_head = parse_function_head();
-    if (is_error(function_head))
-    {
-        return function_head;
-    }
 
     if (!capy_lexer.expect_symbol(token_symbol::sym_curly_open))
     {
@@ -682,9 +674,9 @@ ast_node parser::parse_function_head()
 {
     if (!capy_lexer.ahead_is<token_identifier>())
     {
-        return create_error("Expecting a function name");
+        append_error("Expecting a function name");
     }
-    auto [start_range, function_name] = capy_lexer.expect<token_identifier>();
+    auto [start_range, function_name] = capy_lexer.parse_or_default<token_identifier>();
 
     function_signature signature;
     parse_function_signature(signature);
@@ -695,7 +687,7 @@ ast_node parser::parse_function_head()
 
     return make_located<node_function_head>(
         start_range.start,
-        start_range.end, // TODO
+        start_range.end, // TODO: this should span the whole signature
         function_name.name,
         signature);
 }

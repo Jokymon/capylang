@@ -55,6 +55,23 @@ fn _start() {
     )
 
 
+def test_missing_function_identifier():
+    code = """
+import wasi_snapshot_preview1:: (exit_code: u32) as proc_exit;
+
+fn _start() {
+    proc_exit(10)
+}
+"""
+    exit_code, stderr = tools.compile_test_code(code)
+
+    assert exit_code == 1
+    assert (
+        tools.normalize_filename_from_output(stderr)
+        == "filename:2:32: Expecting a function name\nfilename:5:18: Function 'proc_exit' is not defined\n"
+    )
+
+
 # ----------------------------------------
 # semantic errors
 
