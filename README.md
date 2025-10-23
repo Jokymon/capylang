@@ -44,3 +44,17 @@ exit codes. This is supported by `uv` and the `pytest` library.
 - Safe navigation operator: https://en.wikipedia.org/wiki/Safe_navigation_operator
 - Null coalescing operator: https://en.wikipedia.org/wiki/Null_coalescing_operator
 - Chocopy WASM backend: https://yangdanny97.github.io/blog/2022/10/11/chocopy-wasm-backend
+
+## Decisions
+
+### Using Binaryen as code generator
+
+Binaryen would be a good generator to easily produce WASM WAT format but also binary WASM modules. Additionally it would
+even include some optimisation steps out of the box. However during first experiments of adding the project as CPM
+packet, several problems were encountered and the idea was ultimately abandoned for the moment.
+
+ * Binaryen needs support for exceptions; We currently use the Clang-based WASI SDK which as of 23.10.2025 still claims
+   to not support exceptions. The option `-fno-exception` could be removed from `CMakeLists.txt` but it is unclear
+   whether this really works. Some compiler errors still showed up.
+ * Binaryen needs threads support; With a simple switch to target `wasm32-wasip1-threads` this should be fixable but
+   also here might be more problems than initially seen.
