@@ -1,3 +1,4 @@
+import pytest
 import tools
 
 
@@ -124,6 +125,21 @@ fn _start() {
     // leaving a value on the stack
     add2(34u32);
     proc_exit(3u32)
+}"""
+    exit_code, _ = tools.run_test_code(code)
+
+    assert exit_code == 3
+
+
+# ------------------------------------------------------------------
+# import specific tests
+@pytest.mark.skip(reason="There is a bug in proper alias handling")
+def test_import_alias_name_can_be_used():
+    code = """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as pe;
+
+fn _start() {
+    pe(3u32)
 }"""
     exit_code, _ = tools.run_test_code(code)
 
