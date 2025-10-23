@@ -501,19 +501,18 @@ ast_node parser::parse_module()
     return capy_module;
 }
 
-std::optional<ast_node> parser::parse_function_signature(function_signature &signature)
+void parser::parse_function_signature(function_signature &signature)
 {
-    // TODO: we lost how we can keep to location of the signature here :-(
     if (!capy_lexer.expect_symbol(token_symbol::sym_brac_open))
     {
-        return create_error("Expecting an opening bracket '(' for function parameters");
+        append_error("Expecting an opening bracket '(' for function parameters");
     }
 
     parse_parameters(signature.parameters);
 
     if (!capy_lexer.expect_symbol(token_symbol::sym_brac_close))
     {
-        return create_error("Expecting an closing bracket ')' for function parameters");
+        append_error("Expecting an closing bracket ')' for function parameters");
     }
 
     std::optional<type_kind> return_type = t_t::void_type{};
@@ -527,8 +526,6 @@ std::optional<ast_node> parser::parse_function_signature(function_signature &sig
     }
 
     signature.return_type = return_type.value();
-
-    return std::nullopt;
 }
 
 void parser::parse_parameters(std::vector<param_spec> &parameters)
@@ -690,11 +687,7 @@ ast_node parser::parse_function_head()
     auto [start_range, function_name] = capy_lexer.expect<token_identifier>();
 
     function_signature signature;
-    auto signature_result = parse_function_signature(signature);
-    if (signature_result.has_value())
-    {
-        return std::move(signature_result.value());
-    }
+    parse_function_signature(signature);
 
     current_scope->function_table[function_name.name] = func_symbol{
         .name = function_name.name,

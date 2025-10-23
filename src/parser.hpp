@@ -284,7 +284,7 @@ private:
 
     ast_node parse_module();
     void parse_parameters(std::vector<param_spec>& parameters);
-    std::optional<ast_node> parse_function_signature(function_signature& signature);
+    void parse_function_signature(function_signature& signature);
     ast_node parse_import_definition();
     ast_node parse_function_definition();
     ast_node parse_function_head();

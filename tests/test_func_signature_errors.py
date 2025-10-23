@@ -21,6 +21,40 @@ fn _start() {
     )
 
 
+def test_missing_open_bracket_for_parameters():
+    code = """
+import wasi_snapshot_preview1::proc_exit exit_code: u32) as proc_exit;
+
+fn _start() {
+    proc_exit(10)
+}
+"""
+    exit_code, stderr = tools.compile_test_code(code)
+
+    assert exit_code == 1
+    assert (
+        tools.normalize_filename_from_output(stderr)
+        == "filename:2:41: Expecting an opening bracket '(' for function parameters\n"
+    )
+
+
+def test_missing_closing_bracket_for_parameters():
+    code = """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32 as proc_exit;
+
+fn _start() {
+    proc_exit(10)
+}
+"""
+    exit_code, stderr = tools.compile_test_code(code)
+
+    assert exit_code == 1
+    assert (
+        tools.normalize_filename_from_output(stderr)
+        == "filename:2:56: Expecting an closing bracket ')' for function parameters\n"
+    )
+
+
 # ----------------------------------------
 # semantic errors
 
