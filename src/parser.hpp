@@ -123,6 +123,13 @@ struct scope {
     std::optional<func_symbol> lookup_function(const std::string& name);
 };
 
+template <typename T>
+struct located
+{
+    T value;
+    source_range location;
+};
+
 struct node_number;
 struct node_var_reference;
 struct node_pointer_deref;

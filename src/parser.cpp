@@ -534,7 +534,7 @@ void parser::parse_parameters(std::vector<param_spec> &parameters)
 
     while (capy_lexer.ahead_is<token_identifier>())
     {
-        auto [_, param_name] = capy_lexer.expect<token_identifier>();
+        auto param_name = capy_lexer.expect<token_identifier>();
         if (!capy_lexer.expect_symbol(token_symbol::sym_colon))
         {
             append_error("Expecting a colon ':' between parameter name and parameter type");
@@ -563,13 +563,13 @@ ast_node parser::parse_import_definition()
 {
     // Eat the 'import' keyword that we already established in
     // the calling function
-    auto [start_range, _] = capy_lexer.expect<token_symbol>();
+    auto start_range = capy_lexer.expect<token_symbol>().location;
 
     if (!capy_lexer.ahead_is<token_identifier>())
     {
         return create_error("Expecting a namespace identifier");
     }
-    auto [_, namespace_name] = capy_lexer.expect<token_identifier>();
+    auto namespace_name = capy_lexer.expect<token_identifier>();
 
     if (!capy_lexer.expect_symbol(token_symbol::sym_dcolon))
     {
@@ -588,14 +588,14 @@ ast_node parser::parse_import_definition()
         {
             return create_error("Expecting an alias identifier for imported symbol");
         }
-        auto [_, alias_name] = capy_lexer.expect<token_identifier>();
+        auto alias_name = capy_lexer.expect<token_identifier>();
     }
 
     if (!capy_lexer.ahead_is_sym(token_symbol::sym_semicolon))
     {
         return create_error("Expecting a closing ';' after import definition");
     }
-    auto [end_range, _] = capy_lexer.expect<token_symbol>();
+    auto end_range = capy_lexer.expect<token_symbol>().location;
 
     return make_located<node_import_definition>(
         start_range.start,
@@ -607,7 +607,7 @@ ast_node parser::parse_import_definition()
 
 ast_node parser::parse_function_definition()
 {
-    auto [start_range, _] = capy_lexer.expect<token_symbol>();
+    auto start_range = capy_lexer.expect<token_symbol>().location;
 
     auto function_head = parse_function_head();
 
@@ -658,7 +658,7 @@ ast_node parser::parse_function_definition()
     {
         return create_error("Expecting a closing brace '}' after function body definition");
     }
-    auto [end_range, _] = capy_lexer.expect<token_symbol>();
+    auto end_range = capy_lexer.expect<token_symbol>().location;
 
     current_scope = current_scope->parent;
 
@@ -676,7 +676,8 @@ ast_node parser::parse_function_head()
     {
         append_error("Expecting a function name");
     }
-    auto [start_range, function_name] = capy_lexer.parse_or_default<token_identifier>();
+    auto function_name = capy_lexer.parse_or_default<token_identifier>();
+    auto start_range = function_name.location;
 
     function_signature signature;
     parse_function_signature(signature);
@@ -697,19 +698,19 @@ ast_node parser::parse_expression(int min_precedence)
     if (capy_lexer.ahead_is_sym(token_symbol::sym_brac_open))
     {
         // eat up the '(' token
-        auto [start, _] = capy_lexer.expect<token_symbol>();
+        auto start = capy_lexer.expect<token_symbol>().location;
 
         auto expression = parse_expression();
 
         // check for a closing )
         if (capy_lexer.ahead_is_sym(token_symbol::sym_brac_close))
         {
-            auto [end, _] = capy_lexer.expect<token_symbol>();
+            auto end = capy_lexer.expect<token_symbol>().location;
 
             if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_as))
             {
                 // next token is a conversion operator, skip it
-                auto op_token = capy_lexer.next_token();
+                auto op_token = capy_lexer.expect<token_symbol>();
 
                 auto type_spec = parse_type_reference();
 
@@ -757,7 +758,7 @@ ast_node parser::parse_expression(int min_precedence)
             int prec = get_precedence(op);
             if (prec < min_precedence)
                 break;
-            auto op_token = capy_lexer.next_token();
+            auto op_token = capy_lexer.expect<token_symbol>();
 
             ast_node rhs;
             if (op == op_conversion)
@@ -804,7 +805,7 @@ ast_node parser::parse_function_call(source_range name_range, const std::string 
     }
 
     // TODO: check for closing )
-    auto [end_location, _] = capy_lexer.expect<token_symbol>();
+    auto end_location = capy_lexer.expect<token_symbol>().location;
 
     auto func = current_scope->lookup_function(function_name);
     if (!func.has_value())
@@ -831,13 +832,13 @@ ast_node parser::parse_function_call(source_range name_range, const std::string 
 ast_node parser::parse_let_expression()
 {
     // eat the 'let' keyword
-    auto [start_location, _] = capy_lexer.expect<token_symbol>();
+    auto start_location = capy_lexer.expect<token_symbol>().location;
 
     if (!capy_lexer.ahead_is<token_identifier>())
     {
         append_error("Expecting a variable name after 'let' keyword");
     }
-    auto [_, variable_name] = capy_lexer.parse_or_default<token_identifier>();
+    auto variable_name = capy_lexer.parse_or_default<token_identifier>();
 
     if (!capy_lexer.expect_symbol(token_symbol::sym_colon))
     {
@@ -875,14 +876,14 @@ ast_node parser::parse_let_expression()
 ast_node parser::parse_record_definition()
 {
     // eat the 'record' keyword
-    auto [start_range, _] = capy_lexer.expect<token_symbol>();
+    auto start_range = capy_lexer.expect<token_symbol>().location;
 
     if (!capy_lexer.ahead_is<token_identifier>())
     {
         return create_error("'record' definition requires an identifier for the record");
     }
 
-    auto  [_, record_id] = capy_lexer.expect<token_identifier>();
+    auto record_id = capy_lexer.expect<token_identifier>();
 
     if (!capy_lexer.expect_symbol(token_symbol::sym_curly_open))
     {
@@ -892,7 +893,7 @@ ast_node parser::parse_record_definition()
     std::vector<t_t::record::field_spec> new_record_fields;
     while (capy_lexer.ahead_is<token_identifier>())
     {
-        auto [_, field_id] = capy_lexer.expect<token_identifier>();
+        auto field_id = capy_lexer.expect<token_identifier>();
         if (!capy_lexer.expect_symbol(token_symbol::sym_colon))
         {
             return create_error("Expecting a colon ':' after field name and before type specification");
@@ -918,7 +919,7 @@ ast_node parser::parse_record_definition()
     {
         return create_error("Record definition must be terminated with a semicolon");
     }
-    auto [end_range, _] = capy_lexer.expect<token_symbol>();
+    auto end_range = capy_lexer.expect<token_symbol>().location;
 
     auto* global_scope = current_scope->get_global_scope();
     global_scope->type_table[record_id.name] = t_t::record(new_record_fields);
@@ -946,7 +947,8 @@ ast_node parser::parse_record_initialisation(source_range name_range, const std:
 
     while (capy_lexer.ahead_is<token_identifier>())
     {
-        auto [field_position, field_name] = capy_lexer.expect<token_identifier>();
+        auto field_name = capy_lexer.expect<token_identifier>();
+        auto field_position = field_name.location;
 
         if (!capy_lexer.ahead_is_sym(token_symbol::sym_equal))
         {
@@ -969,7 +971,7 @@ ast_node parser::parse_record_initialisation(source_range name_range, const std:
     {
         return create_error("Record initialisation must be finished with a closing '}'");
     }
-    auto [end_range, _] = capy_lexer.expect<token_symbol>();
+    auto end_range = capy_lexer.expect<token_symbol>().location;
 
     return make_located<node_record_initialisation>(
         name_range.start,
@@ -995,7 +997,8 @@ ast_node parser::parse_field_deref(type_kind base_type, ast_node object)
             base_type
         );
     }
-    auto [field_range, field_name] = capy_lexer.expect<token_identifier>();
+    auto field_name = capy_lexer.expect<token_identifier>();
+    auto field_range = field_name.location;
 
     auto node = make_located<node_field_deref>(
         object.location.start,
@@ -1035,7 +1038,8 @@ ast_node parser::parse_primary()
 {
     if (capy_lexer.ahead_is<token_identifier>())
     {
-        auto [id_range, id] = capy_lexer.expect<token_identifier>();
+        auto id = capy_lexer.expect<token_identifier>();
+        auto id_range = id.location;
 
         if (capy_lexer.ahead_is_sym(token_symbol::sym_brac_open))
         {
@@ -1093,7 +1097,7 @@ ast_node parser::parse_primary()
     }
     else if (capy_lexer.ahead_is_sym(token_symbol::sym_star))
     {
-        auto op_token = capy_lexer.next_token();
+        auto op_token = capy_lexer.expect<token_symbol>();
 
         auto pointer_expr = parse_primary();
 
@@ -1133,13 +1137,12 @@ ast_node parser::parse_type_reference()
     source_range token_location;
     token_location.start = capy_lexer.current_source_position();
     token_location.end = capy_lexer.current_source_position();
-    token_identifier type_name = {""};
+    token_identifier type_name = {token_location, ""};
 
     if (capy_lexer.ahead_is<token_identifier>())
     {
-        auto pos_token = capy_lexer.expect<token_identifier>();
-        token_location = std::get<0>(pos_token);
-        type_name = std::get<1>(pos_token);
+        type_name = capy_lexer.expect<token_identifier>();
+        token_location = type_name.location;
     }
     else
     {
@@ -1170,11 +1173,8 @@ ast_node parser::parse_type_reference()
 
 ast_node parser::parse_number()
 {
-    // We expect to only end up here, when we are already sure
-    // that the next token is an integer
-    assert(capy_lexer.ahead_is<token_integer>());
-
-    auto [lhs_location, lhs] = capy_lexer.expect<token_integer>();
+    auto lhs = capy_lexer.expect<token_integer>();
+    auto lhs_location = lhs.location;
 
     auto number_type = type_from_id(lhs.type_suffix);
     if (!number_type.has_value())

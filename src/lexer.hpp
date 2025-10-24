@@ -16,25 +16,23 @@ struct source_range
     source_position end;
 };
 
-template <typename T>
-struct located
+struct located_token
 {
-    T value;
     source_range location;
 };
 
-struct token_integer
+struct token_integer : public located_token
 {
     long number;
     std::string type_suffix;
 };
 
-struct token_identifier
+struct token_identifier : public located_token
 {
     std::string name;
 };
 
-struct token_symbol
+struct token_symbol : public located_token
 {
     enum symbol_type
     {
@@ -83,17 +81,16 @@ enum operator_type
 int get_precedence(operator_type op_type);
 operator_type op_from_symbol(const token_symbol& symbol);
 
-struct token_eof
+struct token_eof : public located_token
 {
 };
 
-struct token_illegal
+struct token_illegal : public located_token
 {
     std::string token_text;
 };
 
-using token_raw = std::variant<token_integer, token_identifier, token_symbol, token_eof, token_illegal>;
-using token = located<token_raw>;
+using token = std::variant<token_integer, token_identifier, token_symbol, token_eof, token_illegal>;
 
 std::string repr_op(operator_type op);
 std::string repr_token(const token &tok);
@@ -109,7 +106,7 @@ public:
     bool ahead_is()
     {
         const token &tok = peek_token();
-        return std::holds_alternative<T>(tok.value);
+        return std::holds_alternative<T>(tok);
     }
     bool ahead_is_sym(token_symbol::symbol_type symbol);
     bool ahead_is_operator();
@@ -117,35 +114,35 @@ public:
     template <typename T>
     T next_as()
     {
-        return std::get<T>(peek_token().value);
+        return std::get<T>(peek_token());
     }
 
     template <typename T>
-    std::tuple<source_range, T> expect()
+    T expect()
     {
-        if (std::holds_alternative<T>(peek_token().value))
+        if (std::holds_alternative<T>(peek_token()))
         {
             auto token = next_token();
-            return {token.location, std::move(std::get<T>(token.value))};
+            return std::move(std::get<T>(token));
         }
 
         // TODO: in reality this function only produces a sensible result
         // when the next token is as expected
-        return {peek_token().location, T{}};
+        return T{};
     }
 
     /* This is an expect<>()-variant that will try to get a token based on the expectation
        but will otherwise just return a default constructed token */
     template <typename T>
-    std::tuple<source_range, T> parse_or_default()
+    T parse_or_default()
     {
-        if (std::holds_alternative<T>(peek_token().value))
+        if (std::holds_alternative<T>(peek_token()))
         {
             auto token = next_token();
-            return {token.location, std::move(std::get<T>(token.value))};
+            return std::move(std::get<T>(token));
         }
 
-        return {{current_position, current_position}, T{}};
+        return T{}; // TODO: set the location to current_position
     }
 
     bool expect_symbol(token_symbol::symbol_type symbol);

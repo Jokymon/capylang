@@ -1,16 +1,6 @@
 #include "lexer.hpp"
 #include <assert.h>
 
-template <typename T, typename... Args>
-token make_located(source_position start, source_position end, Args... args)
-{
-    return token{
-        .value = T{args...},
-        .location = source_range{
-            .start = start,
-            .end = end}};
-}
-
 std::string token_symbol::to_string() const
 {
     switch (sym_type)
@@ -172,7 +162,7 @@ std::string repr_token(const token &tok)
                           } else {
                             return "<!TOK_FAIL!>";
                           } },
-                      tok.value);
+                      tok);
 }
 
 lexer::lexer(std::istream &input)
@@ -221,7 +211,7 @@ bool lexer::ahead_is_operator()
         } else {
             return false;
         }
-    }, tok.value);
+    }, tok);
 }
 
 bool lexer::expect_symbol(token_symbol::symbol_type symbol)
@@ -300,7 +290,7 @@ token lexer::parse_token()
 
     if (input_.eof())
     {
-        return make_located<token_eof>(look_ahead_position, look_ahead_position);
+        return token_eof{look_ahead_position};
     }
 
     char ch = input_.peek();
@@ -320,83 +310,83 @@ token lexer::parse_token()
     {
         auto start_position = look_ahead_position;
         get_char(); get_char();
-        return make_located<token_symbol>(start_position, look_ahead_position, token_symbol::sym_arrow);
+        return token_symbol{start_position, look_ahead_position, token_symbol::sym_arrow};
     }
     else if (ch=='/')
     {
         get_char();
-        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_slash);
+        return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_slash};
     }
     else if (ch=='*')
     {
         get_char();
-        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_star);
+        return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_star};
     }
     else if (ch=='%')
     {
         get_char();
-        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_percent);
+        return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_percent};
     }
     else if (ch=='-')
     {
         get_char();
-        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_minus);
+        return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_minus};
     }
     else if (ch=='+')
     {
         get_char();
-        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_plus);
+        return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_plus};
     }
     else if (ch=='.')
     {
         get_char();
-        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_period);
+        return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_period};
     }
     else if ((ch == ':') && (peek_ahead() == ':'))
     {
         auto start_position = look_ahead_position;
         get_char(); get_char();
-        return make_located<token_symbol>(start_position, look_ahead_position, token_symbol::sym_dcolon);
+        return token_symbol{start_position, look_ahead_position, token_symbol::sym_dcolon};
     }
     else if (ch == ';')
     {
         get_char();
-        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_semicolon);
+        return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_semicolon};
     }
     else if (ch == ':')
     {
         get_char();
-        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_colon);
+        return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_colon};
     }
     else if (ch == ',')
     {
         get_char();
-        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_comma);
+        return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_comma};
     }
     else if (ch == '=')
     {
         get_char();
-        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_equal);
+        return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_equal};
     }
     else if (ch == '(')
     {
         get_char();
-        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_brac_open);
+        return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_brac_open};
     }
     else if (ch == ')')
     {
         get_char();
-        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_brac_close);
+        return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_brac_close};
     }
     else if (ch == '{')
     {
         get_char();
-        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_curly_open);
+        return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_curly_open};
     }
     else if (ch == '}')
     {
         get_char();
-        return make_located<token_symbol>(look_ahead_position, look_ahead_position, token_symbol::sym_curly_close);
+        return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_curly_close};
     }
     else if (is_id_start_character(ch))
     {
@@ -404,7 +394,7 @@ token lexer::parse_token()
     }
 
     get_char();
-    return make_located<token_illegal>(look_ahead_position, look_ahead_position, std::to_string(ch));
+    return token_illegal{look_ahead_position, look_ahead_position, std::to_string(ch)};
 }
 
 token lexer::parse_number()
@@ -425,7 +415,7 @@ token lexer::parse_number()
         suffix += get_char();
     }
 
-    return make_located<token_integer>(start_position, look_ahead_position, std::stoi(num), suffix);
+    return token_integer{start_position, look_ahead_position, std::stoi(num), suffix};
 }
 
 token lexer::parse_identifier_or_keyword()
@@ -439,26 +429,26 @@ token lexer::parse_identifier_or_keyword()
 
     if (id_name == "fn")
     {
-        return make_located<token_symbol>(start_position, look_ahead_position, token_symbol::sym_kw_fn);
+        return token_symbol{start_position, look_ahead_position, token_symbol::sym_kw_fn};
     }
     else if (id_name == "import")
     {
-        return make_located<token_symbol>(start_position, look_ahead_position, token_symbol::sym_kw_import);
+        return token_symbol{start_position, look_ahead_position, token_symbol::sym_kw_import};
     }
     else if (id_name == "let")
     {
-        return make_located<token_symbol>(start_position, look_ahead_position, token_symbol::sym_kw_let);
+        return token_symbol{start_position, look_ahead_position, token_symbol::sym_kw_let};
     }
     else if (id_name == "record")
     {
-        return make_located<token_symbol>(start_position, look_ahead_position, token_symbol::sym_kw_record);
+        return token_symbol{start_position, look_ahead_position, token_symbol::sym_kw_record};
     }
     else if (id_name == "as")
     {
-        return make_located<token_symbol>(start_position, look_ahead_position, token_symbol::sym_kw_as);
+        return token_symbol{start_position, look_ahead_position, token_symbol::sym_kw_as};
     }
     else
     {
-        return make_located<token_identifier>(start_position, look_ahead_position, id_name);
+        return token_identifier{start_position, look_ahead_position, id_name};
     }
 }
