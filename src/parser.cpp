@@ -501,10 +501,6 @@ ast_node parser::parse_module()
     while (capy_lexer.ahead_is_sym(token_symbol::sym_kw_fn))
     {
         auto function = parse_function_definition();
-        if (is_error(function))
-        {
-            return function;
-        }
 
         std::get<node_module>(capy_module.value).functions.push_back(std::make_unique<ast_node>(std::move(function)));
     }
@@ -624,7 +620,7 @@ ast_node parser::parse_function_definition()
 
     if (!capy_lexer.expect_symbol(token_symbol::sym_curly_open))
     {
-        return create_error("Expecting an opening brace '{' for function body definition");
+        append_error("Expecting an opening brace '{' for function body definition");
     }
 
     auto func_scope = std::make_unique<scope>();
@@ -667,7 +663,7 @@ ast_node parser::parse_function_definition()
 
     if (!capy_lexer.ahead_is_sym(token_symbol::sym_curly_close))
     {
-        return create_error("Expecting a closing brace '}' after function body definition");
+        append_error("Expecting a closing brace '}' after function body definition");
     }
     auto end_range = capy_lexer.expect<token_symbol>().location;
 
