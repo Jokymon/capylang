@@ -14,10 +14,11 @@ namespace t_t
     struct u8;
     struct s32;
     struct u32;
+    struct string;
     struct pointer;
     struct record;
 };
-using type_kind = std::variant<t_t::unassigned, t_t::void_type, t_t::s32, t_t::u8, t_t::u32, t_t::pointer, t_t::record>;
+using type_kind = std::variant<t_t::unassigned, t_t::void_type, t_t::s32, t_t::u8, t_t::u32, t_t::string, t_t::pointer, t_t::record>;
 
 namespace t_t
 {
@@ -36,6 +37,9 @@ namespace t_t
     };
     struct u32{
         bool operator==(const u32& other) const { return true; }
+    };
+    struct string{
+        bool operator==(const string& other) const { return true; }
     };
 
     struct pointer{
@@ -131,6 +135,7 @@ struct located
 };
 
 struct node_number;
+struct node_string_literal;
 struct node_var_reference;
 struct node_pointer_deref;
 struct node_let_expression;
@@ -146,7 +151,7 @@ struct node_expression;
 struct node_module;
 struct node_parse_error;
 
-using ast_node_raw = std::variant<node_number, node_var_reference, node_pointer_deref, node_let_expression, node_type_spec, node_record_definition, node_record_initialisation, node_field_deref, node_function_head, node_import_definition, node_function_call, node_function_definition, node_expression, node_module, node_parse_error>;
+using ast_node_raw = std::variant<node_number, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_type_spec, node_record_definition, node_record_initialisation, node_field_deref, node_function_head, node_import_definition, node_function_call, node_function_definition, node_expression, node_module, node_parse_error>;
 using ast_node = located<ast_node_raw>;
 
 void dump_ast(const ast_node& root, size_t indent=0);
@@ -160,6 +165,11 @@ struct node_number
 {
     long long number;
     type_kind assigned_type;
+};
+
+struct node_string_literal
+{
+    std::string string_literal;
 };
 
 struct node_var_reference

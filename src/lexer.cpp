@@ -23,6 +23,8 @@ std::string token_symbol::to_string() const
         return ",";
     case sym_dcolon:
         return "::";
+    case sym_dquote:
+        return "\"";
     case sym_equal:
         return "=";
     case sym_minus:
@@ -157,6 +159,8 @@ std::string repr_token(const token &tok)
                             return "<TOK_ILLEGAL: "+n.token_text+">";
                           } else if constexpr (std::is_same_v<T, token_integer>) {
                             return "<TOK_INT: "+std::to_string(n.number)+">";
+                          } else if constexpr (std::is_same_v<T, token_string_literal>) {
+                            return "<TOK_STR: "+n.str+">";
                           } else if constexpr (std::is_same_v<T, token_symbol>) {
                             return "<TOK_SYM: "+n.to_string()+">";
                           } else {
@@ -388,6 +392,10 @@ token lexer::parse_token()
         get_char();
         return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_curly_close};
     }
+    else if (ch == '\"')
+    {
+        return parse_string_literal();
+    }
     else if (is_id_start_character(ch))
     {
         return parse_identifier_or_keyword();
@@ -451,4 +459,49 @@ token lexer::parse_identifier_or_keyword()
     {
         return token_identifier{start_position, look_ahead_position, id_name};
     }
+}
+
+token lexer::parse_string_literal()
+{
+    auto start_position = look_ahead_position;
+    get_char(); // parse over the opening "
+    std::string string_literal;
+
+    while (input_.peek() != '\"')
+    {
+        auto ch = get_char();
+
+        if (ch == '\\')
+        {
+            // handle escape sequences
+            char next_ch = get_char();
+            switch (next_ch)
+            {
+            case 'n':
+                string_literal += '\n';
+                break;
+            case 't':
+                string_literal += '\t';
+                break;
+            case '\\':
+                string_literal += '\\';
+                break;
+            case '\"':
+                string_literal += '\"';
+                break;
+            default:
+                // unknown escape sequence, just add both characters as-is
+                string_literal += ch;
+                string_literal += next_ch;
+                break;
+            }
+        }
+        else
+        {
+            string_literal += ch;
+        }
+    }
+    get_char(); // parse over the closing "
+
+    return token_string_literal{start_position, look_ahead_position, string_literal};
 }

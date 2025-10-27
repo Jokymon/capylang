@@ -32,6 +32,11 @@ struct token_identifier : public located_token
     std::string name;
 };
 
+struct token_string_literal : public located_token
+{
+    std::string str;
+};
+
 struct token_symbol : public located_token
 {
     enum symbol_type
@@ -46,6 +51,7 @@ struct token_symbol : public located_token
         sym_colon,
         sym_comma,
         sym_dcolon,
+        sym_dquote,
         sym_equal,
         sym_minus,
         sym_percent,
@@ -90,7 +96,7 @@ struct token_illegal : public located_token
     std::string token_text;
 };
 
-using token = std::variant<token_integer, token_identifier, token_symbol, token_eof, token_illegal>;
+using token = std::variant<token_integer, token_string_literal, token_identifier, token_symbol, token_eof, token_illegal>;
 
 std::string repr_op(operator_type op);
 std::string repr_token(const token &tok);
@@ -165,4 +171,5 @@ private:
 
     token parse_number();
     token parse_identifier_or_keyword();
+    token parse_string_literal();
 };

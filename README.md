@@ -49,6 +49,14 @@ This refactoring however has multiple steps:
     as we did with the tokens. This should make the type definitions and the code for accessing the AST node fields
     much easier.
 
+### String implementation
+
+The idea for strings and interop with WASI (preview1 and component model) is that strings would implicitly represent a
+record with the fields ptr: *u32 and size: u32 and that these fields are implicitly made available by the compiler.
+
+This also raises the question, how exactly such a structure would be represented in memory. We could start thinking
+about different lowering strategies and for example store a string in two local variables in some cases.
+
 ### Inspiration for language design:
 
  - Discussion about dereference operator prefix/postfix: https://www.reddit.com/r/Compilers/comments/1bl7c1m/why_is_the_dereference_operator_generally_a/

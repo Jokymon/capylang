@@ -26,6 +26,13 @@ void dump_node(const node_number& n, size_t indent)
     std::cout << ind << "Num:" << n.number << "\n";
 }
 
+void dump_node(const node_string_literal& n, size_t indent)
+{
+    std::string ind = std::string(indent, ' ');
+
+    std::cout << ind << "String literal: \"" << n.string_literal<< "\"\n";
+}
+
 void dump_node(const node_var_reference& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
@@ -407,6 +414,10 @@ std::optional<type_kind> type_from_id(const std::string &id)
     else if ((id == "s32") || (id == ""))
     {
         return t_t::s32{};
+    }
+    else if (id == "string")
+    {
+        return t_t::string{};
     }
 
     return std::nullopt;
@@ -1112,6 +1123,15 @@ ast_node parser::parse_primary()
     else if (capy_lexer.ahead_is<token_integer>())
     {
         return parse_number();
+    }
+    else if (capy_lexer.ahead_is<token_string_literal>())
+    {
+        auto literal = capy_lexer.expect<token_string_literal>();
+        auto literal_location = literal.location;
+        return make_located<node_string_literal>(
+            literal_location.start,
+            literal_location.end,
+            literal.str);
     }
     else
     {

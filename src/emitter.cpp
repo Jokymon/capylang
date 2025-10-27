@@ -89,6 +89,8 @@ void emitter::emit(const ast_node &node)
 
         if constexpr (std::is_same_v<T, node_number>) {
             this->emit(n);
+        } else if constexpr (std::is_same_v<T, node_string_literal>) {
+            this->emit(n);
         } else if constexpr (std::is_same_v<T, node_var_reference>) {
             this->emit(n);
         } else if constexpr (std::is_same_v<T, node_pointer_deref>) {
@@ -309,6 +311,14 @@ void emitter::emit(const node_expression &root)
         }
         break;
     }
+}
+
+void emitter::emit(const node_string_literal& literal)
+{
+    // TODO: emitting some dummy value for the moment; once we implement
+    // actual string support, this should be the necessary values for a string
+    // reference
+    output_ << "      i32.const 0\n";
 }
 
 void emitter::emit(const node_number &number)
