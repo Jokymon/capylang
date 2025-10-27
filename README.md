@@ -32,7 +32,24 @@ exit codes. This is supported by `uv` and the `pytest` library.
    --> this probably has to be checked with the return type and be made sure that the part after the ;
        is treated as a void return
 
- ### Inspiration for language design:
+### Big refactoring
+
+The final goal is to use dedicated AST node types (if possible). If we manage to do that, then a lot of code should get
+simpler, because we no longer need to check for th variant of AST node in a lot of places.
+
+This refactoring however has multiple steps:
+
+ 1. All the parsing errors need to be converted to "multi-error" capable errors. This is necessary because so far,
+    still a few of the parsing functions can still either return a valid node or an error node. But we need a valid
+    though potentially dummy value for all the nodes.
+ 1. Step by step replace the generic AST node return by more specific returns. Some returns can be very specific, for
+    example a `node_module` can only ever be a `node_module`, but for expressions, we could still have some generic
+    parent type. This is where we would keep things such as a node type which is not needed for other AST nodes.
+ 1. Finally or maybe partially interlinked with the previous step, we can get rid of the `located` concept for AST nodes
+    as we did with the tokens. This should make the type definitions and the code for accessing the AST node fields
+    much easier.
+
+### Inspiration for language design:
 
  - Discussion about dereference operator prefix/postfix: https://www.reddit.com/r/Compilers/comments/1bl7c1m/why_is_the_dereference_operator_generally_a/
  - The Nox language: https://codeberg.org/nox-language/nox
