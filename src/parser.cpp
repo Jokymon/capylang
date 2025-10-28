@@ -883,14 +883,14 @@ ast_node parser::parse_record_definition()
 
     if (!capy_lexer.ahead_is<token_identifier>())
     {
-        return create_error("'record' definition requires an identifier for the record");
+        append_error("'record' definition requires an identifier for the record");
     }
 
     auto record_id = capy_lexer.expect<token_identifier>();
 
     if (!capy_lexer.expect_symbol(token_symbol::sym_curly_open))
     {
-        return create_error("Expecting an opening brace '{' starting the record definition");
+        append_error("Expecting an opening brace '{' starting the record definition");
     }
     
     std::vector<t_t::record::field_spec> new_record_fields;
@@ -899,7 +899,7 @@ ast_node parser::parse_record_definition()
         auto field_id = capy_lexer.expect<token_identifier>();
         if (!capy_lexer.expect_symbol(token_symbol::sym_colon))
         {
-            return create_error("Expecting a colon ':' after field name and before type specification");
+            append_error("Expecting a colon ':' after field name and before type specification");
         }
 
         auto type_spec_node = parse_type_reference();
@@ -909,18 +909,18 @@ ast_node parser::parse_record_definition()
 
         if (!capy_lexer.expect_symbol(token_symbol::sym_comma))
         {
-            return create_error("Record field definitions must be terminated with a ','");
+            append_error("Record field definitions must be terminated with a ','");
         }
     }
 
     if (!capy_lexer.ahead_is_sym(token_symbol::sym_curly_close))
     {
-        return create_error("Record definition must be closed with a matching '}'");
+        append_error("Record definition must be closed with a matching '}'");
     }
     capy_lexer.expect<token_symbol>();
     if (!capy_lexer.ahead_is_sym(token_symbol::sym_semicolon))
     {
-        return create_error("Record definition must be terminated with a semicolon");
+        append_error("Record definition must be terminated with a semicolon");
     }
     auto end_range = capy_lexer.expect<token_symbol>().location;
 
@@ -940,7 +940,8 @@ ast_node parser::parse_record_initialisation(source_range name_range, const std:
     auto record_type = current_scope->lookup_type(record_name);
     if (!record_type.has_value())
     {
-        return create_error("Trying to initialise record of unknown type '"+record_name+"'");
+        append_error("Trying to initialise record of unknown type '"+record_name+"'");
+        record_type = t_t::void_type{};
     }
 
     // skipping the opening '{'
@@ -955,7 +956,7 @@ ast_node parser::parse_record_initialisation(source_range name_range, const std:
 
         if (!capy_lexer.ahead_is_sym(token_symbol::sym_equal))
         {
-            return create_error("For field initialisation, field name must be followed by a '=' and an initialisation expression");
+            append_error("For field initialisation, field name must be followed by a '=' and an initialisation expression");
         }
         capy_lexer.expect<token_symbol>();
 
@@ -963,7 +964,7 @@ ast_node parser::parse_record_initialisation(source_range name_range, const std:
 
         if (!capy_lexer.ahead_is_sym(token_symbol::sym_comma))
         {
-            return create_error("Field initialisations must be terminated by a comma");
+            append_error("Field initialisations must be terminated by a comma");
         }
         capy_lexer.expect<token_symbol>();
         
@@ -972,7 +973,7 @@ ast_node parser::parse_record_initialisation(source_range name_range, const std:
 
     if (!capy_lexer.ahead_is_sym(token_symbol::sym_curly_close))
     {
-        return create_error("Record initialisation must be finished with a closing '}'");
+        append_error("Record initialisation must be finished with a closing '}'");
     }
     auto end_range = capy_lexer.expect<token_symbol>().location;
 
