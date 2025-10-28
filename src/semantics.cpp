@@ -62,18 +62,18 @@ semantic_analyser::semantic_analyser()
 {
 }
 
-std::optional<node_parse_error> semantic_analyser::process(node_number &n)
+std::optional<parse_error> semantic_analyser::process(node_number &n)
 {
     return std::nullopt;
 }
 
-std::optional<node_parse_error> semantic_analyser::process(node_var_reference &n)
+std::optional<parse_error> semantic_analyser::process(node_var_reference &n)
 {
     n.context = current_context;
     return std::nullopt;
 }
 
-std::optional<node_parse_error> semantic_analyser::process(node_pointer_deref &n)
+std::optional<parse_error> semantic_analyser::process(node_pointer_deref &n)
 {
     n.context = current_context;
 
@@ -86,7 +86,7 @@ std::optional<node_parse_error> semantic_analyser::process(node_pointer_deref &n
     type_kind expression_type = assigned_node_type(*n.pointer_expression);
     if (!std::holds_alternative<t_t::pointer>(expression_type))
     {
-        return node_parse_error{
+        return parse_error{
             .error_location = source_position{0, 0},
             .error_message = "Can't dereference non-pointer type " + repr_type(expression_type)};
     }
@@ -94,12 +94,12 @@ std::optional<node_parse_error> semantic_analyser::process(node_pointer_deref &n
     return std::nullopt;
 }
 
-std::optional<node_parse_error> semantic_analyser::process(node_type_spec &n)
+std::optional<parse_error> semantic_analyser::process(node_type_spec &n)
 {
     return std::nullopt;
 }
 
-std::optional<node_parse_error> semantic_analyser::process(source_range location, node_record_initialisation &n)
+std::optional<parse_error> semantic_analyser::process(source_range location, node_record_initialisation &n)
 {
     t_t::record& r = std::get<t_t::record>(n.type_spec);
     for (const auto& field : r.fields)
@@ -115,7 +115,7 @@ std::optional<node_parse_error> semantic_analyser::process(source_range location
         }
         if (!is_initialised)
         {
-            return node_parse_error{
+            return parse_error{
                 .error_location = location.start,
                 .error_message = "Record field '"+field.name+"' not initialised"
             };
@@ -135,7 +135,7 @@ std::optional<node_parse_error> semantic_analyser::process(source_range location
         }
         if (!is_actual_field)
         {
-            return node_parse_error{
+            return parse_error{
                 .error_location = init.location,
                 .error_message = "Unknown record field '"+init.field_name+"'"
             };
@@ -145,11 +145,11 @@ std::optional<node_parse_error> semantic_analyser::process(source_range location
     return std::nullopt;
 }
 
-std::optional<node_parse_error> semantic_analyser::process(source_range location, node_field_deref &n)
+std::optional<parse_error> semantic_analyser::process(source_range location, node_field_deref &n)
 {
     if (!std::holds_alternative<t_t::record>(n.object_type))
     {
-        return node_parse_error{
+        return parse_error{
             .error_location = location.start,
             .error_message = "Dereferencing non-record variable or field '"+n.repr_obj()+"'"
         };
@@ -158,7 +158,7 @@ std::optional<node_parse_error> semantic_analyser::process(source_range location
 
     if (!field_type.has_value())
     {
-        return node_parse_error{
+        return parse_error{
             .error_location = location.start,
             .error_message = "Unknown record field '"+n.fieldname+"'"};
     }
@@ -166,7 +166,7 @@ std::optional<node_parse_error> semantic_analyser::process(source_range location
 }
 
 
-std::optional<node_parse_error> semantic_analyser::process(source_range location, node_function_call &n)
+std::optional<parse_error> semantic_analyser::process(source_range location, node_function_call &n)
 {
     function_signature actual_signature;
 
@@ -182,7 +182,7 @@ std::optional<node_parse_error> semantic_analyser::process(source_range location
 
     if (!actual_signature.equals_call_signature(n.symbol_ref.signature))
     {
-        return node_parse_error{
+        return parse_error{
             .error_location = location.start,
             .error_message = "Function '" + n.symbol_ref.name + "' expects signature "
                 + n.symbol_ref.signature.repr() + "; called with signature "
@@ -192,17 +192,17 @@ std::optional<node_parse_error> semantic_analyser::process(source_range location
     return std::nullopt;
 }
 
-std::optional<node_parse_error> semantic_analyser::process(node_let_expression &n)
+std::optional<parse_error> semantic_analyser::process(node_let_expression &n)
 {
     return semantic_analysis(*n.init_expression);
 }
 
-std::optional<node_parse_error> semantic_analyser::process(node_import_definition &n)
+std::optional<parse_error> semantic_analyser::process(node_import_definition &n)
 {
     return std::nullopt;
 }
 
-std::optional<node_parse_error> semantic_analyser::process(node_function_definition &n)
+std::optional<parse_error> semantic_analyser::process(node_function_definition &n)
 {
     auto declared_return_type = assigned_node_type(*n.function_head);
 
@@ -221,7 +221,7 @@ std::optional<node_parse_error> semantic_analyser::process(node_function_definit
 
     if (declared_return_type != actual_return_type)
     {
-        return node_parse_error{
+        return parse_error{
             .error_location = error_location.start,
             .error_message = "Returned value of type " + repr_type(actual_return_type) +
                              " doesn't match the declared return type " + repr_type(declared_return_type)};
@@ -229,7 +229,7 @@ std::optional<node_parse_error> semantic_analyser::process(node_function_definit
     return std::nullopt;
 }
 
-std::optional<node_parse_error> semantic_analyser::process(source_range location, node_expression &n)
+std::optional<parse_error> semantic_analyser::process(source_range location, node_expression &n)
 {
     if (n.operation == op_assignment) {
         current_context = assign_context::lhs;
@@ -264,7 +264,7 @@ std::optional<node_parse_error> semantic_analyser::process(source_range location
         }
         else
         {
-            return node_parse_error{
+            return parse_error{
                 .error_location = location.start,
                 .error_message = "Trying to assign to non-lvalue expression"};
         }
@@ -278,7 +278,7 @@ std::optional<node_parse_error> semantic_analyser::process(source_range location
     {
         if (!std::holds_alternative<node_type_spec>(n.right->value))
         {
-            return node_parse_error{
+            return parse_error{
                 .error_location = location.start,
                 .error_message = "Illegal parse tree"};
         }
@@ -289,7 +289,7 @@ std::optional<node_parse_error> semantic_analyser::process(source_range location
     }
     else
     {
-        return node_parse_error{
+        return parse_error{
             .error_location = n.op_range.start,
             .error_message = "Types for '" + repr_op(n.operation) +
                              "'-operation do not match; they should be equal but are '" +
@@ -298,7 +298,7 @@ std::optional<node_parse_error> semantic_analyser::process(source_range location
     }
 }
 
-std::optional<node_parse_error> semantic_analyser::process(node_module &n)
+std::optional<parse_error> semantic_analyser::process(node_module &n)
 {
     for (const auto &func_def : n.functions)
     {
@@ -311,9 +311,9 @@ std::optional<node_parse_error> semantic_analyser::process(node_module &n)
     return std::nullopt;
 }
 
-std::optional<node_parse_error> semantic_analyser::semantic_analysis(ast_node &root)
+std::optional<parse_error> semantic_analyser::semantic_analysis(ast_node &root)
 {
-    return std::visit([&](auto &n) -> std::optional<node_parse_error>
+    return std::visit([&](auto &n) -> std::optional<parse_error>
                       {
         using T = std::decay_t<decltype(n)>;
 

@@ -149,9 +149,8 @@ struct node_function_call;
 struct node_function_definition;
 struct node_expression;
 struct node_module;
-struct node_parse_error;
 
-using ast_node_raw = std::variant<node_number, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_type_spec, node_record_definition, node_record_initialisation, node_field_deref, node_function_head, node_import_definition, node_function_call, node_function_definition, node_expression, node_module, node_parse_error>;
+using ast_node_raw = std::variant<node_number, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_type_spec, node_record_definition, node_record_initialisation, node_field_deref, node_function_head, node_import_definition, node_function_call, node_function_definition, node_expression, node_module>;
 using ast_node = located<ast_node_raw>;
 
 void dump_ast(const ast_node& root, size_t indent=0);
@@ -274,28 +273,23 @@ struct node_module
     std::unique_ptr<scope> module_scope;
 };
 
-struct node_parse_error
+struct parse_error
 {
-    // TODO: the location is now duplicated from located<ast>
     source_position error_location;
     std::string error_message;
-    // A node representing a failed parsing result
 };
-
-bool is_error(const ast_node &node);
 
 class parser
 {
 public:
     explicit parser(lexer &l);
 
-    std::vector<node_parse_error> errors;
+    std::vector<parse_error> errors;
     ast_node parse();
 
 private:
     lexer &capy_lexer;
 
-    ast_node create_error(const std::string &error_message);
     void append_error(const std::string &error_message);
     void append_error_at(source_position location, const std::string &error_message);
 

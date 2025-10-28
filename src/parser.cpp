@@ -14,11 +14,6 @@ ast_node make_located(source_position start, source_position end, Args &&...args
             .end = end}};
 }
 
-bool is_error(const ast_node &node)
-{
-    return std::holds_alternative<node_parse_error>(node.value);
-}
-
 void dump_node(const node_number& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
@@ -164,13 +159,6 @@ void dump_node(const node_module& n, size_t indent)
     {
         dump_ast(*function, indent+4);
     }
-}
-
-void dump_node(const node_parse_error& n, size_t indent)
-{
-    std::string ind = std::string(indent, ' ');
-
-    std::cout << ind << "PARSE ERROR:"+n.error_message+"'\n";
 }
 
 void dump_ast(const ast_node& root, size_t indent)
@@ -429,10 +417,6 @@ parser::parser(lexer &l)
 ast_node parser::parse()
 {
     auto root = parse_module();
-    if (is_error(root))
-    {
-        return root;
-    }
     if (!capy_lexer.ahead_is<token_eof>())
     {
         append_error("Unexpected trailing code after function definition");
@@ -440,29 +424,18 @@ ast_node parser::parse()
     return root;
 }
 
-ast_node parser::create_error(const std::string &error_message)
-{
-    auto current_pos = capy_lexer.current_source_position();
-
-    return make_located<node_parse_error>(
-        current_pos,
-        current_pos,
-        current_pos,
-        error_message);
-}
-
 void parser::append_error(const std::string &error_message)
 {
     auto current_pos = capy_lexer.current_source_position();
 
-    errors.emplace_back(node_parse_error(
+    errors.emplace_back(parse_error(
         current_pos,
         error_message));
 }
 
 void parser::append_error_at(source_position location, const std::string &error_message)
 {
-    errors.emplace_back(node_parse_error(
+    errors.emplace_back(parse_error(
         location,
         error_message));
 }
@@ -486,11 +459,6 @@ ast_node parser::parse_module()
     while (capy_lexer.ahead_is_sym(token_symbol::sym_kw_record))
     {
         auto record_def = parse_record_definition();
-        if (is_error(record_def))
-        {
-            return record_def;
-        }
-
         std::get<node_module>(capy_module.value).typedefs.push_back(std::make_unique<ast_node>(std::move(record_def)));
     }
 

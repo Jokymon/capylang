@@ -42,6 +42,7 @@ This refactoring however has multiple steps:
  1. All the parsing errors need to be converted to "multi-error" capable errors. This is necessary because so far,
     still a few of the parsing functions can still either return a valid node or an error node. But we need a valid
     though potentially dummy value for all the nodes.
+    --> COMPLETED
  1. Step by step replace the generic AST node return by more specific returns. Some returns can be very specific, for
     example a `node_module` can only ever be a `node_module`, but for expressions, we could still have some generic
     parent type. This is where we would keep things such as a node type which is not needed for other AST nodes.
