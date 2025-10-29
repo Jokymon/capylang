@@ -446,6 +446,8 @@ ast_node parser::parse_module()
         source_position{1, 1},
         source_position{1, 1});
 
+    current_module = &std::get<node_module>(capy_module.value);
+
     std::get<node_module>(capy_module.value).module_scope = std::make_unique<scope>();
     current_scope = std::get<node_module>(capy_module.value).module_scope.get();
 
@@ -469,6 +471,7 @@ ast_node parser::parse_module()
         std::get<node_module>(capy_module.value).functions.push_back(std::make_unique<ast_node>(std::move(function)));
     }
 
+    current_module = nullptr;
     return capy_module;
 }
 
@@ -1178,8 +1181,9 @@ ast_node parser::parse_number()
 
 size_t parser::collect_literal(const std::string& literal)
 {
-    size_t insert_index = string_literals.size();
-    string_literals.emplace_back(string_literal_entry{0, literal});
+    size_t insert_index = current_module->string_literals.size();
+    current_module->string_literals.emplace_back(
+        node_module::string_literal_entry{0, literal});
 
     return insert_index;
 }

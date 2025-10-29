@@ -81,14 +81,14 @@ emitter::emitter(std::ostream &output) : output_(output), data_buffer(""), data_
     allocate_data(std::string("\x42\x00\x00\x00\x10\x00\x00\x00\x10\x20\x30\x40Test", 16));
 }
 
-void emitter::generate(const ast_node &node)
+void emitter::generate(ast_node &node)
 {
     this->emit(node);
 }
 
-void emitter::emit(const ast_node &node)
+void emitter::emit(ast_node &node)
 {
-    std::visit([&, this](const auto &n)
+    std::visit([&, this](auto &n)
                {
         using T = std::decay_t<decltype(n)>;
 
@@ -121,9 +121,14 @@ void emitter::emit(const ast_node &node)
         } else {} }, node.value);
 }
 
-void emitter::emit(const node_module &module_def)
+void emitter::emit(node_module &module_def)
 {
     output_ << "(module\n";
+
+    for (auto& literal: module_def.string_literals)
+    {
+        literal.start_address = allocate_data(literal.literal);
+    }
 
     for (const auto &import_def : module_def.imports)
     {
@@ -386,15 +391,36 @@ uint32_t emitter::allocate_data(const std::string& data)
     data_offset += data.size();
 
     for (const char& c : data) {
-        if (c>='\x20')
-        {
-            data_buffer += std::string(1, c);
-        }
-        else
-        {
-            std::ostringstream oss;
-            oss << "\\" << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << (int)c;
-            data_buffer +=  oss.str();
+        switch (c) {
+            case '\\':
+                data_buffer += "\\\\";
+                break;
+            case '\'':
+                data_buffer += "\\\'";
+                break;
+            case '\"':
+                data_buffer += "\\\"";
+                break;
+            case '\t':
+                data_buffer += "\\t";
+                break;
+            case '\r':
+                data_buffer += "\\r";
+                break;
+            case '\n':
+                data_buffer += "\\n";
+                break;
+            default:
+                if (c>='\x20')
+                {
+                    data_buffer += std::string(1, c);
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    oss << "\\" << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << (int)c;
+                    data_buffer +=  oss.str();
+                }
         }
     }
     return alloc_address;
