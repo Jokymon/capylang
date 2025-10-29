@@ -1,5 +1,8 @@
 #include "emitter.hpp"
 #include "semantics.hpp"
+#include <algorithm>
+#include <iomanip>
+#include <sstream>
 
 std::string create_wasm_name(const std::string capy_name)
 {
@@ -60,7 +63,8 @@ std::optional<size_t> record_field_offset(const type_kind& record, const std::st
     const t_t::record& r = std::get<t_t::record>(record);
 
     size_t offset = 0;
-    for (const auto& field_definition : r.fields) {
+    for (const auto& field_definition : r.fields)
+    {
         if (field_definition.name == field_name)
         {
             return offset;
@@ -72,8 +76,9 @@ std::optional<size_t> record_field_offset(const type_kind& record, const std::st
     return std::nullopt;
 }
 
-emitter::emitter(std::ostream &output) : output_(output)
+emitter::emitter(std::ostream &output) : output_(output), data_buffer(""), data_offset(100)
 {
+    allocate_data(std::string("\x42\x00\x00\x00\x10\x00\x00\x00\x10\x20\x30\x40Test", 16));
 }
 
 void emitter::generate(const ast_node &node)
@@ -126,7 +131,7 @@ void emitter::emit(const node_module &module_def)
     }
 
     output_ << "  (memory (;0;) 2)\n";
-    output_ << "  (data (i32.const 100) \"\\42\\00\\00\\00\\10\\00\\00\\00\\10\\20\\30\\40Test\")\n";
+    output_ << "  (data (i32.const 100) \"" << data_buffer << "\")\n";
     output_ << "  (global $heap_ptr (mut i32) (i32.const 1024))\n";
     output_ << "  (export \"memory\" (memory 0))\n";
     output_ << "  (export \"_start\" (func $_start))\n";
@@ -174,14 +179,14 @@ void emitter::emit(const node_function_definition &func_def)
     emit(*func_def.function_head);
     output_ << "\n";
 
-    for (auto& [identifier, symbol]: func_def.function_scope->symbol_table)
+    for (auto& [identifier, symbol] : func_def.function_scope->symbol_table)
     {
         if (symbol.kind == symbol_kind::local_var)
         {
             output_ << "      (local " << create_wasm_name(identifier) << " i32)\n";
         }
     }
-    output_ << "      (local $_rec_ptr i32)\n";  // Pointer used during record initialisations
+    output_ << "      (local $_rec_ptr i32)\n"; // Pointer used during record initialisations
 
     for (const auto &expression : func_def.code)
     {
@@ -209,10 +214,10 @@ void emitter::emit(const node_let_expression& let_expression)
 void emitter::emit(const node_record_initialisation& record_init)
 {
     size_t record_size = type_size(record_init.type_spec);
-    output_ << "      i32.const 0\n";   // originalPtr
-    output_ << "      i32.const 0\n";   // originalSize
-    output_ << "      i32.const 4\n";   // alignment
-    output_ << "      i32.const " << record_size << "\n";   // newSize
+    output_ << "      i32.const 0\n";                     // originalPtr
+    output_ << "      i32.const 0\n";                     // originalSize
+    output_ << "      i32.const 4\n";                     // alignment
+    output_ << "      i32.const " << record_size << "\n"; // newSize
     output_ << "      call $cabi_realloc\n";
     output_ << "      local.set $_rec_ptr\n";
 
@@ -245,7 +250,7 @@ void emitter::emit(const node_record_initialisation& record_init)
         output_ << "      i32.store offset=" << offset << "\n";
 
         offset += type_size(*field.type_spec);
-    }   
+    }
 
     // after record initialisation, leave the pointer of the newly created record
     // on the stack
@@ -288,7 +293,8 @@ void emitter::emit(const node_expression &root)
     case op_assignment:
         if (std::holds_alternative<node_pointer_deref>(root.left->value))
         {
-            if (t_t::is_of<t_t::u8>(assigned_node_type(*root.left))) {
+            if (t_t::is_of<t_t::u8>(assigned_node_type(*root.left)))
+            {
                 output_ << "      i32.store8\n";
                 break;
             }
@@ -330,7 +336,8 @@ void emitter::emit(const node_var_reference &variable)
 {
     // When the variable is used in an LHS context, then we need to
     // handle the storing of the value differently
-    if (variable.context == assign_context::rhs) {
+    if (variable.context == assign_context::rhs)
+    {
         output_ << "      local.get " << variable.symbol_ref.index_addr << "\n";
     }
 }
@@ -338,15 +345,19 @@ void emitter::emit(const node_var_reference &variable)
 void emitter::emit(const node_pointer_deref& ptr_deref)
 {
     emit(*ptr_deref.pointer_expression);
-    if (ptr_deref.context == assign_context::rhs) {
-        if (t_t::is_of<t_t::u8>(ptr_deref.assigned_type)) {
+    if (ptr_deref.context == assign_context::rhs)
+    {
+        if (t_t::is_of<t_t::u8>(ptr_deref.assigned_type))
+        {
             output_ << "      i32.load8_u\n";
         }
-        else {
+        else
+        {
             output_ << "      i32.load\n";
         }
     }
-    else {
+    else
+    {
         // in LHS context we have to get address, which in our
         // case means to get the index of the variable
         auto var_index = std::get<node_var_reference>(ptr_deref.pointer_expression->value).symbol_ref.index_addr;
@@ -367,4 +378,24 @@ void emitter::emit_function_signature(const std::string &function_name, const fu
     {
         output_ << " (result " << type_mapping(signature.return_type) << ")";
     }
+}
+
+uint32_t emitter::allocate_data(const std::string& data)
+{
+    auto alloc_address = data_offset;
+    data_offset += data.size();
+
+    for (const char& c : data) {
+        if (c>='\x20')
+        {
+            data_buffer += std::string(1, c);
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "\\" << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << (int)c;
+            data_buffer +=  oss.str();
+        }
+    }
+    return alloc_address;
 }

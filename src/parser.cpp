@@ -25,7 +25,7 @@ void dump_node(const node_string_literal& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "String literal: \"" << n.string_literal<< "\"\n";
+    std::cout << ind << "String literal: \"" << n.table_index << "\"\n";
 }
 
 void dump_node(const node_var_reference& n, size_t indent)
@@ -1089,10 +1089,11 @@ ast_node parser::parse_primary()
     {
         auto literal = capy_lexer.expect<token_string_literal>();
         auto literal_location = literal.location;
+        auto literal_index = collect_literal(literal.str);
         return make_located<node_string_literal>(
             literal_location.start,
             literal_location.end,
-            literal.str);
+            literal_index);
     }
     else
     {
@@ -1173,4 +1174,12 @@ ast_node parser::parse_number()
         lhs_location.end,
         lhs.number,
         number_type.value());
+}
+
+size_t parser::collect_literal(const std::string& literal)
+{
+    size_t insert_index = string_literals.size();
+    string_literals.emplace_back(string_literal_entry{0, literal});
+
+    return insert_index;
 }

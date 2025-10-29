@@ -168,7 +168,8 @@ struct node_number
 
 struct node_string_literal
 {
-    std::string string_literal;
+    // index into the string literals table
+    size_t table_index;
 };
 
 struct node_var_reference
@@ -287,6 +288,12 @@ public:
     std::vector<parse_error> errors;
     ast_node parse();
 
+    struct string_literal_entry {
+        uint32_t start_address;
+        std::string literal;
+    };
+    std::vector<string_literal_entry> string_literals;
+
 private:
     lexer &capy_lexer;
 
@@ -308,6 +315,8 @@ private:
     ast_node parse_primary();
     ast_node parse_type_reference();
     ast_node parse_number();
+
+    size_t collect_literal(const std::string& literal);
 
     scope* current_scope;
 };

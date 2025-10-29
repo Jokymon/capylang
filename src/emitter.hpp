@@ -26,6 +26,9 @@ public:
 
 private:
     void emit_function_signature(const std::string& function_name, const function_signature& signature);
+    uint32_t allocate_data(const std::string& data);
 
     std::ostream &output_;
+    std::string data_buffer;
+    uint32_t data_offset;
 };
