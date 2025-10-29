@@ -35,6 +35,13 @@ void dump_node(const node_string_literal& n, size_t indent)
     std::cout << ind << "String literal: \"" << n.table_index << "\"\n";
 }
 
+void dump_node(const node_bool_const& n, size_t indent)
+{
+    std::string ind = std::string(indent, ' ');
+
+    std::cout << ind << "Bool:" << n.value << "\n";
+}
+
 void dump_node(const node_var_reference& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
@@ -274,6 +281,8 @@ std::string repr_type(const type_kind& type_spec)
             return "!unassigned";
         else if constexpr (std::is_same_v<T, t_t::void_type>)
             return "void";
+        else if constexpr (std::is_same_v<T, t_t::boolean>)
+            return "bool";
         else if constexpr (std::is_same_v<T, t_t::s32>)
             return "s32";
         else if constexpr (std::is_same_v<T, t_t::u8>)
@@ -419,6 +428,10 @@ std::optional<type_kind> type_from_id(const std::string &id)
     else if (id == "string")
     {
         return t_t::string{};
+    }
+    else if (id == "bool")
+    {
+        return t_t::boolean{};
     }
 
     return std::nullopt;
@@ -1077,6 +1090,13 @@ ast_node parser::parse_primary()
             auto var = current_scope->lookup(id.name);
             if (!var.has_value())
             {
+                if ((id.name == "true") || (id.name == "false")) {
+                    return make_located<node_bool_const>(
+                        id_range.start,
+                        id_range.end,
+                        node_bool_const::from_string(id.name));
+                }
+
                 append_error_at(id_range.start, "Undefined variable: '"+id.name+"'");
                 var = symbol{
                     "_",

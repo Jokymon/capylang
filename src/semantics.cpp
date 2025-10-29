@@ -40,6 +40,8 @@ type_kind assigned_node_type(const ast_node &node)
             return n.assigned_type;
         } else if constexpr (std::is_same_v<T, node_char_literal>) {
             return t_t::char_type{};
+        } else if constexpr (std::is_same_v<T, node_bool_const>) {
+            return t_t::boolean{};
         } else if constexpr (std::is_same_v<T, node_string_literal>) {
             return t_t::string{};
         } else if constexpr (std::is_same_v<T, node_var_reference>) {

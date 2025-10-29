@@ -346,6 +346,11 @@ void emitter::emit(const node_type_spec& spec)
 {
 }
 
+void emitter::emit(const node_bool_const& bool_const)
+{
+    output_ << "      i32.const " << (bool_const.value ? "1" : "0") << "\n";
+}
+
 void emitter::emit(const node_number &number)
 {
     output_ << "      i32.const " << number.number << "\n";
