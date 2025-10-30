@@ -31,4 +31,6 @@ private:
     std::ostream &output_;
     std::string data_buffer;
     uint32_t data_offset;
+
+    node_module* current_module;
 };

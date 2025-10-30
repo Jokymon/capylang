@@ -1098,7 +1098,8 @@ ast_node parser::parse_primary()
         return make_located<node_string_literal>(
             literal_location.start,
             literal_location.end,
-            literal_index);
+            literal_index,
+            literal.str.size());
     }
     else
     {

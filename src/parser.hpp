@@ -170,6 +170,7 @@ struct node_string_literal
 {
     // index into the string literals table
     size_t table_index;
+    uint32_t size;
 };
 
 struct node_var_reference

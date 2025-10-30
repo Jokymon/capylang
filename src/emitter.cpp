@@ -123,6 +123,8 @@ void emitter::emit(ast_node &node)
 
 void emitter::emit(node_module &module_def)
 {
+    current_module = &module_def;
+
     output_ << "(module\n";
 
     for (auto& literal: module_def.string_literals)
@@ -160,6 +162,8 @@ void emitter::emit(node_module &module_def)
     }
 
     output_ << ")\n";
+
+    current_module = nullptr;
 }
 
 void emitter::emit(const node_import_definition &import_def)
@@ -188,7 +192,15 @@ void emitter::emit(const node_function_definition &func_def)
     {
         if (symbol.kind == symbol_kind::local_var)
         {
-            output_ << "      (local " << create_wasm_name(identifier) << " i32)\n";
+            if (t_t::is_of<t_t::string>(symbol.symbol_type))
+            {
+                output_ << "      (local " << create_wasm_name(identifier) << "_ptr i32)\n";
+                output_ << "      (local " << create_wasm_name(identifier) << "_size i32)\n";
+            }
+            else
+            {
+                output_ << "      (local " << create_wasm_name(identifier) << " i32)\n";
+            }
         }
     }
     output_ << "      (local $_rec_ptr i32)\n"; // Pointer used during record initialisations
@@ -213,7 +225,15 @@ void emitter::emit(const node_function_call &func_call)
 void emitter::emit(const node_let_expression& let_expression)
 {
     emit(*let_expression.init_expression);
-    output_ << "      local.set " << let_expression.symbol_ref.index_addr << "\n";
+    if (t_t::is_of<t_t::string>(let_expression.symbol_ref.symbol_type))
+    {
+        output_ << "      local.set " << create_wasm_name(let_expression.symbol_ref.name + "_ptr") << "\n";
+        output_ << "      local.set " << create_wasm_name(let_expression.symbol_ref.name + "_size") << "\n";
+    }
+    else
+    {
+        output_ << "      local.set " << let_expression.symbol_ref.index_addr << "\n";
+    }
 }
 
 void emitter::emit(const node_record_initialisation& record_init)
@@ -326,10 +346,9 @@ void emitter::emit(const node_expression &root)
 
 void emitter::emit(const node_string_literal& literal)
 {
-    // TODO: emitting some dummy value for the moment; once we implement
-    // actual string support, this should be the necessary values for a string
-    // reference
-    output_ << "      i32.const 0\n";
+    uint32_t ptr = current_module->string_literals[literal.table_index].start_address;
+    output_ << "      i32.const " << literal.size << "\n";
+    output_ << "      i32.const " << ptr << "\n";
 }
 
 void emitter::emit(const node_number &number)
