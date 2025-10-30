@@ -87,7 +87,7 @@ fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:6:15: Dereferencing non-record variable or field 'v'\n"
+        == "filename:6:15: Dereferencing non-record variable or field 'v'\nfilename:6:15: Unknown record field 'field1'\nfilename:6:5: Function 'proc_exit' expects signature (u32); called with signature (!unassigned)\n"
     )
 
 
@@ -115,6 +115,31 @@ fn _start() {
     )
 
 
+def test_failure_invalid_dereferencing_in_field_init():
+    code = """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+record s {
+    field1: u32,
+};
+
+fn _start() {
+    let w: u32 = 3u32;
+    let v: s = s{
+        field1=w.a,
+    };
+    proc_exit(v.field1)
+}
+"""
+    exit_code, stderr = tools.compile_test_code(code)
+
+    assert exit_code == 1
+    assert (
+        tools.normalize_filename_from_output(stderr)
+        == "filename:11:16: Dereferencing non-record variable or field 'w'\nfilename:11:16: Unknown record field 'a'\n"
+    )
+
+
 def test_failure_accessing_unknown_field_in_dereferencing():
     code = """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
@@ -135,7 +160,7 @@ fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:12:15: Unknown record field 'fld'\n"
+        == "filename:12:15: Unknown record field 'fld'\nfilename:12:5: Function 'proc_exit' expects signature (u32); called with signature (!unassigned)\n"
     )
 
 

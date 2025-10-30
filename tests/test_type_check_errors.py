@@ -9,5 +9,5 @@ def test_mismatching_types_in_binary_op():
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:5:21: Types for '+'-operation do not match; they should be equal but are 's32' and 'u32'\n"
+        == "filename:5:21: Types for '+'-operation do not match; they should be equal but are 's32' and 'u32'\nfilename:5:5: Function 'proc_exit' expects signature (u32); called with signature (!unassigned)\n"
     )

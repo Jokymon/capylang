@@ -62,44 +62,44 @@ semantic_analyser::semantic_analyser()
 {
 }
 
-std::optional<parse_error> semantic_analyser::process(node_number &n)
+void semantic_analyser::append_error_at(source_position location, const std::string &error_message)
 {
-    return std::nullopt;
+    errors.emplace_back(parse_error(
+        location,
+        error_message));
 }
 
-std::optional<parse_error> semantic_analyser::process(node_var_reference &n)
+void semantic_analyser::process(node_number &n)
 {
-    n.context = current_context;
-    return std::nullopt;
 }
 
-std::optional<parse_error> semantic_analyser::process(node_pointer_deref &n)
+void semantic_analyser::process(node_var_reference &n)
+{
+    n.context = current_context;
+}
+
+void semantic_analyser::process(node_pointer_deref &n)
 {
     n.context = current_context;
 
-    auto res = semantic_analysis(*n.pointer_expression);
-    if (res.has_value())
-    {
-        return res;
-    }
+    semantic_analysis(*n.pointer_expression);
 
     type_kind expression_type = assigned_node_type(*n.pointer_expression);
     if (!std::holds_alternative<t_t::pointer>(expression_type))
     {
-        return parse_error{
-            .error_location = source_position{0, 0},
-            .error_message = "Can't dereference non-pointer type " + repr_type(expression_type)};
+        append_error_at(
+            source_position{0, 0},
+            "Can't dereference non-pointer type " + repr_type(expression_type)
+        );
     }
     n.assigned_type = *std::get<t_t::pointer>(expression_type).base_type;
-    return std::nullopt;
 }
 
-std::optional<parse_error> semantic_analyser::process(node_type_spec &n)
+void semantic_analyser::process(node_type_spec &n)
 {
-    return std::nullopt;
 }
 
-std::optional<parse_error> semantic_analyser::process(source_range location, node_record_initialisation &n)
+void semantic_analyser::process(source_range location, node_record_initialisation &n)
 {
     t_t::record& r = std::get<t_t::record>(n.type_spec);
     for (const auto& field : r.fields)
@@ -115,15 +115,17 @@ std::optional<parse_error> semantic_analyser::process(source_range location, nod
         }
         if (!is_initialised)
         {
-            return parse_error{
-                .error_location = location.start,
-                .error_message = "Record field '"+field.name+"' not initialised"
-            };
+            append_error_at(
+                location.start,
+                "Record field '"+field.name+"' not initialised"
+            );
         }
     }
 
     for (const auto& init : n.initialisations)
     {
+        semantic_analysis(*init.init_expression);
+
         bool is_actual_field = false;
         for (const auto& field : r.fields)
         {
@@ -135,74 +137,64 @@ std::optional<parse_error> semantic_analyser::process(source_range location, nod
         }
         if (!is_actual_field)
         {
-            return parse_error{
-                .error_location = init.location,
-                .error_message = "Unknown record field '"+init.field_name+"'"
-            };
+            append_error_at(
+                init.location,
+                "Unknown record field '"+init.field_name+"'"
+            );
         }
     }
-
-    return std::nullopt;
 }
 
-std::optional<parse_error> semantic_analyser::process(source_range location, node_field_deref &n)
+void semantic_analyser::process(source_range location, node_field_deref &n)
 {
     if (!std::holds_alternative<t_t::record>(n.object_type))
     {
-        return parse_error{
-            .error_location = location.start,
-            .error_message = "Dereferencing non-record variable or field '"+n.repr_obj()+"'"
-        };
+        append_error_at(
+            location.start,
+            "Dereferencing non-record variable or field '"+n.repr_obj()+"'"
+        );
     }
     auto field_type = record_field_type(n.object_type, n.fieldname);
 
     if (!field_type.has_value())
     {
-        return parse_error{
-            .error_location = location.start,
-            .error_message = "Unknown record field '"+n.fieldname+"'"};
+        append_error_at(
+            location.start,
+            "Unknown record field '"+n.fieldname+"'");
     }
-    return std::nullopt;
 }
 
 
-std::optional<parse_error> semantic_analyser::process(source_range location, node_function_call &n)
+void semantic_analyser::process(source_range location, node_function_call &n)
 {
     function_signature actual_signature;
 
     for (const auto &param : n.parameter)
     {
-        auto res = semantic_analysis(*param);
-        if (res.has_value())
-        {
-            return res;
-        }
+        semantic_analysis(*param);
         actual_signature.parameters.push_back(param_spec{.name = "_", .type_spec = assigned_node_type(*param)});
     }
 
     if (!actual_signature.equals_call_signature(n.symbol_ref.signature))
     {
-        return parse_error{
-            .error_location = location.start,
-            .error_message = "Function '" + n.symbol_ref.name + "' expects signature "
+        append_error_at(
+            location.start,
+            "Function '" + n.symbol_ref.name + "' expects signature "
                 + n.symbol_ref.signature.repr() + "; called with signature "
-                + actual_signature.repr()};
+                + actual_signature.repr());
     }
-
-    return std::nullopt;
 }
 
-std::optional<parse_error> semantic_analyser::process(node_let_expression &n)
+void semantic_analyser::process(node_let_expression &n)
 {
-    return semantic_analysis(*n.init_expression);
+    semantic_analysis(*n.init_expression);
 }
 
-std::optional<parse_error> semantic_analyser::process(node_import_definition &n)
+void semantic_analyser::process(node_import_definition &n)
 {
-    return std::nullopt;
 }
 
-std::optional<parse_error> semantic_analyser::process(node_function_definition &n)
+void semantic_analyser::process(node_function_definition &n)
 {
     auto declared_return_type = assigned_node_type(*n.function_head);
 
@@ -210,26 +202,21 @@ std::optional<parse_error> semantic_analyser::process(node_function_definition &
     source_range error_location;
     for (const auto &expression : n.code)
     {
-        auto res = semantic_analysis(*expression);
-        if (res.has_value())
-        {
-            return res;
-        }
+        semantic_analysis(*expression);
         actual_return_type = assigned_node_type(*expression);
         error_location = expression->location;
     }
 
     if (declared_return_type != actual_return_type)
     {
-        return parse_error{
-            .error_location = error_location.start,
-            .error_message = "Returned value of type " + repr_type(actual_return_type) +
-                             " doesn't match the declared return type " + repr_type(declared_return_type)};
+        append_error_at(
+            error_location.start,
+            "Returned value of type " + repr_type(actual_return_type) +
+                " doesn't match the declared return type " + repr_type(declared_return_type));
     }
-    return std::nullopt;
 }
 
-std::optional<parse_error> semantic_analyser::process(source_range location, node_expression &n)
+void semantic_analyser::process(source_range location, node_expression &n)
 {
     if (n.operation == op_assignment) {
         current_context = assign_context::lhs;
@@ -238,19 +225,11 @@ std::optional<parse_error> semantic_analyser::process(source_range location, nod
         current_context = assign_context::rhs;
     }
 
-    auto lhs_error = semantic_analysis(*n.left);
-    if (lhs_error.has_value())
-    {
-        return lhs_error;
-    }
+    semantic_analysis(*n.left);
     auto lhs_type = assigned_node_type(*n.left);
 
     current_context = assign_context::rhs;
-    auto rhs_error = semantic_analysis(*n.right);
-    if (rhs_error.has_value())
-    {
-        return rhs_error;
-    }
+    semantic_analysis(*n.right);
     auto rhs_type = assigned_node_type(*n.right);
 
     // propagate the type upwards based on the operands
@@ -260,89 +239,79 @@ std::optional<parse_error> semantic_analyser::process(source_range location, nod
             std::holds_alternative<node_var_reference>(n.left->value))
         {
             n.assigned_type = t_t::void_type{};
-            return std::nullopt;
         }
         else
         {
-            return parse_error{
-                .error_location = location.start,
-                .error_message = "Trying to assign to non-lvalue expression"};
+            append_error_at(
+                location.start,
+                "Trying to assign to non-lvalue expression");
         }
     }
     else if ((lhs_type == rhs_type) && (!t_t::is_of<t_t::unassigned>(lhs_type)))
     {
         n.assigned_type = lhs_type;
-        return std::nullopt;
     }
     else if (n.operation == op_conversion)
     {
         if (!std::holds_alternative<node_type_spec>(n.right->value))
         {
-            return parse_error{
-                .error_location = location.start,
-                .error_message = "Illegal parse tree"};
+            append_error_at(
+                location.start,
+                "Illegal parse tree");
         }
 
         n.assigned_type = std::get<node_type_spec>(n.right->value).type_spec;
-
-        return std::nullopt;
     }
     else
     {
-        return parse_error{
-            .error_location = n.op_range.start,
-            .error_message = "Types for '" + repr_op(n.operation) +
-                             "'-operation do not match; they should be equal but are '" +
-                             repr_type(lhs_type) + "' and '" + repr_type(rhs_type) + "'",
-        };
+        append_error_at(
+            n.op_range.start,
+            "Types for '" + repr_op(n.operation) +
+                "'-operation do not match; they should be equal but are '" +
+                repr_type(lhs_type) + "' and '" + repr_type(rhs_type) + "'"
+        );
     }
 }
 
-std::optional<parse_error> semantic_analyser::process(node_module &n)
+void semantic_analyser::process(node_module &n)
 {
     for (const auto &func_def : n.functions)
     {
-        auto result = semantic_analysis(*func_def);
-        if (result.has_value())
-        {
-            return result;
-        }
+        semantic_analysis(*func_def);
     }
-    return std::nullopt;
 }
 
-std::optional<parse_error> semantic_analyser::semantic_analysis(ast_node &root)
+void semantic_analyser::semantic_analysis(ast_node &root)
 {
-    return std::visit([&](auto &n) -> std::optional<parse_error>
+    std::visit([&](auto &n) -> void
                       {
         using T = std::decay_t<decltype(n)>;
 
         if constexpr (std::is_same_v<T, node_number>) {
-            return process(n);
+            process(n);
         } else if constexpr (std::is_same_v<T, node_var_reference>) {
-            return process(n);
+            process(n);
         } else if constexpr (std::is_same_v<T, node_pointer_deref>) {
-            return process(n);
+            process(n);
         } else if constexpr (std::is_same_v<T, node_field_deref>) {
-            return process(root.location, n);
+            process(root.location, n);
         } else if constexpr (std::is_same_v<T, node_record_initialisation>) {
-            return process(root.location, n);
+            process(root.location, n);
         } else if constexpr (std::is_same_v<T, node_type_spec>) {
-            return process(n);
+            process(n);
         } else if constexpr (std::is_same_v<T, node_function_call>) {
-            return process(root.location, n);
+            process(root.location, n);
         } else if constexpr (std::is_same_v<T, node_let_expression>) {
-            return process(n);
+            process(n);
         } else if constexpr (std::is_same_v<T, node_import_definition>) {
-            return process(n);
+            process(n);
         } else if constexpr (std::is_same_v<T, node_function_definition>) {
-            return process(n);
+            process(n);
         } else if constexpr (std::is_same_v<T, node_expression>) {
-            return process(root.location, n);
+            process(root.location, n);
         } else if constexpr (std::is_same_v<T, node_module>) {
-            return process(n);
+            process(n);
         } else {
             // TODO: This should happen, maybe return special error
-            return std::nullopt;
         } }, root.value);
 }

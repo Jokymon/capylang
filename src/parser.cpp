@@ -273,6 +273,8 @@ std::string repr_type(const type_kind& type_spec)
             return "u8";
         else if constexpr (std::is_same_v<T, t_t::u32>)
             return "u32";
+        else if constexpr (std::is_same_v<T, t_t::string>)
+            return "string";
         else if constexpr (std::is_same_v<T, t_t::pointer>) {
             if (!t.base_type) {
                 std::cout << "   Uh oh, null base_type in pointer\n";

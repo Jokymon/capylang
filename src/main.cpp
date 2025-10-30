@@ -41,10 +41,13 @@ int main(int argc, char *argv[])
     }
 
     semantic_analyser analyser;
-    auto error = analyser.semantic_analysis(root_node);
-    if (error.has_value())
+    analyser.semantic_analysis(root_node);
+    if (!analyser.errors.empty())
     {
-        std::cerr << args.input_path << ":" << error.value().error_location.line << ":" << error.value().error_location.column << ": " << error.value().error_message << "\n";
+        for (const auto& error : analyser.errors)
+        {
+            std::cerr << args.input_path << ":" << error.error_location.line << ":" << error.error_location.column << ": " << error.error_message << "\n";
+        }
         return 1;
     }
 
