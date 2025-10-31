@@ -77,6 +77,11 @@ namespace t_t
     static bool is_of(V&& value) {
         return std::holds_alternative<T>(value);
     }
+
+    static bool is_record_like(type_kind t) {
+        return std::holds_alternative<t_t::record>(t) ||
+                std::holds_alternative<t_t::string>(t);
+    }
 };
 
 std::string repr_type(const type_kind& type_spec);

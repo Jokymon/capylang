@@ -284,14 +284,24 @@ void emitter::emit(const node_record_initialisation& record_init)
 
 void emitter::emit(const node_field_deref& field_deref)
 {
-    emit(*field_deref.object);
-    auto maybe_size = record_field_offset(field_deref.object_type, field_deref.fieldname);
-    if (!maybe_size.has_value())
+    if (t_t::is_of<t_t::string>(field_deref.object_type))
     {
-        // TODO: panic! this should have been taken care of in the semantic step
+        // TODO: for the moment we can only handle variables of types strings
+        // but not strings that are fields of records
+        auto var_name = std::get<node_var_reference>(field_deref.object->value).name;
+        output_ << "      local.get $" << var_name << "_" << field_deref.fieldname << "\n";
     }
+    else
+    {
+        emit(*field_deref.object);
+        auto maybe_size = record_field_offset(field_deref.object_type, field_deref.fieldname);
+        if (!maybe_size.has_value())
+        {
+            // TODO: panic! this should have been taken care of in the semantic step
+        }
 
-    output_ << "      i32.load offset=" << maybe_size.value() << "\n";
+        output_ << "      i32.load offset=" << maybe_size.value() << "\n";
+    }
 }
 
 void emitter::emit(const node_expression &root)

@@ -147,20 +147,34 @@ void semantic_analyser::process(source_range location, node_record_initialisatio
 
 void semantic_analyser::process(source_range location, node_field_deref &n)
 {
-    if (!std::holds_alternative<t_t::record>(n.object_type))
+    if (!t_t::is_record_like(n.object_type))
     {
         append_error_at(
             location.start,
             "Dereferencing non-record variable or field '"+n.repr_obj()+"'"
         );
+        // TODO: if we already know that its not a record type, then
+        // we can also skip the check for a valid field name
     }
-    auto field_type = record_field_type(n.object_type, n.fieldname);
 
-    if (!field_type.has_value())
+    if (t_t::is_of<t_t::string>(n.object_type))
     {
-        append_error_at(
-            location.start,
-            "Unknown record field '"+n.fieldname+"'");
+        if ((n.fieldname!="ptr") && (n.fieldname!="size"))
+        {
+            append_error_at(
+                location.start,
+                "Unknown field '"+n.fieldname+"' for string type");
+        }
+    }
+    else
+    {
+        auto field_type = record_field_type(n.object_type, n.fieldname);
+        if (!field_type.has_value())
+        {
+            append_error_at(
+                location.start,
+                "Unknown record field '"+n.fieldname+"'");
+        }
     }
 }
 
