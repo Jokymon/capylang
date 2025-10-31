@@ -21,6 +21,12 @@ int main(int argc, char *argv[])
     }
 
     std::ifstream infile(args.input_path);
+    if (infile.fail())
+    {
+        std::cerr << "Couldn't open input file '" << args.input_path << "': " << strerror(errno) << "\n";
+        return 1;
+    }
+
     lexer capylexer{infile};
     parser capyparser{capylexer};
     auto root_node = capyparser.parse();
