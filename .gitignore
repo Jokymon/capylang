@@ -15,3 +15,6 @@ wheels/
 # Example generated code
 example.wat
 example.wasm
+
+# a folder with some stuff to keep around, like documentations, examples, ...
+shelf/
