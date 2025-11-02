@@ -7,22 +7,28 @@ param (
     [string]$InputFile
 )
 
+# --- Compute relative paths manually (without requiring existence) ---
+function Get-RelativePath($TargetPath, $BasePath) {
+    $uriTarget = New-Object System.Uri($TargetPath)
+    $uriBase   = New-Object System.Uri($BasePath + [System.IO.Path]::DirectorySeparatorChar)
+    return $uriBase.MakeRelativeUri($uriTarget).ToString() -replace '/', [System.IO.Path]::DirectorySeparatorChar
+}
+
 # ------------------------------------------------------------------------------
-$InputFile = (Resolve-Path $InputFile).Path
-$BaseName  = [System.IO.Path]::GetFileNameWithoutExtension($InputFile)
-$DirName   = [System.IO.Path]::GetDirectoryName($InputFile)
+$ResolvedInput = (Resolve-Path $InputFile).Path
+$BaseName  = [System.IO.Path]::GetFileNameWithoutExtension($ResolvedInput)
+$DirName   = [System.IO.Path]::GetDirectoryName($ResolvedInput)
 
 $WatFile = Join-Path $DirName ($BaseName + ".wat")
 $WasmFile = Join-Path $DirName ($BaseName + ".wasm")
 
-# --- Build relative paths (relative to $DirName) ---
-Push-Location $DirName
-try {
-    $InputRel  = [System.IO.Path]::GetFileName($InputFile)
-    $WatRel = [System.IO.Path]::GetFileName($WatFile)
-} finally {
-    Pop-Location
-}
+# --- Build relative paths ---
+$CurrentDir = (Resolve-Path ".").Path
+$InputRel   = Get-RelativePath $ResolvedInput $CurrentDir
+$WatFileRel = Get-RelativePath $WatFile $CurrentDir
+
+$InputRel  = $InputRel -replace '\\', '/'
+$WatFileRel = $WatFileRel -replace '\\', '/'
 
 # Cleanup first
 if (Test-Path $WatFile) {
@@ -33,7 +39,7 @@ if (Test-Path $WasmFile) {
 }
 
 # Run the capylang compiler
-C:\sw\wasmtime-v33.0.0-x86_64-windows\wasmtime.exe run --dir . .\build\capylang.wasm -i $InputRel -o $WatRel
+C:\sw\wasmtime-v33.0.0-x86_64-windows\wasmtime.exe run --dir . .\build\capylang.wasm -i $InputRel -o $WatFileRel
 if ($LASTEXITCODE -ne 0) {
     Write-Output "Compilation failed, terminating script"
     exit $LASTEXITCODE
