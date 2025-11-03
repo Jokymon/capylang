@@ -1,17 +1,19 @@
 import tools
+import pytest
 
 
 # ----------------------------------------
 # syntactic errors
+@pytest.mark.parse_error
 def test_missing_curly_brace_at_function_definition_start():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 fn _start()
     proc_exit(10)
 }
 """
-    exit_code, stderr = tools.compile_test_code(code)
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
 
     assert exit_code == 1
     assert (
@@ -20,14 +22,15 @@ fn _start()
     )
 
 
+@pytest.mark.parse_error
 def test_missing_curly_brace_at_function_definition_end():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 fn _start() {
     proc_exit(10)
 """
-    exit_code, stderr = tools.compile_test_code(code)
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
 
     assert exit_code == 1
     assert (
@@ -36,15 +39,16 @@ fn _start() {
     )
 
 
+@pytest.mark.parse_error
 def test_missing_namespace_identifier_in_import():
-    code = """
+    """
 import wasi_snapshot_preview1 proc_exit(exit_code: u32) as proc_exit;
 
 fn _start() {
     proc_exit(10)
 }
 """
-    exit_code, stderr = tools.compile_test_code(code)
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
 
     assert exit_code == 1
     assert (
@@ -53,15 +57,16 @@ fn _start() {
     )
 
 
+@pytest.mark.parse_error
 def test_missing_colon_after_namespace_in_import():
-    code = """
+    """
 import ::proc_exit(exit_code: u32) as proc_exit;
 
 fn _start() {
     proc_exit(10)
 }
 """
-    exit_code, stderr = tools.compile_test_code(code)
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
 
     assert exit_code == 1
     assert (

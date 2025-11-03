@@ -1,8 +1,10 @@
 import tools
+import pytest
 
 
+@pytest.mark.good
 def test_failure_module_parsing_eof():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 fn _start() {
@@ -10,7 +12,7 @@ fn _start() {
 }
 {
 """
-    exit_code, stderr = tools.compile_test_code(code)
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
 
     assert exit_code == 1
     assert (

@@ -16,5 +16,8 @@ wheels/
 example.wat
 example.wasm
 
+# extracted code examples
+corpus/
+
 # a folder with some stuff to keep around, like documentations, examples, ...
 shelf/

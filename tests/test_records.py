@@ -1,8 +1,10 @@
 import tools
+import pytest
 
 
+@pytest.mark.good
 def test_simple_u32_field_access():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 record s {
@@ -16,13 +18,14 @@ fn _start() {
     proc_exit(v.field1)
 }
 """
-    exit_code, _ = tools.run_test_code(code)
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
 
     assert exit_code == 18
 
 
+@pytest.mark.good
 def test_nested_record_access():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 record s2 {
@@ -43,14 +46,15 @@ fn _start() {
     proc_exit(v1.sub.field1)
 }
 """
-    exit_code, _ = tools.run_test_code(code)
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
 
     assert exit_code == 18
 
 
 # ######## FAILURE HANDLING ###########
+@pytest.mark.parse_error
 def test_failure_illegal_deref_syntax():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 record s {
@@ -64,7 +68,7 @@ fn _start() {
     proc_exit(v.)
 }
 """
-    exit_code, stderr = tools.compile_test_code(code)
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
 
     assert exit_code == 1
     assert (
@@ -73,8 +77,9 @@ fn _start() {
     )
 
 
+@pytest.mark.parse_error
 def test_failure_dereferencing_non_record_type():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 fn _start() {
@@ -82,7 +87,7 @@ fn _start() {
     proc_exit(v.field1)
 }
 """
-    exit_code, stderr = tools.compile_test_code(code)
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
 
     assert exit_code == 1
     assert (
@@ -91,8 +96,9 @@ fn _start() {
     )
 
 
+@pytest.mark.parse_error
 def test_failure_unknown_variable_in_initialisation():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 record s {
@@ -106,7 +112,7 @@ fn _start() {
     proc_exit(v.field1)
 }
 """
-    exit_code, stderr = tools.compile_test_code(code)
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
 
     assert exit_code == 1
     assert (
@@ -115,8 +121,9 @@ fn _start() {
     )
 
 
+@pytest.mark.parse_error
 def test_failure_invalid_dereferencing_in_field_init():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 record s {
@@ -131,7 +138,7 @@ fn _start() {
     proc_exit(v.field1)
 }
 """
-    exit_code, stderr = tools.compile_test_code(code)
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
 
     assert exit_code == 1
     assert (
@@ -140,8 +147,9 @@ fn _start() {
     )
 
 
+@pytest.mark.parse_error
 def test_failure_accessing_unknown_field_in_dereferencing():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 record s {
@@ -155,7 +163,7 @@ fn _start() {
     proc_exit(v.fld)
 }
 """
-    exit_code, stderr = tools.compile_test_code(code)
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
 
     assert exit_code == 1
     assert (
@@ -164,8 +172,9 @@ fn _start() {
     )
 
 
+@pytest.mark.parse_error
 def test_failure_accessing_unknown_field_in_initialisation():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 record s {
@@ -180,7 +189,7 @@ fn _start() {
     proc_exit(v.field1)
 }
 """
-    exit_code, stderr = tools.compile_test_code(code)
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
 
     assert exit_code == 1
     assert (
@@ -189,8 +198,9 @@ fn _start() {
     )
 
 
+@pytest.mark.parse_error
 def test_failure_missing_field_in_initialisation():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 record s {
@@ -203,7 +213,7 @@ fn _start() {
     proc_exit(v.field1)
 }
 """
-    exit_code, stderr = tools.compile_test_code(code)
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
 
     assert exit_code == 1
     assert (

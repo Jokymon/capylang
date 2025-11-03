@@ -7,3 +7,9 @@ requires-python = ">=3.13"
 dependencies = [
     "pytest>=8.4.1",
 ]
+
+[tool.pytest.ini_options]
+markers = [
+    "good: tests for capy code that compiles and runs",
+    "parse_error: source code that fails the parsing step",
+]

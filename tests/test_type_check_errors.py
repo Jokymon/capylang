@@ -1,10 +1,16 @@
 import tools
+import pytest
 
 
+@pytest.mark.parse_error
 def test_mismatching_types_in_binary_op():
-    code = """proc_exit(4s32 + 5u32)"""
-    code = tools.expression_to_full_program(code)
-    exit_code, stderr = tools.compile_test_code(code)
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn _start() {
+    proc_exit(4s32 + 5u32)
+}"""
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
 
     assert exit_code == 1
     assert (

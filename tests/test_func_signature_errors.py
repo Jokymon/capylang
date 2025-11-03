@@ -1,18 +1,20 @@
 import tools
+import pytest
 
 # ----------------------------------------
 # syntactic errors
 
 
+@pytest.mark.parse_error
 def test_missing_colon_for_parameter_types():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code u32) as proc_exit;
 
 fn _start() {
     proc_exit(10)
 }
 """
-    exit_code, stderr = tools.compile_test_code(code)
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
 
     assert exit_code == 1
     assert (
@@ -21,15 +23,16 @@ fn _start() {
     )
 
 
+@pytest.mark.parse_error
 def test_missing_open_bracket_for_parameters():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit exit_code: u32) as proc_exit;
 
 fn _start() {
     proc_exit(10)
 }
 """
-    exit_code, stderr = tools.compile_test_code(code)
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
 
     assert exit_code == 1
     assert (
@@ -38,15 +41,16 @@ fn _start() {
     )
 
 
+@pytest.mark.parse_error
 def test_missing_closing_bracket_for_parameters():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32 as proc_exit;
 
 fn _start() {
     proc_exit(10)
 }
 """
-    exit_code, stderr = tools.compile_test_code(code)
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
 
     assert exit_code == 1
     assert (
@@ -55,15 +59,16 @@ fn _start() {
     )
 
 
+@pytest.mark.parse_error
 def test_missing_function_identifier():
-    code = """
+    """
 import wasi_snapshot_preview1:: (exit_code: u32) as proc_exit;
 
 fn _start() {
     proc_exit(10)
 }
 """
-    exit_code, stderr = tools.compile_test_code(code)
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
 
     assert exit_code == 1
     assert (
@@ -76,15 +81,16 @@ fn _start() {
 # semantic errors
 
 
+@pytest.mark.parse_error
 def test_undefined_function():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 fn _start() {
     proc_exit(add2(10, 20))
 }
 """
-    exit_code, stderr = tools.compile_test_code(code)
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
 
     assert exit_code == 1
     assert (
@@ -93,8 +99,9 @@ fn _start() {
     )
 
 
+@pytest.mark.parse_error
 def test_mismatching_argument_count():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 fn add2(a: u32) -> u32 {
@@ -105,7 +112,7 @@ fn _start() {
     proc_exit(add2(10, 20))
 }
 """
-    exit_code, stderr = tools.compile_test_code(code)
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
 
     assert exit_code == 1
     assert (
@@ -114,8 +121,9 @@ fn _start() {
     )
 
 
+@pytest.mark.parse_error
 def test_mismatching_return_types():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 fn const_u32() -> u32 {
@@ -126,7 +134,7 @@ fn _start() {
     proc_exit(const_u32())
 }
 """
-    exit_code, stderr = tools.compile_test_code(code)
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
 
     assert exit_code == 1
     assert (

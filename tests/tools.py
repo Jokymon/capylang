@@ -2,6 +2,9 @@ import pathlib
 import os
 import subprocess
 import tempfile
+import inspect
+import gc
+import types
 
 
 def run_compile(source_path, wat_path, wasm_path) -> tuple[int, str]:
@@ -110,3 +113,21 @@ def normalize_filename_from_output(stdxxx):
     lines = stdxxx.split("\n")
     lines = map(cleanupline, lines)
     return "\n".join(lines)
+
+
+def get_doc_str():
+    # trailing f_back is needed, so that we first leave this
+    # helper function and go into the function we are actually
+    # interested in
+    # This code is mostly taken from
+    # https://stackoverflow.com/a/4506081/4553852
+    frame = inspect.currentframe().f_back
+    code = frame.f_code
+    funcs = []
+    for func in gc.get_referrers(code):
+        if isinstance(func, types.FunctionType):
+            if getattr(func, "__code__", None) is code:
+                if funcs:
+                    return None
+                funcs.append(func)
+    return funcs[0].__doc__ if funcs else None
