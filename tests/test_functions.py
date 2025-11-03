@@ -2,6 +2,22 @@ import tools
 import pytest
 
 
+def test_function_body_can_be_empty():
+    code = """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn bla() { }
+
+fn _start() {
+    bla();
+    proc_exit(4u32)
+}"""
+    exit_code, _ = tools.run_test_code(code)
+
+    assert exit_code == 4
+
+
+
 # ----------------------------------------
 # syntactic errors
 @pytest.mark.parse_error

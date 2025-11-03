@@ -26,9 +26,6 @@ exit codes. This is supported by `uv` and the `pytest` library.
  * Add intrinsics
  * Make sure pointer types are correctly dereferenced; special checks for u8, u16, since we dereference u32 normally
  * Comparison operators and bool type
- * Check error messages when a function has it's last statement terminated with a ;
-   --> this probably has to be checked with the return type and be made sure that the part after the ;
-       is treated as a void return
 
 ### Big refactoring
 
@@ -87,3 +84,17 @@ packet, several problems were encountered and the idea was ultimately abandoned 
 
 To insert specific unicode code points in strings, we use the more flexible notation `\u{xxx}` as used in Rust, Swift or
 PHP rather than the stricter, fixed length variants with `\u` and `\U` in Java, C, C++ or C#.
+
+### Structure of bodies
+
+For the moment we take the route that any body (function body or later if and loop bodies) consists of a sequence of
+expressions and semicolons. We define the following rules accordingly:
+
+ * A body may be completely empty
+ * If a body is not empty, then it must start with a ';'
+ * Between every two expressions must be a ';'
+ * A body may be finished by an expression (without trailing ';'). In that case, this last expression defines the
+   type of that body. This in turn defines the type of an 'if'-expression
+ * If a body is terminated with a ';', then this body always has type 'void'
+ * We treat everything as expressions, there are no statements. Even a 'let'-
+   statement is treated as expression, but one that has type 'void'
