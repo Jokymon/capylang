@@ -63,6 +63,8 @@ std::string token_symbol::to_string() const
         return "as";
     case sym_kw_fn:
         return "fn";
+    case sym_kw_if:
+        return "if";
     case sym_kw_import:
         return "import";
     case sym_kw_let:
@@ -500,6 +502,10 @@ token lexer::parse_identifier_or_keyword()
     if (id_name == "fn")
     {
         return token_symbol{start_position, look_ahead_position, token_symbol::sym_kw_fn};
+    }
+    else if (id_name == "if")
+    {
+        return token_symbol{start_position, look_ahead_position, token_symbol::sym_kw_if};
     }
     else if (id_name == "import")
     {

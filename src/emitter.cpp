@@ -191,6 +191,17 @@ void emitter::emit(const node_record_definition& record_def)
 {
 }
 
+void emitter::emit(const node_if_expression& if_expr)
+{
+    emit(*if_expr.condition);
+    output_ << "      if\n";
+    for (const auto& expression : if_expr.then_code)
+    {
+        emit(*expression);
+    }
+    output_ << "      end\n";
+}
+
 void emitter::emit(const node_function_call &func_call)
 {
     for (const auto &param : func_call.parameter)

@@ -15,6 +15,7 @@ public:
     void emit(const node_function_head& function_head);
     void emit(const node_function_definition& func_def);
     void emit(const node_record_definition& record_def);
+    void emit(const node_if_expression& if_expr);
     void emit(const node_function_call& func_call);
     void emit(const node_let_expression& let_expression);
     void emit(const node_record_initialisation& record_init);

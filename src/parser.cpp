@@ -66,6 +66,19 @@ void dump_node(const node_let_expression& n, size_t indent)
     dump_ast(*n.init_expression, indent+4);
 }
 
+void dump_node(const node_if_expression& n, size_t indent)
+{
+    std::string ind = std::string(indent, ' ');
+    std::cout << ind << "If\n";
+    std::cout << ind << "  Condition:\n";
+    dump_ast(*n.condition, indent+4);
+    std::cout << ind << "  Then-Body:\n";
+    for (const auto& expression : n.then_code)
+    {
+        dump_ast(*expression, indent+4);
+    }
+}
+
 void dump_node(const node_type_spec& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
@@ -622,45 +635,7 @@ ast_node parser::parse_function_definition()
     current_scope = func_scope.get();
 
     std::vector<std::unique_ptr<ast_node>> function_body;
-
-    while (!capy_lexer.ahead_is_sym(token_symbol::sym_curly_close) &&
-           !capy_lexer.ahead_is<token_eof>())
-    {
-        auto expression = parse_expression();
-        function_body.emplace_back(std::make_unique<ast_node>(std::move(expression)));
-
-        if (capy_lexer.ahead_is_sym(token_symbol::sym_semicolon))
-        {
-            capy_lexer.expect_symbol(token_symbol::sym_semicolon);
-
-            // If the previous expression wasn't the last one in the function, then it
-            // will have left a value on the stack and will make the WASM validation
-            // unhappy. So we have to "convert" the type of the last expression to 'void'
-            // so the emitter can insert a 'drop' instruction
-            auto previous_expression = std::move(function_body.back());
-            function_body.pop_back();
-        
-            auto drop_wrapper = make_located<node_expression>(
-                previous_expression->location.start,
-                previous_expression->location.end,
-                std::move(previous_expression),
-                std::make_unique<ast_node>(make_located<node_type_spec>(
-                    previous_expression->location.start,
-                    previous_expression->location.end,
-                    t_t::void_type{}
-                )),
-                previous_expression->location,
-                op_conversion,
-                t_t::void_type{}
-            );
-            function_body.emplace_back(std::make_unique<ast_node>(std::move(drop_wrapper)));
-        }
-    }
-
-    if (!capy_lexer.ahead_is_sym(token_symbol::sym_curly_close))
-    {
-        append_error("Expecting a closing brace '}' after function body definition");
-    }
+    parse_body(function_body);
     auto end_range = capy_lexer.expect<token_symbol>().location;
 
     current_scope = current_scope->parent;
@@ -746,6 +721,10 @@ ast_node parser::parse_expression(int min_precedence)
             t_t::unassigned{}
         );
     }
+    else if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_if))
+    {
+        return parse_if_expression();
+    }
     else if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_let))
     {
         return parse_let_expression();
@@ -830,6 +809,30 @@ ast_node parser::parse_function_call(source_range name_range, const std::string 
         function_name,
         func.value(),
         std::move(function_parameters));
+}
+
+ast_node parser::parse_if_expression()
+{
+    // eat the 'if' keyword
+    auto start_location = capy_lexer.expect<token_symbol>().location;
+
+    auto condition = parse_expression();
+
+    if (!capy_lexer.expect_symbol(token_symbol::sym_curly_open))
+    {
+        append_error("Expecting an opening brace '{' for if-body");
+    }
+
+    std::vector<std::unique_ptr<ast_node>> then_body;
+    parse_body(then_body);
+    auto end_range = capy_lexer.expect<token_symbol>().location;
+
+    return make_located<node_if_expression>(
+        start_location.start,
+        start_location.end,
+        std::make_unique<ast_node>(std::move(condition)),
+        std::move(then_body)
+    );
 }
 
 ast_node parser::parse_let_expression()
@@ -1058,7 +1061,11 @@ ast_node parser::parse_primary()
         {
             return parse_function_call(id_range, id.name);
         }
-        else if (capy_lexer.ahead_is_sym(token_symbol::sym_curly_open))
+        // record initialisation and 'if' expressions can look very similar but we
+        // can clearly distinguish them on a semantic level. When the identifier
+        // before the opening '{' is a type, then this must be a record initialisation
+        else if (current_scope->lookup_type(id.name).has_value() &&
+                 capy_lexer.ahead_is_sym(token_symbol::sym_curly_open))
         {
             return parse_record_initialisation(id_range, id.name);
         }
@@ -1234,6 +1241,48 @@ ast_node parser::parse_number()
         lhs_location.end,
         lhs.number,
         number_type.value());
+}
+
+void parser::parse_body(std::vector<std::unique_ptr<ast_node>>& body)
+{
+    while (!capy_lexer.ahead_is_sym(token_symbol::sym_curly_close) &&
+           !capy_lexer.ahead_is<token_eof>())
+    {
+        auto expression = parse_expression();
+        body.emplace_back(std::make_unique<ast_node>(std::move(expression)));
+
+        if (capy_lexer.ahead_is_sym(token_symbol::sym_semicolon))
+        {
+            capy_lexer.expect_symbol(token_symbol::sym_semicolon);
+
+            // If the previous expression wasn't the last one in the body, then it
+            // will have left a value on the stack and will make the WASM validation
+            // unhappy. So we have to "convert" the type of the last expression to 'void'
+            // so the emitter can insert a 'drop' instruction
+            auto previous_expression = std::move(body.back());
+            body.pop_back();
+        
+            auto drop_wrapper = make_located<node_expression>(
+                previous_expression->location.start,
+                previous_expression->location.end,
+                std::move(previous_expression),
+                std::make_unique<ast_node>(make_located<node_type_spec>(
+                    previous_expression->location.start,
+                    previous_expression->location.end,
+                    t_t::void_type{}
+                )),
+                previous_expression->location,
+                op_conversion,
+                t_t::void_type{}
+            );
+            body.emplace_back(std::make_unique<ast_node>(std::move(drop_wrapper)));
+        }
+    }
+
+    if (!capy_lexer.ahead_is_sym(token_symbol::sym_curly_close))
+    {
+        append_error("Expecting a closing brace '}' to terminate the body");
+    }
 }
 
 size_t parser::collect_literal(const std::string& literal)
