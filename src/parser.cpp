@@ -479,14 +479,14 @@ ast_node parser::parse_module()
 
 void parser::parse_function_signature(function_signature &signature)
 {
-    if (!capy_lexer.expect_symbol(token_symbol::sym_brac_open))
+    if (!capy_lexer.expect_symbol(token_symbol::sym_paren_open))
     {
         append_error("Expecting an opening bracket '(' for function parameters");
     }
 
     parse_parameters(signature.parameters);
 
-    if (!capy_lexer.expect_symbol(token_symbol::sym_brac_close))
+    if (!capy_lexer.expect_symbol(token_symbol::sym_paren_close))
     {
         append_error("Expecting an closing bracket ')' for function parameters");
     }
@@ -671,7 +671,7 @@ ast_node parser::parse_function_head()
 
 ast_node parser::parse_expression(int min_precedence)
 {
-    if (capy_lexer.ahead_is_sym(token_symbol::sym_brac_open))
+    if (capy_lexer.ahead_is_sym(token_symbol::sym_paren_open))
     {
         // eat up the '(' token
         auto start = capy_lexer.expect<token_symbol>().location;
@@ -679,7 +679,7 @@ ast_node parser::parse_expression(int min_precedence)
         auto expression = parse_expression();
 
         // check for a closing )
-        if (capy_lexer.ahead_is_sym(token_symbol::sym_brac_close))
+        if (capy_lexer.ahead_is_sym(token_symbol::sym_paren_close))
         {
             auto end = capy_lexer.expect<token_symbol>().location;
 
@@ -768,7 +768,7 @@ ast_node parser::parse_function_call(source_range name_range, const std::string 
     capy_lexer.expect<token_symbol>();
 
     std::vector<std::unique_ptr<ast_node>> function_parameters;
-    while (!capy_lexer.ahead_is_sym(token_symbol::sym_brac_close))
+    while (!capy_lexer.ahead_is_sym(token_symbol::sym_paren_close))
     {
         auto parameter = parse_expression();
         function_parameters.emplace_back(std::make_unique<ast_node>(std::move(parameter)));
@@ -1018,7 +1018,7 @@ ast_node parser::parse_primary()
         auto id = capy_lexer.expect<token_identifier>();
         auto id_range = id.location;
 
-        if (capy_lexer.ahead_is_sym(token_symbol::sym_brac_open))
+        if (capy_lexer.ahead_is_sym(token_symbol::sym_paren_open))
         {
             return parse_function_call(id_range, id.name);
         }

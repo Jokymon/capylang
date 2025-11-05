@@ -61,8 +61,8 @@ struct token_symbol : public located_token
         sym_slash,
         sym_star,
 
-        sym_brac_open,
-        sym_brac_close,
+        sym_paren_open,
+        sym_paren_close,
         sym_curly_open,
         sym_curly_close,
     };

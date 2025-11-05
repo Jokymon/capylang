@@ -41,9 +41,9 @@ std::string token_symbol::to_string() const
         return "/";
     case sym_star:
         return "*";
-    case sym_brac_open:
+    case sym_paren_open:
         return "(";
-    case sym_brac_close:
+    case sym_paren_close:
         return ")";
     case sym_curly_open:
         return "{";
@@ -375,12 +375,12 @@ token lexer::parse_token()
     else if (ch == '(')
     {
         get_char();
-        return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_brac_open};
+        return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_paren_open};
     }
     else if (ch == ')')
     {
         get_char();
-        return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_brac_close};
+        return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_paren_close};
     }
     else if (ch == '{')
     {
