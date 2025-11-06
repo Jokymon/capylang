@@ -88,37 +88,10 @@ void emitter::generate(ast_node &node)
 
 void emitter::emit(ast_node &node)
 {
-    std::visit([&, this](auto &n)
-               {
-        using T = std::decay_t<decltype(n)>;
-
-        if constexpr (std::is_same_v<T, node_number>) {
-            this->emit(n);
-        } else if constexpr (std::is_same_v<T, node_string_literal>) {
-            this->emit(n);
-        } else if constexpr (std::is_same_v<T, node_var_reference>) {
-            this->emit(n);
-        } else if constexpr (std::is_same_v<T, node_pointer_deref>) {
-            this->emit(n);
-        } else if constexpr (std::is_same_v<T, node_function_call>) {
-            this->emit(n);
-        } else if constexpr (std::is_same_v<T, node_import_definition>) {
-            this->emit(n);
-        } else if constexpr (std::is_same_v<T, node_function_definition>) {
-            this->emit(n);
-        } else if constexpr (std::is_same_v<T, node_function_head>) {
-            this->emit(n);
-        } else if constexpr (std::is_same_v<T, node_let_expression>) {
-            this->emit(n);
-        } else if constexpr (std::is_same_v<T, node_record_initialisation>) {
-            this->emit(n);
-        } else if constexpr (std::is_same_v<T, node_field_deref>) {
-            this->emit(n);
-        } else if constexpr (std::is_same_v<T, node_expression>) {
-            this->emit(n);
-        } else if constexpr (std::is_same_v<T, node_module>) {
-            this->emit(n);
-        } else {} }, node.value);
+    std::visit([this](auto &n)
+    {
+        this->emit(n);
+    }, node.value);
 }
 
 void emitter::emit(node_module &module_def)
@@ -211,6 +184,10 @@ void emitter::emit(const node_function_definition &func_def)
     }
 
     output_ << "  )\n";
+}
+
+void emitter::emit(const node_record_definition& record_def)
+{
 }
 
 void emitter::emit(const node_function_call &func_call)
@@ -359,6 +336,10 @@ void emitter::emit(const node_string_literal& literal)
     uint32_t ptr = current_module->string_literals[literal.table_index].start_address;
     output_ << "      i32.const " << literal.size << "\n";
     output_ << "      i32.const " << ptr << "\n";
+}
+
+void emitter::emit(const node_type_spec& spec)
+{
 }
 
 void emitter::emit(const node_number &number)

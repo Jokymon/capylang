@@ -14,6 +14,7 @@ public:
     void emit(const node_import_definition& import_def);
     void emit(const node_function_head& function_head);
     void emit(const node_function_definition& func_def);
+    void emit(const node_record_definition& record_def);
     void emit(const node_function_call& func_call);
     void emit(const node_let_expression& let_expression);
     void emit(const node_record_initialisation& record_init);
@@ -22,6 +23,7 @@ public:
     void emit(const node_var_reference& variable);
     void emit(const node_pointer_deref& ptr_deref);
     void emit(const node_string_literal& literal);
+    void emit(const node_type_spec& spec);
     void emit(const node_number& number);
 
 private:

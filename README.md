@@ -20,8 +20,6 @@ exit codes. This is supported by `uv` and the `pytest` library.
 
  * add other basic number types (f32, f64, s64, s16, s8, ...)
  * add structured component model types (variant, list, record, result, ...)
- * Improve maintainability of emitter-visitor; shouldn't be necessary
-   to add every new type to the std::visit call if possible
  * implement a simple heap management concept (check the WAMR/Emscripten memory organisation)
  * Add structured types (struct, list, enum/unions)
  * Add some form of memory management
