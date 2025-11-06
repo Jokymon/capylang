@@ -92,3 +92,24 @@ fn _start() {
         tools.normalize_filename_from_output(stderr)
         == "filename:6:23: 'then' and 'else' branches have mismatching types 'u32' and 's32'\n"
     )
+
+
+def test_then_with_return_with_empty_else_is_invalid():
+    code = """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn _start() {
+    let condition: bool = true;
+    let result: u32 = if condition {
+        10u32
+    }
+    proc_exit(result)
+}
+"""
+    exit_code, stderr = tools.compile_test_code(code)
+
+    assert exit_code == 1
+    assert (
+        tools.normalize_filename_from_output(stderr)
+        == "filename:6:23: 'if' with return type is missing an 'else' branch\n"
+    )
