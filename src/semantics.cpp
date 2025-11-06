@@ -235,6 +235,14 @@ void semantic_analyser::process(source_range location, node_if_expression &n)
         else_return_type = assigned_node_type(*expression);
     }
 
+    if (then_return_type != else_return_type)
+    {
+        append_error_at(
+            location.start,
+            "'then' and 'else' branches have mismatching types '" + repr_type(then_return_type) +
+                "' and '" + repr_type(else_return_type) + "'");
+    }
+
     n.assigned_type = then_return_type;
 }
 

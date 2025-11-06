@@ -67,3 +67,28 @@ fn _start() {
     exit_code, _ = tools.run_test_code(code)
 
     assert exit_code == 10
+
+
+# ----------------------------------------
+# semantic errors
+def test_then_and_else_branch_need_identical_types():
+    code = """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn _start() {
+    let condition: bool = true;
+    let result: u32 = if condition {
+        10u32
+    } else {
+        12s32
+    }
+    proc_exit(result)
+}
+"""
+    exit_code, stderr = tools.compile_test_code(code)
+
+    assert exit_code == 1
+    assert (
+        tools.normalize_filename_from_output(stderr)
+        == "filename:6:23: 'then' and 'else' branches have mismatching types 'u32' and 's32'\n"
+    )
