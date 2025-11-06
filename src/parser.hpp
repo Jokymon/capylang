@@ -230,6 +230,8 @@ struct node_if_expression
 {
     std::unique_ptr<ast_node> condition;
     std::vector<std::unique_ptr<ast_node>> then_code;
+    std::vector<std::unique_ptr<ast_node>> else_code;
+    type_kind assigned_type;
     // TODO: should be introduce a new scope for the if?
 };
 

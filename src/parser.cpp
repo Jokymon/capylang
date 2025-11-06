@@ -850,7 +850,8 @@ ast_node parser::parse_if_expression()
         start_location.end,
         std::make_unique<ast_node>(std::move(condition)),
         std::move(then_body),
-        std::move(else_body)
+        std::move(else_body),
+        t_t::unassigned{}
     );
 }
 

@@ -194,7 +194,13 @@ void emitter::emit(const node_record_definition& record_def)
 void emitter::emit(const node_if_expression& if_expr)
 {
     emit(*if_expr.condition);
-    output_ << "      if\n";
+    output_ << "      if";
+    if (!t_t::is_of<t_t::void_type>(if_expr.assigned_type))
+    {
+        output_ << " (result " << type_mapping(if_expr.assigned_type) << ")";
+    }
+    output_ << "\n";
+
     for (const auto& expression : if_expr.then_code)
     {
         emit(*expression);

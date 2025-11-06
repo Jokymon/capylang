@@ -58,6 +58,8 @@ type_kind assigned_node_type(const ast_node &node)
             return t_t::void_type{};
         } else if constexpr (std::is_same_v<T, node_record_initialisation>) {
             return n.type_spec;
+        } else if constexpr (std::is_same_v<T, node_if_expression>) {
+            return n.assigned_type;
         } else if constexpr (std::is_same_v<T, node_type_spec>) {
             return n.type_spec;
         } else if constexpr (std::is_same_v<T, node_field_deref>) {
@@ -195,7 +197,6 @@ void semantic_analyser::process(source_range location, node_field_deref &n)
     }
 }
 
-
 void semantic_analyser::process(source_range location, node_function_call &n)
 {
     function_signature actual_signature;
@@ -214,6 +215,27 @@ void semantic_analyser::process(source_range location, node_function_call &n)
                 + n.symbol_ref.signature.repr() + "; called with signature "
                 + actual_signature.repr());
     }
+}
+
+void semantic_analyser::process(source_range location, node_if_expression &n)
+{
+    semantic_analysis(*n.condition);
+
+    type_kind then_return_type = t_t::void_type{};
+    for (const auto &expression : n.then_code)
+    {
+        semantic_analysis(*expression);
+        then_return_type = assigned_node_type(*expression);
+    }
+
+    type_kind else_return_type = t_t::void_type{};
+    for (const auto &expression : n.else_code)
+    {
+        semantic_analysis(*expression);
+        else_return_type = assigned_node_type(*expression);
+    }
+
+    n.assigned_type = then_return_type;
 }
 
 void semantic_analyser::process(source_range location, node_let_expression &n)
@@ -351,6 +373,8 @@ void semantic_analyser::semantic_analysis(ast_node &root)
         } else if constexpr (std::is_same_v<T, node_type_spec>) {
             process(n);
         } else if constexpr (std::is_same_v<T, node_function_call>) {
+            process(root.location, n);
+        } else if constexpr (std::is_same_v<T, node_if_expression>) {
             process(root.location, n);
         } else if constexpr (std::is_same_v<T, node_let_expression>) {
             process(root.location, n);

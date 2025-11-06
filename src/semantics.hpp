@@ -22,6 +22,7 @@ private:
     void process(source_range location, node_record_initialisation &n);
     void process(source_range location, node_field_deref &n);
     void process(source_range location, node_function_call &n);
+    void process(source_range location, node_if_expression &n);
     void process(source_range location, node_let_expression &n);
     void process(node_import_definition &n);
     void process(node_function_definition &n);
