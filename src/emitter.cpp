@@ -199,6 +199,14 @@ void emitter::emit(const node_if_expression& if_expr)
     {
         emit(*expression);
     }
+    if (!if_expr.then_code.empty())
+    {
+        output_ << "      else\n";
+        for (const auto& expression : if_expr.else_code)
+        {
+            emit(*expression);
+        }
+    }
     output_ << "      end\n";
 }
 

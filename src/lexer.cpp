@@ -61,6 +61,8 @@ std::string token_symbol::to_string() const
     {
     case sym_kw_as:
         return "as";
+    case sym_kw_else:
+        return "else";
     case sym_kw_fn:
         return "fn";
     case sym_kw_if:
@@ -499,7 +501,11 @@ token lexer::parse_identifier_or_keyword()
         id_name += get_char();
     }
 
-    if (id_name == "fn")
+    if (id_name == "else")
+    {
+        return token_symbol{start_position, look_ahead_position, token_symbol::sym_kw_else};
+    }
+    else if (id_name == "fn")
     {
         return token_symbol{start_position, look_ahead_position, token_symbol::sym_kw_fn};
     }

@@ -64,7 +64,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control.capy",
-					"match": "\\b(if|while|for|return)\\b"
+					"match": "\\b(if|else|while|for|return)\\b"
 				},
 				{
 					"match": "\\b(let)\\b",

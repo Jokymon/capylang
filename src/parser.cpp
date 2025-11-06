@@ -824,14 +824,33 @@ ast_node parser::parse_if_expression()
     }
 
     std::vector<std::unique_ptr<ast_node>> then_body;
+    std::vector<std::unique_ptr<ast_node>> else_body;
     parse_body(then_body);
+
+    // eat the closing '}' of the then-branch
     auto end_range = capy_lexer.expect<token_symbol>().location;
+
+    if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_else))
+    {
+        // eat the 'else' keyword
+        auto start_location = capy_lexer.expect<token_symbol>().location;
+
+        if (!capy_lexer.expect_symbol(token_symbol::sym_curly_open))
+        {
+            append_error("Expecting an opening brace '{' for the else-body");
+        }
+
+        parse_body(else_body);
+
+        end_range = capy_lexer.expect<token_symbol>().location;
+    }
 
     return make_located<node_if_expression>(
         start_location.start,
         start_location.end,
         std::make_unique<ast_node>(std::move(condition)),
-        std::move(then_body)
+        std::move(then_body),
+        std::move(else_body)
     );
 }
 
