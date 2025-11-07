@@ -523,6 +523,7 @@ void parser::parse_parameters(std::vector<param_spec> &parameters)
             .name = param_name.name,
             .symbol_type = type_spec,
             .kind = symbol_kind::argument,
+            .mutab = false,
             .index_addr = argument_index++};
 
         parameters.emplace_back(param_name.name, type_spec);
@@ -810,6 +811,14 @@ ast_node parser::parse_let_expression()
     // eat the 'let' keyword
     auto start_location = capy_lexer.expect<token_symbol>().location;
 
+    bool is_mutable = false;
+    if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_mut))
+    {
+        // eat the 'mut' keyword
+        capy_lexer.expect<token_symbol>();
+        is_mutable = true;
+    }
+
     if (!capy_lexer.ahead_is<token_identifier>())
     {
         append_error("Expecting a variable name after 'let' keyword");
@@ -835,6 +844,7 @@ ast_node parser::parse_let_expression()
         .name = variable_name.name,
         .symbol_type = type_spec,
         .kind = symbol_kind::local_var,
+        .mutab = is_mutable,
         .index_addr = current_scope->symbol_table.size(),
     };
     current_scope->symbol_table[variable_name.name] = new_symbol;
@@ -1036,6 +1046,7 @@ ast_node parser::parse_primary()
                     "_",
                     t_t::u32{},
                     symbol_kind::global_var,
+                    false,
                     0
                 };
             }
@@ -1060,6 +1071,7 @@ ast_node parser::parse_primary()
                     "_",
                     t_t::u32{},
                     symbol_kind::global_var,
+                    false,
                     0
                 };
             }

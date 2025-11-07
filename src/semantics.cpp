@@ -253,6 +253,16 @@ void semantic_analyser::process(source_range location, node_expression &n)
             std::holds_alternative<node_var_reference>(n.left->value))
         {
             n.assigned_type = t_t::void_type{};
+            auto* var_node = std::get_if<node_var_reference>(&n.left->value);
+            if (var_node!=nullptr)
+            {
+                if (!var_node->symbol_ref.mutab)
+                {
+                    append_error_at(
+                        location.start,
+                        "Can't assign to immutable variable '" + var_node->symbol_ref.name + "'");
+                }
+            }
         }
         else
         {

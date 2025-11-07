@@ -111,6 +111,7 @@ struct symbol {
     std::string name;
     type_kind symbol_type;
     symbol_kind kind;
+    bool mutab;
     uint32_t index_addr;
 };
 

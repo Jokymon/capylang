@@ -1,4 +1,5 @@
 import tools
+import pytest
 
 
 def test_single_number_with_type_suffix():
@@ -118,3 +119,18 @@ proc_exit(*addr2 as u32)"""
     exit_code, _ = tools.run_test_code(code)
 
     assert exit_code == 40
+
+
+@pytest.mark.good
+def test_variables_can_be_modified():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn _start() {
+    let mut a: u32 = 10u32;
+    a = 20u32;
+    proc_exit(a)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 20

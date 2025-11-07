@@ -13,6 +13,8 @@ std::string token_symbol::to_string() const
         return "import";
     case sym_kw_let:
         return "let";
+    case sym_kw_mut:
+        return "mut";
     case sym_kw_record:
         return "record";
     case sym_arrow:
@@ -446,6 +448,10 @@ token lexer::parse_identifier_or_keyword()
     else if (id_name == "let")
     {
         return token_symbol{start_position, look_ahead_position, token_symbol::sym_kw_let};
+    }
+    else if (id_name == "mut")
+    {
+        return token_symbol{start_position, look_ahead_position, token_symbol::sym_kw_mut};
     }
     else if (id_name == "record")
     {
