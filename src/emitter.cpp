@@ -1,6 +1,7 @@
 #include "emitter.hpp"
 #include "semantics.hpp"
 #include <algorithm>
+#include <cassert>
 #include <iomanip>
 #include <sstream>
 
@@ -272,10 +273,7 @@ void emitter::emit(const node_field_deref& field_deref)
     {
         emit(*field_deref.object);
         auto maybe_size = record_field_offset(field_deref.object_type, field_deref.fieldname);
-        if (!maybe_size.has_value())
-        {
-            // TODO: panic! this should have been taken care of in the semantic step
-        }
+        assert(maybe_size.has_value() && "A record field should have its offset calculated by this point");
 
         output_ << "      i32.load offset=" << maybe_size.value() << "\n";
     }
