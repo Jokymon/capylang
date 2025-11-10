@@ -3,8 +3,7 @@
 # module with a WASM runtime
 
 param (
-    [Parameter(Mandatory = $true, Position = 0)]
-    [string]$InputFile
+    [string]$InputFile = $(throw "Input file path is required")
 )
 
 # --- Compute relative paths manually (without requiring existence) ---
@@ -49,7 +48,7 @@ if ($LASTEXITCODE -ne 0) {
 C:\sw\wasm-tools-1.230.0-x86_64-windows\wasm-tools.exe parse $WatFile -o $WasmFile
 
 # Run the new WASM file with a WASM runtime
-C:\sw\wasmtime-v33.0.0-x86_64-windows\wasmtime.exe run $WasmFile
+C:\sw\wasmtime-v33.0.0-x86_64-windows\wasmtime.exe run $WasmFile @args
 Write-Output "Lastexitcode: $LASTEXITCODE"
 # Report the WASM runtime exit code to the outside
 exit $LASTEXITCODE
