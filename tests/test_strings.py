@@ -59,6 +59,20 @@ fn _start() {
     assert exit_code == 4
 
 
+@pytest.mark.good
+def test_creating_character_literals():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn _start() {
+    let c: char = 'a';
+    proc_exit(3u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 3
+
+
 # -------------------------------------------------------
 # compile errors
 @pytest.mark.parse_error
@@ -77,3 +91,6 @@ fn _start() {
         tools.normalize_filename_from_output(stderr)
         == "filename:6:15: Unknown field 'thing' for string type\n"
     )
+
+# TODO: assigning from string literal should either create a copy of the string
+# or it should only be allowed to assign to an immutable variable

@@ -161,6 +161,8 @@ std::string repr_token(const token &tok)
                             return "<TOK_ILLEGAL: "+n.token_text+">";
                           } else if constexpr (std::is_same_v<T, token_integer>) {
                             return "<TOK_INT: "+std::to_string(n.number)+">";
+                          } else if constexpr (std::is_same_v<T, token_char_literal>) {
+                            return "<TOK_CHAR: "+std::to_string(n.ch)+">";
                           } else if constexpr (std::is_same_v<T, token_string_literal>) {
                             return "<TOK_STR: "+n.str+">";
                           } else if constexpr (std::is_same_v<T, token_symbol>) {
@@ -394,6 +396,10 @@ token lexer::parse_token()
         get_char();
         return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_curly_close};
     }
+    else if (ch == '\'')
+    {
+        return parse_char_literal();
+    }
     else if (ch == '\"')
     {
         return parse_string_literal();
@@ -465,6 +471,39 @@ token lexer::parse_identifier_or_keyword()
     {
         return token_identifier{start_position, look_ahead_position, id_name};
     }
+}
+
+token lexer::parse_char_literal()
+{
+    auto start_position = look_ahead_position;
+    get_char(); // parse over the opening '
+    auto ch = get_char();
+    if (ch == '\\')
+    {
+        // handle escape sequences
+        char next_ch = get_char();
+        switch (next_ch)
+        {
+        case 'n':
+            ch = '\n';
+            break;
+        case 't':
+            ch = '\t';
+            break;
+        case '\\':
+            ch = '\\';
+            break;
+        case '\"':
+            ch = '\"';
+            break;
+        default:
+            ch = next_ch;
+            break;
+        }
+    }
+    get_char(); // parse over the closing '
+
+    return token_char_literal{start_position, look_ahead_position, static_cast<uint32_t>(ch)};
 }
 
 token lexer::parse_string_literal()

@@ -23,6 +23,7 @@ public:
     void emit(const node_var_reference& variable);
     void emit(const node_pointer_deref& ptr_deref);
     void emit(const node_string_literal& literal);
+    void emit(const node_char_literal& literal);
     void emit(const node_type_spec& spec);
     void emit(const node_number& number);
 

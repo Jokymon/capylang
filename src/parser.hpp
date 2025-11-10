@@ -11,6 +11,7 @@ namespace t_t
 {
     struct unassigned;
     struct void_type;
+    struct char_type;
     struct u8;
     struct s32;
     struct u32;
@@ -18,7 +19,7 @@ namespace t_t
     struct pointer;
     struct record;
 };
-using type_kind = std::variant<t_t::unassigned, t_t::void_type, t_t::s32, t_t::u8, t_t::u32, t_t::string, t_t::pointer, t_t::record>;
+using type_kind = std::variant<t_t::unassigned, t_t::void_type, t_t::char_type, t_t::s32, t_t::u8, t_t::u32, t_t::string, t_t::pointer, t_t::record>;
 
 namespace t_t
 {
@@ -28,6 +29,9 @@ namespace t_t
 
     struct void_type{
         bool operator==(const void_type& other) const { return true; }
+    };
+    struct char_type{
+        bool operator==(const char_type& other) const { return true; }
     };
     struct s32{
         bool operator==(const s32& other) const { return true; }
@@ -141,6 +145,7 @@ struct located
 };
 
 struct node_number;
+struct node_char_literal;
 struct node_string_literal;
 struct node_var_reference;
 struct node_pointer_deref;
@@ -156,7 +161,7 @@ struct node_function_definition;
 struct node_expression;
 struct node_module;
 
-using ast_node_raw = std::variant<node_number, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_type_spec, node_record_definition, node_record_initialisation, node_field_deref, node_function_head, node_import_definition, node_function_call, node_function_definition, node_expression, node_module>;
+using ast_node_raw = std::variant<node_number, node_char_literal, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_type_spec, node_record_definition, node_record_initialisation, node_field_deref, node_function_head, node_import_definition, node_function_call, node_function_definition, node_expression, node_module>;
 using ast_node = located<ast_node_raw>;
 
 void dump_ast(const ast_node& root, size_t indent=0);
@@ -170,6 +175,11 @@ struct node_number
 {
     long long number;
     type_kind assigned_type;
+};
+
+struct node_char_literal
+{
+    uint32_t ch;
 };
 
 struct node_string_literal

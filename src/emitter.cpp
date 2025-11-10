@@ -336,6 +336,12 @@ void emitter::emit(const node_string_literal& literal)
     output_ << "      i32.const " << ptr << "\n";
 }
 
+void emitter::emit(const node_char_literal& literal)
+{
+    output_ << "      i32.const " << literal.ch << "\n";
+}
+
+
 void emitter::emit(const node_type_spec& spec)
 {
 }

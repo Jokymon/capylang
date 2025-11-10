@@ -32,6 +32,11 @@ struct token_identifier : public located_token
     std::string name;
 };
 
+struct token_char_literal : public located_token
+{
+    uint32_t ch;
+};
+
 struct token_string_literal : public located_token
 {
     std::string str;
@@ -97,7 +102,7 @@ struct token_illegal : public located_token
     std::string token_text;
 };
 
-using token = std::variant<token_integer, token_string_literal, token_identifier, token_symbol, token_eof, token_illegal>;
+using token = std::variant<token_integer, token_char_literal, token_string_literal, token_identifier, token_symbol, token_eof, token_illegal>;
 
 std::string repr_op(operator_type op);
 std::string repr_token(const token &tok);
@@ -172,5 +177,6 @@ private:
 
     token parse_number();
     token parse_identifier_or_keyword();
+    token parse_char_literal();
     token parse_string_literal();
 };
