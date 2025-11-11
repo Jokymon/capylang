@@ -31,6 +31,51 @@ fn _start() {
 
 
 @pytest.mark.good
+def test_string_with_escaped_unicode_char_in_ascii_range():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn _start() {
+    let s: string = "\\u{48}ello";
+    proc_exit(*s.ptr as u32)
+}"""
+    # Hex 0x48 is the ASCII/Unicode code for 'H'
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 0x48
+
+
+@pytest.mark.good
+def test_string_with_escaped_unicode_char_in_2_byte_range():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn _start() {
+    let s: string = "\\u{4dc}";
+    proc_exit(s.size)
+}"""
+    # Unicode 0x4dc is a cyrillic character that should be encodable in 2 bytes
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 2
+
+
+@pytest.mark.good
+def test_string_with_escaped_unicode_char_in_3_byte_range():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn _start() {
+    let s: string = "\\u{932}";
+    proc_exit(s.size)
+}"""
+    # Unicode 0x932 is a devanagari character that should be encodable in 3 bytes
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 3
+
+
+@pytest.mark.good
 def test_strings_have_an_implict_ptr_field():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;

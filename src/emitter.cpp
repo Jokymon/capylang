@@ -432,7 +432,8 @@ uint32_t emitter::allocate_data(const std::string& data)
                 else
                 {
                     std::ostringstream oss;
-                    oss << "\\" << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << (int)c;
+                    oss << "\\" << std::uppercase << std::hex << std::setw(2) << std::setfill('0') 
+                        << ((unsigned int)c & 0xff);
                     data_buffer +=  oss.str();
                 }
         }

@@ -1,6 +1,60 @@
 #include "lexer.hpp"
 #include <assert.h>
 
+const uint32_t MAX_ONE_B = 0x80;
+const uint32_t MAX_TWO_B = 0x800;
+const uint32_t MAX_THREE_B = 0x10000;
+const int TAG_CONT = 0x80;
+const int TAG_TWO_B = 0xc0;
+const int TAG_THREE_B = 0xe0;
+const int TAG_FOUR_B = 0xf0;
+
+size_t len_utf8(uint32_t code)
+{
+    if (code<MAX_ONE_B)
+        return 1;
+    else if (code<MAX_TWO_B)
+        return 2;
+    else if (code<MAX_THREE_B)
+        return 3;
+    return 4;
+}
+
+void encode_utf8_raw_unchecked(uint32_t code, std::string& dst)
+{
+    auto len = len_utf8(code);
+    if (len == 1)
+    {
+        dst += code;
+        return;
+    }
+
+    int last1 = (code >> 0 & 0x3f) | TAG_CONT & 0xff;
+    int last2 = (code >> 6 & 0x3f) | TAG_CONT & 0xff;
+    int last3 = (code >> 12 & 0x3f) | TAG_CONT & 0xff;
+    int last4 = (code >> 18 & 0x3f) | TAG_FOUR_B & 0xff;
+
+    if (len==2)
+    {
+        dst += (last2 | TAG_TWO_B);
+        dst += last1;
+        return;
+    }
+
+    if (len==3)
+    {
+        dst += (last3 | TAG_THREE_B);
+        dst += last2;
+        dst += last1;
+        return;
+    }
+
+    dst += last4;
+    dst += last3;
+    dst += last2;
+    dst += last1;
+}
+
 std::string token_symbol::to_string() const
 {
     switch (sym_type)
@@ -515,6 +569,8 @@ token lexer::parse_string_literal()
     while (input_.peek() != '\"')
     {
         auto ch = get_char();
+        int char_code=0;
+        int digit;
 
         if (ch == '\\')
         {
@@ -533,6 +589,26 @@ token lexer::parse_string_literal()
                 break;
             case '\"':
                 string_literal += '\"';
+                break;
+            case 'u':
+                get_char(); // skip '{'; TODO: check for correct character
+                char_code = 0;
+                digit = get_char();
+                while (digit!='}')
+                {
+                    if ((digit>='0') && (digit<='9'))
+                    {
+                        char_code = (char_code*0x10) + (digit-'0');
+                    }
+                    else if ((digit>='a') && (digit<='f'))
+                    {
+                        char_code = (char_code*0x10) + (digit-'a'+10);
+                    }
+                    // TODO: handle invalid digit
+                    digit = get_char();
+                }
+
+                encode_utf8_raw_unchecked(char_code, string_literal);
                 break;
             default:
                 // unknown escape sequence, just add both characters as-is

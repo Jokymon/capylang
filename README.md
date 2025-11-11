@@ -82,3 +82,8 @@ packet, several problems were encountered and the idea was ultimately abandoned 
    whether this really works. Some compiler errors still showed up.
  * Binaryen needs threads support; With a simple switch to target `wasm32-wasip1-threads` this should be fixable but
    also here might be more problems than initially seen.
+
+### Encoding Unicode code points
+
+To insert specific unicode code points in strings, we use the more flexible notation `\u{xxx}` as used in Rust, Swift or
+PHP rather than the stricter, fixed length variants with `\u` and `\U` in Java, C, C++ or C#.
