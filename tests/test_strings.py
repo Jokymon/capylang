@@ -52,11 +52,40 @@ import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 fn _start() {
     let s: string = "four";
-    proc_exit(s.size as u32)
+    proc_exit(s.size)
 }"""
     exit_code, _ = tools.run_test_code(tools.get_doc_str())
 
     assert exit_code == 4
+
+
+@pytest.mark.good
+def test_string_size_field_has_type_u32_in_expressions():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn _start() {
+    let s: string = "four";
+    proc_exit(s.size + 1u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 5
+
+
+@pytest.mark.good
+def test_string_ptr_field_has_type_u8_ptr():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn _start() {
+    let s: string = "four";
+    let c: *u8 = s.ptr;
+    proc_exit(s.size + 1u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 5
 
 
 @pytest.mark.good
