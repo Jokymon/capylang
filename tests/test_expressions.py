@@ -99,7 +99,7 @@ def test_correct_priority_of_plus_and_multiply():
 
 
 def test_u8_deref_on_rhs():
-    code = """let addr: *u8 = 108u32;
+    code = """let addr: *u8 = 108u32 as *u8;
 proc_exit(*addr as u32)"""
     code = tools.expression_to_full_program(code)
     exit_code, _ = tools.run_test_code(code)
@@ -108,9 +108,9 @@ proc_exit(*addr as u32)"""
 
 
 def test_u8_deref_on_lhs():
-    code = """let addr1: *u8 = 108u32;
-    let addr2: *u8 = 109u32;
-    *addr2 = 40;
+    code = """let addr1: *u8 = 108u32 as *u8;
+    let addr2: *u8 = 109u32 as *u8;
+    *addr2 = 40u8;
     // the following assignment shouldn't change addr2 because
     // it is only changing a u8
     *addr1 = 11;

@@ -83,7 +83,7 @@ def test_failure_dereferencing_non_record_type():
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 fn _start() {
-    let v: u32 = 32;
+    let v: u32 = 32u32;
     proc_exit(v.field1)
 }
 """

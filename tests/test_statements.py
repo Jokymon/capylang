@@ -24,7 +24,7 @@ def test_pointer_dereferencing():
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 fn _start() {
-    let a: *u32 = 104u32;
+    let a: *u32 = 104u32 as *u32;
     proc_exit(*a)
 }"""
     exit_code, _ = tools.run_test_code(tools.get_doc_str())
@@ -38,7 +38,7 @@ def test_pointer_deref_on_lhs():
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 fn _start() {
-    let a: *u32 = 100u32;
+    let a: *u32 = 100u32 as *u32;
     *a = 45u32;
     proc_exit(*a)
 }"""
@@ -79,4 +79,22 @@ fn _start() {
     assert (
         tools.normalize_filename_from_output(stderr)
         == "filename:5:11: Expecting an identifier for the type specification\n"
+    )
+
+
+@pytest.mark.parse_error
+def test_mismatching_types_in_let():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn _start() {
+    let a: u32 = 100s32;
+    proc_exit(a)
+}"""
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
+
+    assert exit_code == 1
+    assert (
+        tools.normalize_filename_from_output(stderr)
+        == "filename:5:5: Type mismatch in let statement. Variable is of type 'u32' but expression has type 's32'\n"
     )

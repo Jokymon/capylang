@@ -3,17 +3,26 @@
 
 std::optional<type_kind> record_field_type(const type_kind& record, const std::string& field_name)
 {
-    if (!std::holds_alternative<t_t::record>(record))
+    if (std::holds_alternative<t_t::record>(record))
     {
-        return std::nullopt;
+        const t_t::record& r = std::get<t_t::record>(record);
+
+        for (const auto& field_definition : r.fields) {
+            if (field_definition.name == field_name)
+            {
+                return *field_definition.type_spec;
+            }
+        }
     }
-
-    const t_t::record& r = std::get<t_t::record>(record);
-
-    for (const auto& field_definition : r.fields) {
-        if (field_definition.name == field_name)
+    else if (std::holds_alternative<t_t::string>(record))
+    {
+        if (field_name == "size")
         {
-            return *field_definition.type_spec;
+            return t_t::u32{};
+        }
+        else if (field_name == "ptr")
+        {
+            return t_t::pointer{t_t::u8{}};
         }
     }
 
@@ -29,6 +38,10 @@ type_kind assigned_node_type(const ast_node &node)
 
         if constexpr (std::is_same_v<T, node_number>) {
             return n.assigned_type;
+        } else if constexpr (std::is_same_v<T, node_char_literal>) {
+            return t_t::char_type{};
+        } else if constexpr (std::is_same_v<T, node_string_literal>) {
+            return t_t::string{};
         } else if constexpr (std::is_same_v<T, node_var_reference>) {
             return n.symbol_ref.symbol_type;
         } else if constexpr (std::is_same_v<T, node_pointer_deref>) {
@@ -41,6 +54,8 @@ type_kind assigned_node_type(const ast_node &node)
             return n.symbol_ref.signature.return_type;
         } else if constexpr (std::is_same_v<T, node_let_expression>) {
             return t_t::void_type{};
+        } else if constexpr (std::is_same_v<T, node_record_initialisation>) {
+            return n.type_spec;
         } else if constexpr (std::is_same_v<T, node_type_spec>) {
             return n.type_spec;
         } else if constexpr (std::is_same_v<T, node_field_deref>) {
@@ -199,9 +214,19 @@ void semantic_analyser::process(source_range location, node_function_call &n)
     }
 }
 
-void semantic_analyser::process(node_let_expression &n)
+void semantic_analyser::process(source_range location, node_let_expression &n)
 {
     semantic_analysis(*n.init_expression);
+
+    if (n.assigned_type!=assigned_node_type(*n.init_expression))
+    {
+        append_error_at(
+            location.start,
+            "Type mismatch in let statement. Variable is of type '"
+                + repr_type(n.assigned_type) + "' but expression has type '"
+                + repr_type(assigned_node_type(*n.init_expression))+"'"
+        );
+    }
 }
 
 void semantic_analyser::process(node_import_definition &n)
@@ -326,7 +351,7 @@ void semantic_analyser::semantic_analysis(ast_node &root)
         } else if constexpr (std::is_same_v<T, node_function_call>) {
             process(root.location, n);
         } else if constexpr (std::is_same_v<T, node_let_expression>) {
-            process(n);
+            process(root.location, n);
         } else if constexpr (std::is_same_v<T, node_import_definition>) {
             process(n);
         } else if constexpr (std::is_same_v<T, node_function_definition>) {

@@ -37,7 +37,7 @@ import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 fn _start() {
     let s: string = "Some \\\" quote here";
-    let p: *u32 = s.ptr;
+    let p: *u8 = s.ptr;
     proc_exit(10u32)
 }"""
     exit_code, _ = tools.run_test_code(tools.get_doc_str())
