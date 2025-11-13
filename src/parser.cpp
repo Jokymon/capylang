@@ -4,6 +4,14 @@
 #include <memory>
 #include <string>
 
+static symbol ERROR_PLACEHOLDER_SYM = symbol{
+    "_",
+    t_t::u32{},
+    symbol_kind::global_var,
+    false,
+    false,
+    0};
+
 template <typename T, typename... Args>
 ast_node make_located(source_position start, source_position end, Args &&...args)
 {
@@ -46,7 +54,7 @@ void dump_node(const node_var_reference& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Var(" << repr_type(n.symbol_ref.symbol_type) << "):" << n.name << "\n";
+    std::cout << ind << "Var(" << repr_type(n.symbol_ref.get().symbol_type) << "):" << n.name << "\n";
 }
 
 void dump_node(const node_pointer_deref& n, size_t indent)
@@ -394,7 +402,7 @@ scope* scope::get_global_scope() const
     return scope_iter;
 }
 
-std::optional<symbol> scope::lookup(const std::string &name)
+std::optional<std::reference_wrapper<symbol>> scope::lookup(const std::string &name)
 {
     if (symbol_table.find(name) != symbol_table.end())
     {
@@ -583,6 +591,7 @@ void parser::parse_parameters(std::vector<param_spec> &parameters)
             .symbol_type = type_spec,
             .kind = symbol_kind::argument,
             .mutab = false,
+            .is_assigned = true,    // function parameters are 'assigned' from the function call
             .index_addr = argument_index++};
 
         parameters.emplace_back(param_name.name, type_spec);
@@ -934,29 +943,39 @@ ast_node parser::parse_let_expression()
     auto type_spec_node = parse_type_reference();
     auto type_spec = std::get<node_type_spec>(type_spec_node.value).type_spec;
 
-    if (!capy_lexer.expect_symbol(token_symbol::sym_equal)) 
-    {
-        append_error("Expecting a '=' starting the initializer expression for the new variable");
-    }
-
-    auto initializer = parse_expression();
-
     auto new_symbol = symbol{
         .name = variable_name.name,
         .symbol_type = type_spec,
         .kind = symbol_kind::local_var,
         .mutab = is_mutable,
+        .is_assigned = false,
         .index_addr = current_scope->symbol_table.size(),
     };
     current_scope->symbol_table[variable_name.name] = new_symbol;
 
+    if (capy_lexer.ahead_is_sym(token_symbol::sym_equal))
+    {
+        capy_lexer.expect_symbol(token_symbol::sym_equal);
+
+        auto initializer = parse_expression();
+
+        current_scope->symbol_table[variable_name.name].is_assigned = true;
+        return make_located<node_let_expression>(
+            start_location.start,
+            initializer.location.end,
+            variable_name.name,
+            type_spec,
+            current_scope->symbol_table[variable_name.name],
+            std::make_unique<ast_node>(std::move(initializer)));
+    }
+
     return make_located<node_let_expression>(
         start_location.start,
-        initializer.location.end,
+        type_spec_node.location.end,
         variable_name.name,
         type_spec,
         new_symbol,
-        std::make_unique<ast_node>(std::move(initializer))
+        nullptr
     );
 }
 
@@ -1147,13 +1166,7 @@ ast_node parser::parse_primary()
             if (!var.has_value())
             {
                 append_error_at(id_range.start, "Undefined variable: '"+id.name+"'");
-                var = symbol{
-                    "_",
-                    t_t::u32{},
-                    symbol_kind::global_var,
-                    false,
-                    0
-                };
+                var = ERROR_PLACEHOLDER_SYM;
             }
 
             ast_node object = make_located<node_var_reference>(
@@ -1162,7 +1175,7 @@ ast_node parser::parse_primary()
                 id.name,
                 var.value(),
                 assign_context::rhs);
-            auto var_type = var.value().symbol_type;
+            auto var_type = var.value().get().symbol_type;
 
             return parse_field_deref(var_type, std::move(object));
         }
@@ -1179,13 +1192,7 @@ ast_node parser::parse_primary()
                 }
 
                 append_error_at(id_range.start, "Undefined variable: '"+id.name+"'");
-                var = symbol{
-                    "_",
-                    t_t::u32{},
-                    symbol_kind::global_var,
-                    false,
-                    0
-                };
+                var = ERROR_PLACEHOLDER_SYM;
             }
 
             return make_located<node_var_reference>(

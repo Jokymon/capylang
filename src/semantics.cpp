@@ -45,7 +45,7 @@ type_kind assigned_node_type(const ast_node &node)
         } else if constexpr (std::is_same_v<T, node_string_literal>) {
             return t_t::string{};
         } else if constexpr (std::is_same_v<T, node_var_reference>) {
-            return n.symbol_ref.symbol_type;
+            return n.symbol_ref.get().symbol_type;
         } else if constexpr (std::is_same_v<T, node_pointer_deref>) {
             return n.assigned_type;
         } else if constexpr (std::is_same_v<T, node_function_definition>) {
@@ -92,8 +92,22 @@ void semantic_analyser::process(node_number &n)
 {
 }
 
-void semantic_analyser::process(node_var_reference &n)
+void semantic_analyser::process(source_range location, node_var_reference &n)
 {
+    if (current_context==assign_context::rhs)
+    {
+        if (!n.symbol_ref.get().is_assigned)
+        {
+            append_error_at(
+                location.start,
+                "Variable '" + n.name + "' used without assigning a value before"
+            );
+        }
+    }
+    else if (current_context==assign_context::lhs)
+    {
+        n.symbol_ref.get().is_assigned = true;
+    }
     n.context = current_context;
 }
 
@@ -258,6 +272,15 @@ void semantic_analyser::process(source_range location, node_if_expression &n)
 
 void semantic_analyser::process(source_range location, node_let_expression &n)
 {
+    if (!n.init_expression)
+    {
+        // There is no init expression to run any semantic analysis on, so we
+        // can skip this here
+        return;
+        // TODO: we still need to add some bigger scope checks that a variable
+        // will indeed get assigned to eventually and that the types do match
+    }
+
     semantic_analysis(*n.init_expression);
 
     if (n.assigned_type!=assigned_node_type(*n.init_expression))
@@ -323,11 +346,12 @@ void semantic_analyser::process(source_range location, node_expression &n)
             auto* var_node = std::get_if<node_var_reference>(&n.left->value);
             if (var_node!=nullptr)
             {
-                if (!var_node->symbol_ref.mutab)
+                // TODO: What about mutable pointers?
+                if (!var_node->symbol_ref.get().mutab)
                 {
                     append_error_at(
                         location.start,
-                        "Can't assign to immutable variable '" + var_node->symbol_ref.name + "'");
+                        "Can't assign to immutable variable '" + var_node->symbol_ref.get().name + "'");
                 }
             }
         }
@@ -381,7 +405,7 @@ void semantic_analyser::semantic_analysis(ast_node &root)
         if constexpr (std::is_same_v<T, node_number>) {
             process(n);
         } else if constexpr (std::is_same_v<T, node_var_reference>) {
-            process(n);
+            process(root.location, n);
         } else if constexpr (std::is_same_v<T, node_pointer_deref>) {
             process(n);
         } else if constexpr (std::is_same_v<T, node_field_deref>) {

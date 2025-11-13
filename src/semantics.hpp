@@ -16,7 +16,7 @@ private:
     void append_error_at(source_position location, const std::string &error_message);
 
     void process(node_number &n);
-    void process(node_var_reference &n);
+    void process(source_range location, node_var_reference &n);
     void process(node_pointer_deref &n);
     void process(node_type_spec &n);
     void process(source_range location, node_record_initialisation &n);

@@ -98,11 +98,16 @@ def test_correct_priority_of_plus_and_multiply():
     assert exit_code == 15
 
 
+@pytest.mark.good
 def test_u8_deref_on_rhs():
-    code = """let addr: *u8 = 108u32 as *u8;
-proc_exit(*addr as u32)"""
-    code = tools.expression_to_full_program(code)
-    exit_code, _ = tools.run_test_code(code)
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn _start() {
+    let addr: *u8 = 108u32 as *u8;
+    proc_exit(*addr as u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
 
     assert exit_code == 0x10
 

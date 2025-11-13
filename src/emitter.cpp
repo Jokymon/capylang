@@ -248,15 +248,22 @@ void emitter::emit(const node_function_call &func_call)
 
 void emitter::emit(const node_let_expression& let_expression)
 {
-    emit(*let_expression.init_expression);
-    if (t_t::is_of<t_t::string>(let_expression.symbol_ref.symbol_type))
+    if (!let_expression.init_expression)
     {
-        output_ << "      local.set " << create_wasm_name(let_expression.symbol_ref.name + "_ptr") << "\n";
-        output_ << "      local.set " << create_wasm_name(let_expression.symbol_ref.name + "_size") << "\n";
+        // The variable is not initialised, so we don't need to evaluate any
+        // initialiser expressions
+        return;
+    }
+
+    emit(*let_expression.init_expression);
+    if (t_t::is_of<t_t::string>(let_expression.symbol_ref.get().symbol_type))
+    {
+        output_ << "      local.set " << create_wasm_name(let_expression.symbol_ref.get().name + "_ptr") << "\n";
+        output_ << "      local.set " << create_wasm_name(let_expression.symbol_ref.get().name + "_size") << "\n";
     }
     else
     {
-        output_ << "      local.set " << let_expression.symbol_ref.index_addr << "\n";
+        output_ << "      local.set " << let_expression.symbol_ref.get().index_addr << "\n";
     }
 }
 
@@ -362,7 +369,7 @@ void emitter::emit(const node_expression &root)
         }
         else
         {
-            output_ << "      local.set " << std::get<node_var_reference>(root.left->value).symbol_ref.index_addr << "\n";
+            output_ << "      local.set " << std::get<node_var_reference>(root.left->value).symbol_ref.get().index_addr << "\n";
             break;
         }
     case op_conversion:
@@ -408,7 +415,7 @@ void emitter::emit(const node_var_reference &variable)
     // handle the storing of the value differently
     if (variable.context == assign_context::rhs)
     {
-        output_ << "      local.get " << variable.symbol_ref.index_addr << "\n";
+        output_ << "      local.get " << variable.symbol_ref.get().index_addr << "\n";
     }
 }
 
@@ -430,7 +437,7 @@ void emitter::emit(const node_pointer_deref& ptr_deref)
     {
         // in LHS context we have to get address, which in our
         // case means to get the index of the variable
-        auto var_index = std::get<node_var_reference>(ptr_deref.pointer_expression->value).symbol_ref.index_addr;
+        auto var_index = std::get<node_var_reference>(ptr_deref.pointer_expression->value).symbol_ref.get().index_addr;
         output_ << "      local.get " << var_index << "\n";
     }
 }

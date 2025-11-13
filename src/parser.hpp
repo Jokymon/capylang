@@ -120,6 +120,7 @@ struct symbol {
     type_kind symbol_type;
     symbol_kind kind;
     bool mutab;
+    bool is_assigned;
     uint32_t index_addr;
 };
 
@@ -136,7 +137,7 @@ struct scope {
 
     scope* get_global_scope() const;
 
-    std::optional<symbol> lookup(const std::string& name);
+    std::optional<std::reference_wrapper<symbol>> lookup(const std::string& name);
     std::optional<type_kind> lookup_type(const std::string& name);
     std::optional<func_symbol> lookup_function(const std::string& name);
 };
@@ -208,7 +209,7 @@ struct node_string_literal
 struct node_var_reference
 {
     std::string name;
-    symbol symbol_ref;
+    std::reference_wrapper<symbol> symbol_ref;
     assign_context context;
 };
 
@@ -223,7 +224,7 @@ struct node_let_expression
 {
     std::string name;
     type_kind assigned_type;
-    symbol symbol_ref;
+    std::reference_wrapper<symbol> symbol_ref;
     std::unique_ptr<ast_node> init_expression;
 };
 
