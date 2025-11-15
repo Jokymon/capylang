@@ -77,6 +77,28 @@ void dump_node(const node_if_expression& n, size_t indent)
     {
         dump_ast(*expression, indent+4);
     }
+    if (n.else_code.size()>0)
+    {
+        std::cout << ind << "  Else-Body:\n";
+        for (const auto& expression : n.else_code)
+        {
+            dump_ast(*expression, indent+4);
+        }
+    }
+}
+
+void dump_node(const node_while_expression& n, size_t indent)
+{
+    std::string ind = std::string(indent, ' ');
+    std::cout << ind << "While\n";
+    std::cout << ind << "  Condition:\n";
+    dump_ast(*n.condition, indent+4);
+    std::cout << ind << "  While-Body:\n";
+    for (const auto& expression : n.while_code)
+    {
+        dump_ast(*expression, indent+4);
+    }
+
 }
 
 void dump_node(const node_type_spec& n, size_t indent)
@@ -725,6 +747,10 @@ ast_node parser::parse_expression(int min_precedence)
     {
         return parse_if_expression();
     }
+    else if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_while))
+    {
+        return parse_while_expression();
+    }
     else if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_let))
     {
         return parse_let_expression();
@@ -852,6 +878,32 @@ ast_node parser::parse_if_expression()
         std::move(then_body),
         std::move(else_body),
         t_t::unassigned{}
+    );
+}
+
+ast_node parser::parse_while_expression()
+{
+    // eat the 'while' keyword
+    auto start_location = capy_lexer.expect<token_symbol>().location;
+
+    auto condition = parse_expression();
+
+    if (!capy_lexer.expect_symbol(token_symbol::sym_curly_open))
+    {
+        append_error("Expecting an opening brace '{' for while-body");
+    }
+
+    std::vector<std::unique_ptr<ast_node>> while_body;
+    parse_body(while_body);
+
+    // eat the closing '}' of the while block
+    auto end_range = capy_lexer.expect<token_symbol>().location;
+
+    return make_located<node_while_expression>(
+        start_location.start,
+        start_location.end,
+        std::make_unique<ast_node>(std::move(condition)),
+        std::move(while_body)
     );
 }
 

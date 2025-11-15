@@ -1,4 +1,5 @@
 import tools
+import pytest
 
 
 def test_then_body_is_executed_with_true_condition():
@@ -67,6 +68,27 @@ fn _start() {
     exit_code, _ = tools.run_test_code(code)
 
     assert exit_code == 10
+
+
+@pytest.mark.good
+def test_while_loop():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn _start() {
+    let condition: bool = true;
+    let value: u32 = 10u32;
+
+    while condition {
+        value = value + 1;
+        condition = false;
+    }
+
+    proc_exit(value)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 11
 
 
 # ----------------------------------------

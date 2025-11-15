@@ -16,6 +16,7 @@ public:
     void emit(const node_function_definition& func_def);
     void emit(const node_record_definition& record_def);
     void emit(const node_if_expression& if_expr);
+    void emit(const node_while_expression& if_expr);
     void emit(const node_function_call& func_call);
     void emit(const node_let_expression& let_expression);
     void emit(const node_record_initialisation& record_init);
@@ -36,6 +37,8 @@ private:
     std::ostream &output_;
     std::string data_buffer;
     uint32_t data_offset;
+
+    uint32_t id_gen;
 
     node_module* current_module;
 };

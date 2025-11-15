@@ -54,6 +54,7 @@ struct token_symbol : public located_token
         sym_kw_let,
         sym_kw_mut,
         sym_kw_record,
+        sym_kw_while,
 
         sym_arrow,
         sym_colon,

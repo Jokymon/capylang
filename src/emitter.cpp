@@ -77,7 +77,7 @@ std::optional<size_t> record_field_offset(const type_kind& record, const std::st
     return std::nullopt;
 }
 
-emitter::emitter(std::ostream &output) : output_(output), data_buffer(""), data_offset(100)
+emitter::emitter(std::ostream &output) : output_(output), data_buffer(""), data_offset(100), id_gen(0)
 {
     allocate_data(std::string("\x42\x00\x00\x00\x10\x00\x00\x00\x10\x20\x30\x40Test", 16));
 }
@@ -213,6 +213,27 @@ void emitter::emit(const node_if_expression& if_expr)
             emit(*expression);
         }
     }
+    output_ << "      end\n";
+}
+
+void emitter::emit(const node_while_expression& while_expr)
+{
+    uint32_t while_id = id_gen++;
+
+    output_ << "      block $while_exit" << while_id << "\n";
+    output_ << "      loop $while_block" << while_id << "\n";
+
+    emit(*while_expr.condition);
+    output_ << "      i32.eqz\n";  // invert the condition
+    output_ << "      br_if $while_exit" << while_id << "\n";
+
+    for (const auto& expression : while_expr.while_code)
+    {
+        emit(*expression);
+    }
+    output_ << "      br $while_block" << while_id << "\n";
+
+    output_ << "      end\n";
     output_ << "      end\n";
 }
 

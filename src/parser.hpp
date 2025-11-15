@@ -156,6 +156,7 @@ struct node_var_reference;
 struct node_pointer_deref;
 struct node_let_expression;
 struct node_if_expression;
+struct node_while_expression;
 struct node_type_spec;
 struct node_record_definition;
 struct node_record_initialisation;
@@ -167,7 +168,7 @@ struct node_function_definition;
 struct node_expression;
 struct node_module;
 
-using ast_node_raw = std::variant<node_number, node_char_literal, node_bool_const, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_if_expression, node_type_spec, node_record_definition, node_record_initialisation, node_field_deref, node_function_head, node_import_definition, node_function_call, node_function_definition, node_expression, node_module>;
+using ast_node_raw = std::variant<node_number, node_char_literal, node_bool_const, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_if_expression, node_while_expression, node_type_spec, node_record_definition, node_record_initialisation, node_field_deref, node_function_head, node_import_definition, node_function_call, node_function_definition, node_expression, node_module>;
 using ast_node = located<ast_node_raw>;
 
 void dump_ast(const ast_node& root, size_t indent=0);
@@ -233,6 +234,12 @@ struct node_if_expression
     std::vector<std::unique_ptr<ast_node>> else_code;
     type_kind assigned_type;
     // TODO: should be introduce a new scope for the if?
+};
+
+struct node_while_expression
+{
+    std::unique_ptr<ast_node> condition;
+    std::vector<std::unique_ptr<ast_node>> while_code;
 };
 
 struct node_type_spec
@@ -350,6 +357,7 @@ private:
     ast_node parse_expression(int min_precedence = 0);
     ast_node parse_function_call(source_range name_range, const std::string function_name);
     ast_node parse_if_expression();
+    ast_node parse_while_expression();
     ast_node parse_let_expression();
     ast_node parse_record_definition();
     ast_node parse_record_initialisation(source_range name_range, const std::string& record_name);
