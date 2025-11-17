@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script type="module">
+        import { TinyWASI } from "./playground/TinyWASI.js";
+
+        let consoleWindow;
+
+        let tinywasi = new TinyWASI();
+        tinywasi.consoleWrite = (text) => {
+            consoleWindow.innerHTML += text.replace("\n", "<br />");
+        };
+
+        let imports = {
+            ...tinywasi.imports
+        };
+        imports.wasi_snapshot_preview1.proc_exit = function (exitCode) {
+            const exitCodeEl = document.getElementById("exitCode");
+            exitCodeEl.value = exitCode;
+            exitCodeEl.classList.add('flash');
+            setTimeout(() => {
+                exitCodeEl.classList.remove('flash');
+            }, 500);
+            console.log("appplication exit code: " + exitCode);
+        };
+
+        let response = await fetch('./example.wasm');
+        let source = new Uint8Array(await response.arrayBuffer());
+        const { module, instance } = await WebAssembly.instantiate(source, imports);
+
+        tinywasi.initialize(instance);
+
+        function runApplication() {
+            instance.exports._start();
+        }
+
+        function attachGui() {
+            const btn = document.getElementById('runButton');
+            btn.addEventListener('click', runApplication);
+
+            consoleWindow = document.getElementById('consoleOutput');
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', attachGui);
+        } else {
+            attachGui();
+        }
+    </script>
+    <style>
+        #exitCode {
+            width: 3em;
+        }
+        #exitCodeLbl {
+            margin-left: 3em;
+        }
+
+        fieldset {
+            margin-top: 2em;
+        }
+        #consoleOutput {
+            position: relative;
+
+            font-family: 'Courier New', Courier, monospace;
+
+            resize: vertical;
+            overflow: auto;
+            width: 100%;
+            min-height: 100px;
+        }
+
+        .flash {
+            animation: flash 1s ease-out;
+        }
+        @keyframes flash {
+            0%   { box-shadow: 0 0 20px 3px cyan; }
+            100% { box-shadow: 0 0 0 0 transparent; }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Capy-lang Playground</h1>
+    <label>Arguments:<input id="arguments"></input></label>
+    <button id="runButton">Run application</button>
+    <label id="exitCodeLbl">Exit code:<input id="exitCode"></input></label>
+
+    <fieldset>
+        <legend>Console output of the application</legend>
+        <div id="consoleOutput">
+        </div>
+    </fieldset>
+</body>
+
+</html>
