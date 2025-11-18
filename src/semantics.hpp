@@ -8,13 +8,14 @@ class semantic_analyser
 {
 public:
     semantic_analyser();
-    void semantic_analysis(ast_node &root);
+    void semantic_analysis(node_module &module);
 
     std::vector<parse_error> errors;
 
 private:
     void append_error_at(source_position location, const std::string &error_message);
 
+    void visit(ast_node &root);
     void process(node_number &n);
     void process(source_range location, node_var_reference &n);
     void process(node_pointer_deref &n);

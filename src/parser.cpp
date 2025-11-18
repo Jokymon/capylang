@@ -22,6 +22,8 @@ ast_node make_located(source_position start, source_position end, Args &&...args
             .end = end}};
 }
 
+void dump_ast(const ast_node& root, size_t indent=0);
+
 void dump_node(const node_number& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
@@ -199,7 +201,7 @@ void dump_node(const node_expression& n, size_t indent)
     dump_ast(*n.right, indent+4);
 }
 
-void dump_node(const node_module& n, size_t indent)
+void dump_module(const node_module& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
@@ -483,7 +485,7 @@ std::optional<type_kind> type_from_id(const std::string &id)
 parser::parser(lexer &l)
     : capy_lexer(l) {}
 
-ast_node parser::parse()
+node_module parser::parse()
 {
     auto root = parse_module();
     if (!capy_lexer.ahead_is<token_eof>())
@@ -509,35 +511,35 @@ void parser::append_error_at(source_position location, const std::string &error_
         error_message));
 }
 
-ast_node parser::parse_module()
+node_module parser::parse_module()
 {
-    auto capy_module = make_located<node_module>(
+    auto capy_module = node_module{
         source_position{1, 1},
-        source_position{1, 1});
+        source_position{1, 1}};
 
-    current_module = &std::get<node_module>(capy_module.value);
+    current_module = &capy_module;
 
-    std::get<node_module>(capy_module.value).module_scope = std::make_unique<scope>();
-    current_scope = std::get<node_module>(capy_module.value).module_scope.get();
+    capy_module.module_scope = std::make_unique<scope>();
+    current_scope = capy_module.module_scope.get();
 
     while (capy_lexer.ahead_is_sym(token_symbol::sym_kw_import))
     {
         auto import_def = parse_import_definition();
 
-        std::get<node_module>(capy_module.value).imports.push_back(std::make_unique<ast_node>(std::move(import_def)));
+        capy_module.imports.push_back(std::make_unique<ast_node>(std::move(import_def)));
     }
 
     while (capy_lexer.ahead_is_sym(token_symbol::sym_kw_record))
     {
         auto record_def = parse_record_definition();
-        std::get<node_module>(capy_module.value).typedefs.push_back(std::make_unique<ast_node>(std::move(record_def)));
+        capy_module.typedefs.push_back(std::make_unique<ast_node>(std::move(record_def)));
     }
 
     while (capy_lexer.ahead_is_sym(token_symbol::sym_kw_fn))
     {
         auto function = parse_function_definition();
 
-        std::get<node_module>(capy_module.value).functions.push_back(std::make_unique<ast_node>(std::move(function)));
+        capy_module.functions.push_back(std::make_unique<ast_node>(std::move(function)));
     }
 
     current_module = nullptr;

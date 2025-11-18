@@ -82,20 +82,7 @@ emitter::emitter(std::ostream &output) : output_(output), data_buffer(""), data_
     allocate_data(std::string("\x42\x00\x00\x00\x10\x00\x00\x00\x10\x20\x30\x40Test", 16));
 }
 
-void emitter::generate(ast_node &node)
-{
-    this->emit(node);
-}
-
-void emitter::emit(ast_node &node)
-{
-    std::visit([this](auto &n)
-    {
-        this->emit(n);
-    }, node.value);
-}
-
-void emitter::emit(node_module &module_def)
+void emitter::generate(node_module &module_def)
 {
     current_module = &module_def;
 
@@ -138,6 +125,14 @@ void emitter::emit(node_module &module_def)
     output_ << ")\n";
 
     current_module = nullptr;
+}
+
+void emitter::emit(ast_node &node)
+{
+    std::visit([this](auto &n)
+    {
+        this->emit(n);
+    }, node.value);
 }
 
 void emitter::emit(const node_import_definition &import_def)

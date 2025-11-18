@@ -88,6 +88,14 @@ void semantic_analyser::append_error_at(source_position location, const std::str
         error_message));
 }
 
+void semantic_analyser::semantic_analysis(node_module &module)
+{
+    for (const auto &func_def : module.functions)
+    {
+        visit(*func_def);
+    }
+}
+
 void semantic_analyser::process(node_number &n)
 {
 }
@@ -115,7 +123,7 @@ void semantic_analyser::process(node_pointer_deref &n)
 {
     n.context = current_context;
 
-    semantic_analysis(*n.pointer_expression);
+    visit(*n.pointer_expression);
 
     type_kind expression_type = assigned_node_type(*n.pointer_expression);
     if (!std::holds_alternative<t_t::pointer>(expression_type))
@@ -157,7 +165,7 @@ void semantic_analyser::process(source_range location, node_record_initialisatio
 
     for (const auto& init : n.initialisations)
     {
-        semantic_analysis(*init.init_expression);
+        visit(*init.init_expression);
 
         bool is_actual_field = false;
         for (const auto& field : r.fields)
@@ -217,7 +225,7 @@ void semantic_analyser::process(source_range location, node_function_call &n)
 
     for (const auto &param : n.parameter)
     {
-        semantic_analysis(*param);
+        visit(*param);
         actual_signature.parameters.push_back(param_spec{.name = "_", .type_spec = assigned_node_type(*param)});
     }
 
@@ -233,19 +241,19 @@ void semantic_analyser::process(source_range location, node_function_call &n)
 
 void semantic_analyser::process(source_range location, node_if_expression &n)
 {
-    semantic_analysis(*n.condition);
+    visit(*n.condition);
 
     type_kind then_return_type = t_t::void_type{};
     for (const auto &expression : n.then_code)
     {
-        semantic_analysis(*expression);
+        visit(*expression);
         then_return_type = assigned_node_type(*expression);
     }
 
     type_kind else_return_type = t_t::void_type{};
     for (const auto &expression : n.else_code)
     {
-        semantic_analysis(*expression);
+        visit(*expression);
         else_return_type = assigned_node_type(*expression);
     }
 
@@ -281,7 +289,7 @@ void semantic_analyser::process(source_range location, node_let_expression &n)
         // will indeed get assigned to eventually and that the types do match
     }
 
-    semantic_analysis(*n.init_expression);
+    visit(*n.init_expression);
 
     if (n.assigned_type!=assigned_node_type(*n.init_expression))
     {
@@ -306,7 +314,7 @@ void semantic_analyser::process(node_function_definition &n)
     source_range error_location;
     for (const auto &expression : n.code)
     {
-        semantic_analysis(*expression);
+        visit(*expression);
         actual_return_type = assigned_node_type(*expression);
         error_location = expression->location;
     }
@@ -329,11 +337,11 @@ void semantic_analyser::process(source_range location, node_expression &n)
         current_context = assign_context::rhs;
     }
 
-    semantic_analysis(*n.left);
+    visit(*n.left);
     auto lhs_type = assigned_node_type(*n.left);
 
     current_context = assign_context::rhs;
-    semantic_analysis(*n.right);
+    visit(*n.right);
     auto rhs_type = assigned_node_type(*n.right);
 
     // propagate the type upwards based on the operands
@@ -388,15 +396,7 @@ void semantic_analyser::process(source_range location, node_expression &n)
     }
 }
 
-void semantic_analyser::process(node_module &n)
-{
-    for (const auto &func_def : n.functions)
-    {
-        semantic_analysis(*func_def);
-    }
-}
-
-void semantic_analyser::semantic_analysis(ast_node &root)
+void semantic_analyser::visit(ast_node &root)
 {
     std::visit([&](auto &n) -> void
                       {
@@ -426,8 +426,6 @@ void semantic_analyser::semantic_analysis(ast_node &root)
             process(n);
         } else if constexpr (std::is_same_v<T, node_expression>) {
             process(root.location, n);
-        } else if constexpr (std::is_same_v<T, node_module>) {
-            process(n);
         } else {
             // TODO: This should happen, maybe return special error
         } }, root.value);

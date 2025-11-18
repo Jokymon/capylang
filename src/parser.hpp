@@ -149,6 +149,11 @@ struct located
     source_range location;
 };
 
+struct located_node
+{
+    source_range location;
+};
+
 struct node_number;
 struct node_char_literal;
 struct node_bool_const;
@@ -169,10 +174,10 @@ struct node_function_definition;
 struct node_expression;
 struct node_module;
 
-using ast_node_raw = std::variant<node_number, node_char_literal, node_bool_const, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_if_expression, node_while_expression, node_type_spec, node_record_definition, node_record_initialisation, node_field_deref, node_function_head, node_import_definition, node_function_call, node_function_definition, node_expression, node_module>;
+using ast_node_raw = std::variant<node_number, node_char_literal, node_bool_const, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_if_expression, node_while_expression, node_type_spec, node_record_definition, node_record_initialisation, node_field_deref, node_function_head, node_import_definition, node_function_call, node_function_definition, node_expression>;
 using ast_node = located<ast_node_raw>;
 
-void dump_ast(const ast_node& root, size_t indent=0);
+void dump_module(const node_module& module, size_t indent=0);
 
 enum class assign_context {
     lhs,
@@ -314,7 +319,7 @@ struct node_expression
     type_kind assigned_type;
 };
 
-struct node_module
+struct node_module : public located_node
 {
     std::vector<std::unique_ptr<ast_node>> imports;
     std::vector<std::unique_ptr<ast_node>> functions;
@@ -341,7 +346,7 @@ public:
     explicit parser(lexer &l);
 
     std::vector<parse_error> errors;
-    ast_node parse();
+    node_module parse();
 
 private:
     lexer &capy_lexer;
@@ -349,7 +354,7 @@ private:
     void append_error(const std::string &error_message);
     void append_error_at(source_position location, const std::string &error_message);
 
-    ast_node parse_module();
+    node_module parse_module();
     void parse_parameters(std::vector<param_spec>& parameters);
     void parse_function_signature(function_signature& signature);
     ast_node parse_import_definition();

@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     }
 
     if (args.dump_ast) {
-        dump_ast(root_node);
+        dump_module(root_node);
         return 0;
     }
 

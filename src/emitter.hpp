@@ -6,11 +6,10 @@ class emitter
 public:
     explicit emitter(std::ostream &output);
 
-    void generate(ast_node& node);
+    void generate(node_module &module_def);
 
     void emit(ast_node& node);
 
-    void emit(node_module& module_def);
     void emit(const node_import_definition& import_def);
     void emit(const node_function_head& function_head);
     void emit(const node_function_definition& func_def);
