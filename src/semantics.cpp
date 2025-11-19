@@ -49,9 +49,7 @@ type_kind assigned_node_type(const ast_node &node)
         } else if constexpr (std::is_same_v<T, node_pointer_deref>) {
             return n.assigned_type;
         } else if constexpr (std::is_same_v<T, node_function_definition>) {
-            return assigned_node_type(*n.function_head);
-        } else if constexpr (std::is_same_v<T, node_function_head>) {
-            return n.signature.return_type;
+            return n.function_head->signature.return_type;
         } else if constexpr (std::is_same_v<T, node_function_call>) {
             return n.symbol_ref.signature.return_type;
         } else if constexpr (std::is_same_v<T, node_let_expression>) {
@@ -308,7 +306,7 @@ void semantic_analyser::process(node_import_definition &n)
 
 void semantic_analyser::process(node_function_definition &n)
 {
-    auto declared_return_type = assigned_node_type(*n.function_head);
+    auto declared_return_type = n.function_head->signature.return_type;
 
     type_kind actual_return_type = t_t::void_type{};
     source_range error_location;

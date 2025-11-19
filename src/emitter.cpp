@@ -140,7 +140,7 @@ void emitter::emit(const node_import_definition &import_def)
     output_ << "  (import \"" << import_def.ns_name << "\" ";
     // TODO: this is really ugly, but unfortunately, the "plain" name is only needed
     // in the import definition of WAT
-    output_ << "\"" << std::get<node_function_head>(import_def.function_head->value).name << "\" ";
+    output_ << "\"" << import_def.function_head->name << "\" ";
 
     emit(*import_def.function_head);
     output_ << "))\n";

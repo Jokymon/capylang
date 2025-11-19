@@ -174,7 +174,7 @@ struct node_function_definition;
 struct node_expression;
 struct node_module;
 
-using ast_node_raw = std::variant<node_number, node_char_literal, node_bool_const, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_if_expression, node_while_expression, node_type_spec, node_record_definition, node_record_initialisation, node_field_deref, node_function_head, node_import_definition, node_function_call, node_function_definition, node_expression>;
+using ast_node_raw = std::variant<node_number, node_char_literal, node_bool_const, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_if_expression, node_while_expression, node_type_spec, node_record_definition, node_record_initialisation, node_field_deref, node_import_definition, node_function_call, node_function_definition, node_expression>;
 using ast_node = located<ast_node_raw>;
 
 void dump_module(const node_module& module, size_t indent=0);
@@ -283,7 +283,7 @@ struct node_record_initialisation
     std::vector<field_initialisation> initialisations;
 };
 
-struct node_function_head
+struct node_function_head : public located_node
 {
     std::string name;
     function_signature signature;
@@ -292,7 +292,7 @@ struct node_function_head
 struct node_import_definition
 {
     std::string ns_name;
-    std::unique_ptr<ast_node> function_head;
+    std::unique_ptr<node_function_head> function_head;
 
     std::optional<std::string> alias;
 };
@@ -306,7 +306,7 @@ struct node_function_call
 
 struct node_function_definition
 {
-    std::unique_ptr<ast_node> function_head;
+    std::unique_ptr<node_function_head> function_head;
     std::vector<std::unique_ptr<ast_node>> code;
     std::unique_ptr<scope> function_scope;
 };
@@ -359,7 +359,7 @@ private:
     void parse_function_signature(function_signature& signature);
     ast_node parse_import_definition();
     ast_node parse_function_definition();
-    ast_node parse_function_head();
+    node_function_head parse_function_head();
     ast_node parse_expression(int min_precedence = 0);
     ast_node parse_function_call(source_range name_range, const std::string function_name);
     ast_node parse_if_expression();

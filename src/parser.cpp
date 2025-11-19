@@ -183,7 +183,7 @@ void dump_node(const node_function_definition& n, size_t indent)
     std::string ind = std::string(indent, ' ');
 
     std::cout << ind << "Function definition:\n";
-    dump_ast(*n.function_head, indent);
+    dump_node(*n.function_head, indent);
     std::cout << ind << "  Body:\n";
     for (const auto& expression : n.code)
     {
@@ -648,7 +648,7 @@ ast_node parser::parse_import_definition()
         start_range.start,
         end_range.end,
         namespace_name.name,
-        std::make_unique<ast_node>(std::move(function_head)),
+        std::make_unique<node_function_head>(std::move(function_head)),
         alias_name);
 }
 
@@ -676,12 +676,12 @@ ast_node parser::parse_function_definition()
     return make_located<node_function_definition>(
         start_range.start,
         end_range.end,
-        std::make_unique<ast_node>(std::move(function_head)),
+        std::make_unique<node_function_head>(std::move(function_head)),
         std::move(function_body),
         std::move(func_scope));
 }
 
-ast_node parser::parse_function_head()
+node_function_head parser::parse_function_head()
 {
     if (!capy_lexer.ahead_is<token_identifier>())
     {
@@ -697,11 +697,11 @@ ast_node parser::parse_function_head()
         .name = function_name.name,
         .signature = signature};
 
-    return make_located<node_function_head>(
+    return node_function_head{
         start_range.start,
         start_range.end, // TODO: this should span the whole signature
         function_name.name,
-        signature);
+        signature};
 }
 
 ast_node parser::parse_expression(int min_precedence)
