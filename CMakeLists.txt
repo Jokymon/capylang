@@ -10,6 +10,7 @@ add_executable(${PROJECT_NAME}
     src/emitter.cpp
     src/parser.cpp
     src/semantics.cpp
+    src/symbol.cpp
 )
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 26)
