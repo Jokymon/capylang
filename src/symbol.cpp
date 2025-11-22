@@ -179,9 +179,9 @@ std::optional<std::reference_wrapper<symbol>> scope::lookup(const std::string &n
 
 std::optional<type_kind> scope::lookup_type(const std::string& name)
 {
-    if (type_table.find(name) != type_table.end())
+    if ((symbol_table.find(name) != symbol_table.end()) && (symbol_table[name].kind == symbol_kind::type_spec))
     {
-        return type_table[name];
+        return symbol_table[name].symbol_type;
     }
     else if (parent != nullptr)
     {
@@ -193,11 +193,11 @@ std::optional<type_kind> scope::lookup_type(const std::string& name)
     }
 }
 
-std::optional<func_symbol> scope::lookup_function(const std::string &name)
+std::optional<symbol> scope::lookup_function(const std::string &name)
 {
-    if (function_table.find(name) != function_table.end())
+    if ((symbol_table.find(name) != symbol_table.end()) && (symbol_table[name].kind == symbol_kind::function))
     {
-        return function_table[name];
+        return symbol_table[name];
     }
     else if (parent != nullptr)
     {

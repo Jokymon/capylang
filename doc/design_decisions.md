@@ -45,3 +45,19 @@ expressions and semicolons. We define the following rules accordingly:
  * If a body is terminated with a ';', then this body always has type 'void'
  * We treat everything as expressions, there are no statements. Even a 'let'-
    statement is treated as expression, but one that has type 'void'
+
+## Symbol handling
+
+Rather than having separate lookup tables for different symbol types (variables, functions, types, ...) we keep one
+common concept of symbols that we manage in a table. Then we distinguish different types of these common symbols using
+a symbol tag.
+
+We expect the following advantages:
+
+ * We might be able to give better error messages when trying to call a variable or a type, because we could first try
+   to lookup a symbol and then check if it even is a function symbol. If it is not, we could even inform the programmer
+   about what type of symbol we found instead.
+ * We can more easily introduce new kinds of symbols by just extending the symbol tag.
+
+The disadvantage is, that we might have to take some additional steps, to check, that a found symbol actual has the
+kind we need. But we currently expect this to cause minor issues when compared to the advantages.

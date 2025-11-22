@@ -7,6 +7,7 @@
 static symbol ERROR_PLACEHOLDER_SYM = symbol{
     "_",
     t_t::u32{},
+    function_signature{},
     symbol_kind::global_var,
     false,
     false,
@@ -585,9 +586,14 @@ node_function_head parser::parse_function_head()
     function_signature signature;
     parse_function_signature(signature);
 
-    current_scope->function_table[function_name.name] = func_symbol{
+    current_scope->symbol_table[function_name.name] = symbol{
         .name = function_name.name,
-        .signature = signature};
+        .symbol_type = t_t::unassigned{},
+        .signature = signature,
+        .kind = symbol_kind::function,
+        .mutab = false,
+        .index_addr = 0
+    };
 
     return node_function_head{
         start_range.start,
@@ -723,12 +729,12 @@ ast_node parser::parse_function_call(source_range name_range, const std::string 
     {
         append_error("Function '" + function_name + "' is not defined");
 
-        func_symbol dummy_symbol;
+        symbol dummy_function_symbol;
         return make_located<node_function_call>(
             name_range.start,
             end_location.end,
             function_name,
-            dummy_symbol,
+            dummy_function_symbol,
             std::move(function_parameters));
     }
 
@@ -922,7 +928,10 @@ ast_node parser::parse_record_definition()
     auto end_range = capy_lexer.expect<token_symbol>().location;
 
     auto* global_scope = current_scope->get_global_scope();
-    global_scope->type_table[record_id.name] = t_t::record(new_record_fields);
+    global_scope->symbol_table[record_id.name] = symbol{
+        .symbol_type = t_t::record(new_record_fields),
+        .kind = symbol_kind::type_spec
+    };
 
     return make_located<node_record_definition>(
         start_range.start,

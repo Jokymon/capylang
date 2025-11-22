@@ -176,7 +176,7 @@ struct node_global
 struct node_function_call
 {
     std::string function_name;
-    func_symbol symbol_ref;
+    symbol symbol_ref;
     std::vector<std::unique_ptr<ast_node>> parameter;
 };
 
