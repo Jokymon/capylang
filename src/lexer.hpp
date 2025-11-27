@@ -48,6 +48,7 @@ struct token_symbol : public located_token
     {
         sym_kw_as,
         sym_kw_else,
+        sym_kw_export,
         sym_kw_fn,
         sym_kw_if,
         sym_kw_import,

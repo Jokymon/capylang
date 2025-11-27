@@ -535,7 +535,8 @@ node_module parser::parse_module()
         capy_module.typedefs.push_back(std::make_unique<ast_node>(std::move(record_def)));
     }
 
-    while (capy_lexer.ahead_is_sym(token_symbol::sym_kw_fn))
+    while (capy_lexer.ahead_is_sym(token_symbol::sym_kw_fn) || 
+            capy_lexer.ahead_is_sym(token_symbol::sym_kw_export))
     {
         auto function = parse_function_definition();
 
@@ -654,7 +655,27 @@ ast_node parser::parse_import_definition()
 
 ast_node parser::parse_function_definition()
 {
-    auto start_range = capy_lexer.expect<token_symbol>().location;
+    bool exported = false;
+
+    auto start_token = capy_lexer.expect<token_symbol>();
+    auto start_range = start_token.location;
+
+    if (start_token.sym_type == token_symbol::sym_kw_export)
+    {
+        exported = true;
+
+        if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_fn))
+        {
+            // all good, the 'fn' follows the 'export
+            capy_lexer.expect_symbol(token_symbol::sym_kw_fn);
+        }
+        else
+        {
+            // not good, we were expecting an 'fn' but got
+            // something different
+            append_error("Expecting keyword 'fn' after 'export'");
+        }
+    }
 
     auto function_head = parse_function_head();
 
@@ -678,7 +699,9 @@ ast_node parser::parse_function_definition()
         end_range.end,
         std::make_unique<node_function_head>(std::move(function_head)),
         std::move(function_body),
-        std::move(func_scope));
+        std::move(func_scope),
+        exported
+    );
 }
 
 node_function_head parser::parse_function_head()

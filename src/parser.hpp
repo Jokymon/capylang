@@ -309,6 +309,7 @@ struct node_function_definition
     std::unique_ptr<node_function_head> function_head;
     std::vector<std::unique_ptr<ast_node>> code;
     std::unique_ptr<scope> function_scope;
+    bool exported;
 };
 
 struct node_expression

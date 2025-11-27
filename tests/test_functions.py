@@ -2,8 +2,9 @@ import tools
 import pytest
 
 
+@pytest.mark.good
 def test_function_body_can_be_empty():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 fn bla() { }
@@ -12,10 +13,25 @@ fn _start() {
     bla();
     proc_exit(4u32)
 }"""
-    exit_code, _ = tools.run_test_code(code)
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
 
     assert exit_code == 4
 
+
+@pytest.mark.good
+def test_function_can_be_exported():
+    # This test doesn't check that the 'export'ed function is actually exported
+    # in the resulting WASM. It only makes sure, the 'export' keyword is
+    # accepted
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+export fn _start() {
+    proc_exit(4u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 4
 
 
 # ----------------------------------------
@@ -88,4 +104,22 @@ fn _start() {
     assert (
         tools.normalize_filename_from_output(stderr)
         == "filename:2:7: Expecting a namespace identifier\n"
+    )
+
+
+@pytest.mark.parse_error
+def test_export_not_followed_by_fn_is_nicely_explained():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+export _start() {
+    proc_exit(10u32)
+}
+"""
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
+
+    assert exit_code == 1
+    assert (
+        tools.normalize_filename_from_output(stderr)
+        == "filename:4:7: Expecting keyword 'fn' after 'export'\n"
     )
