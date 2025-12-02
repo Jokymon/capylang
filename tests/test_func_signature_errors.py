@@ -10,7 +10,7 @@ def test_missing_colon_for_parameter_types():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     proc_exit(10)
 }
 """
@@ -28,7 +28,7 @@ def test_missing_open_bracket_for_parameters():
     """
 import wasi_snapshot_preview1::proc_exit exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     proc_exit(10)
 }
 """
@@ -46,7 +46,7 @@ def test_missing_closing_bracket_for_parameters():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32 as proc_exit;
 
-fn _start() {
+export fn _start() {
     proc_exit(10)
 }
 """
@@ -64,7 +64,7 @@ def test_missing_function_identifier():
     """
 import wasi_snapshot_preview1:: (exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     proc_exit(10)
 }
 """
@@ -86,7 +86,7 @@ def test_undefined_function():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     proc_exit(add2(10, 20))
 }
 """
@@ -108,7 +108,7 @@ fn add2(a: u32) -> u32 {
     a + 2u32
 }
 
-fn _start() {
+export fn _start() {
     proc_exit(add2(10, 20))
 }
 """
@@ -130,7 +130,7 @@ fn const_u32() -> u32 {
     34
 }
 
-fn _start() {
+export fn _start() {
     proc_exit(const_u32())
 }
 """

@@ -103,7 +103,7 @@ def test_u8_deref_on_rhs():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     let addr: *u8 = 108u32 as *u8;
     proc_exit(*addr as u32)
 }"""
@@ -131,7 +131,7 @@ def test_variables_can_be_modified():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     let mut a: u32 = 10u32;
     a = 20u32;
     proc_exit(a)

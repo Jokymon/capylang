@@ -2,27 +2,29 @@ import tools
 import pytest
 
 
+@pytest.mark.good
 def test_then_body_is_executed_with_true_condition():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     let condition: bool = true;
     if condition {
         proc_exit(10u32)
     }
     proc_exit(4u32)
 }"""
-    exit_code, _ = tools.run_test_code(code)
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
 
     assert exit_code == 10
 
 
+@pytest.mark.good
 def test_else_body_is_executed_with_false_condition():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     let condition: bool = false;
     if condition {
         proc_exit(10u32)
@@ -31,32 +33,34 @@ fn _start() {
     }
     proc_exit(4u32)
 }"""
-    exit_code, _ = tools.run_test_code(code)
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
 
     assert exit_code == 8
 
 
+@pytest.mark.good
 def test_then_body_is_not_executed_with_false_condition():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     let condition: bool = false;
     if condition {
         proc_exit(10u32)
     }
     proc_exit(4u32)
 }"""
-    exit_code, _ = tools.run_test_code(code)
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
 
     assert exit_code == 4
 
 
+@pytest.mark.good
 def test_if_is_an_expression_with_return():
-    code = """
+    """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     let condition: bool = true;
     let result: u32 = if condition {
         10u32
@@ -65,7 +69,7 @@ fn _start() {
     }
     proc_exit(result)
 }"""
-    exit_code, _ = tools.run_test_code(code)
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
 
     assert exit_code == 10
 
@@ -75,7 +79,7 @@ def test_while_loop():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     let condition: bool = true;
     let value: u32 = 10u32;
 
@@ -97,7 +101,7 @@ def test_then_and_else_branch_need_identical_types():
     code = """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     let condition: bool = true;
     let result: u32 = if condition {
         10u32
@@ -120,7 +124,7 @@ def test_then_with_return_with_empty_else_is_invalid():
     code = """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     let condition: bool = true;
     let result: u32 = if condition {
         10u32

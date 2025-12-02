@@ -92,7 +92,7 @@ def expression_to_full_program(code):
     procedure_wrapper = """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {{
+export fn _start() {{
     {code}
 }}"""
     full_code = procedure_wrapper.format(code=code)

@@ -7,7 +7,7 @@ def test_let_statement_with_simple_type():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     let a: u32 = 2u32;
     proc_exit(a)
 }"""
@@ -21,7 +21,7 @@ def test_let_doesnt_need_initialiser_expression():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     let mut a: u32;
     a = 17u32;
     proc_exit(a)
@@ -38,7 +38,7 @@ def test_pointer_dereferencing():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     let a: *u32 = 104u32 as *u32;
     proc_exit(*a)
 }"""
@@ -52,7 +52,7 @@ def test_pointer_deref_on_lhs():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     let a: *u32 = 100u32 as *u32;
     *a = 45u32;
     proc_exit(*a)
@@ -67,7 +67,7 @@ def test_non_pointer_deref_on_lhs():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     let mut a: u32 = 100u32;
     a = 45u32;
     proc_exit(a)
@@ -83,7 +83,7 @@ def test_missing_type_spec_for_let():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     let a: = 100u32;
     a = 45u32;
     proc_exit(a)
@@ -102,7 +102,7 @@ def test_mismatching_types_in_let():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     let a: u32 = 100s32;
     proc_exit(a)
 }"""
@@ -120,7 +120,7 @@ def test_let_without_any_assignment_before_usage_is_error():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     let mut a: u32;
     proc_exit(a)
 }"""

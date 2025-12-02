@@ -11,7 +11,7 @@ record s {
     field1: u32,
 };
 
-fn _start() {
+export fn _start() {
     let v: s = s{
         field1=18,
     };
@@ -36,7 +36,7 @@ record s1 {
     sub: s2,
 };
 
-fn _start() {
+export fn _start() {
     let v2: s2 = s2{
         field1=18,
     };
@@ -61,7 +61,7 @@ record s {
     field1: u32,
 };
 
-fn _start() {
+export fn _start() {
     let v: s = s{
         field1=18,
     };
@@ -82,7 +82,7 @@ def test_failure_dereferencing_non_record_type():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     let v: u32 = 32u32;
     proc_exit(v.field1)
 }
@@ -105,7 +105,7 @@ record s {
     field1: u32,
 };
 
-fn _start() {
+export fn _start() {
     let v: s = s{
         field1=w,
     };
@@ -130,7 +130,7 @@ record s {
     field1: u32,
 };
 
-fn _start() {
+export fn _start() {
     let w: u32 = 3u32;
     let v: s = s{
         field1=w.a,
@@ -156,7 +156,7 @@ record s {
     field1: u32,
 };
 
-fn _start() {
+export fn _start() {
     let v: s = s{
         field1=18,
     };
@@ -181,7 +181,7 @@ record s {
     field1: u32,
 };
 
-fn _start() {
+export fn _start() {
     let v: s = s{
         field1=12,
         fld=18,
@@ -207,7 +207,7 @@ record s {
     field1: u32,
 };
 
-fn _start() {
+export fn _start() {
     let v: s = s{
     };
     proc_exit(v.field1)

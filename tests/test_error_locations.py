@@ -7,7 +7,7 @@ def test_location_of_incomplete_expression():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     let a: u32 = 4u32+
 }"""
     exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
@@ -24,7 +24,7 @@ def test_undefined_variable():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     proc_exit(a_name)
 }"""
     exit_code, stderr = tools.compile_test_code(tools.get_doc_str())

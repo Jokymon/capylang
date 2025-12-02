@@ -29,6 +29,8 @@ uv run pytest tests/
  * Add intrinsics
  * Make sure pointer types are correctly dereferenced; special checks for u8, u16, since we dereference u32 normally
  * Comparison operators and bool type
+ * pub/export/... specification to explicitly mark exports of functions
+ * Early returns
 
 ### Big refactoring
 

@@ -9,7 +9,7 @@ import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 fn bla() { }
 
-fn _start() {
+export fn _start() {
     bla();
     proc_exit(4u32)
 }"""
@@ -41,7 +41,7 @@ def test_missing_curly_brace_at_function_definition_start():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start()
+export fn _start()
     proc_exit(10)
 }
 """
@@ -50,7 +50,7 @@ fn _start()
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:4:12: Expecting an opening brace '{' for function body definition\n"
+        == "filename:4:19: Expecting an opening brace '{' for function body definition\n"
     )
 
 
@@ -59,7 +59,7 @@ def test_missing_curly_brace_at_function_definition_end():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     proc_exit(10)
 """
     exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
@@ -76,7 +76,7 @@ def test_missing_namespace_identifier_in_import():
     """
 import wasi_snapshot_preview1 proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     proc_exit(10)
 }
 """
@@ -94,7 +94,7 @@ def test_missing_colon_after_namespace_in_import():
     """
 import ::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     proc_exit(10)
 }
 """

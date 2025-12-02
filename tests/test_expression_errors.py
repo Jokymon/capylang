@@ -7,7 +7,7 @@ def test_number_with_illegal_suffix():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     proc_exit(4xy)
 }"""
     exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
@@ -24,7 +24,7 @@ def test_multiple_numbers_with_illegal_suffix():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     let a: u32 = 5ab;
     proc_exit(4xy+a)
 }"""
@@ -42,7 +42,7 @@ def test_assignment_to_non_variable_expression():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     4 = 4+2;
     proc_exit(4u32)
 }"""
@@ -61,7 +61,7 @@ def test_immutable_variables_cant_be_modified():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-fn _start() {
+export fn _start() {
     let a: u32 = 10u32;
     a = 20u32;
     proc_exit(a)
