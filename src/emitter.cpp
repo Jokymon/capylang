@@ -1,4 +1,5 @@
 #include "emitter.hpp"
+#include "ir.hpp"
 #include "semantics.hpp"
 #include <algorithm>
 #include <cassert>
@@ -10,21 +11,21 @@ std::string create_wasm_name(const std::string capy_name)
     return "$" + capy_name;
 }
 
-std::string type_mapping(const type_kind& type_spec)
+wasm_type from_type_kind(const type_kind& type_spec)
 {
-    return std::visit([&](const auto &t) -> std::string {
+    return std::visit([&](const auto &t) -> auto {
         using T = std::decay_t<decltype(t)>;
 
         if constexpr (std::is_same_v<T, t_t::s32>) {
-            return "i32";
+            return wasm_type::i32;
         } else if constexpr (std::is_same_v<T, t_t::u8>) {
-            return "i32";
+            return wasm_type::u8;
         } else if constexpr (std::is_same_v<T, t_t::u32>) {
-            return "i32";
+            return wasm_type::i32;
         } else if constexpr (std::is_same_v<T, t_t::pointer>) {
-            return "i32";
+            return wasm_type::i32;
         } else {
-            return "";
+            return wasm_type::none;
         }
     }, type_spec);
 }
@@ -77,16 +78,36 @@ std::optional<size_t> record_field_offset(const type_kind& record, const std::st
     return std::nullopt;
 }
 
-emitter::emitter(std::ostream &output) : output_(output), data_buffer(""), data_offset(100), id_gen(0)
+emitter::emitter(std::ostream &output) : output_(output) //, data_buffer(""), data_offset(100), id_gen(0)
 {
+    cur_data = new wasm_data_section(100);
     allocate_data(std::string("\x42\x00\x00\x00\x10\x00\x00\x00\x10\x20\x30\x40Test", 16));
+}
+
+emitter::~emitter()
+{
+    delete cur_data;
 }
 
 void emitter::generate(node_module &module_def)
 {
+    wasm_module ir_module;
+    cur_mod = &ir_module;
+
     current_module = &module_def;
 
-    output_ << "(module\n";
+    auto& memory = ir_module.create_memory(2);
+    ir_module.export_as("memory", memory);
+
+    ir_module.create_global("heap_ptr", wasm_type::i32, wasm_module::access_type::mut, 1024);
+    auto& cabi_func = ir_module.create_function("cabi_realloc", wasm_type::i32,
+                                               {{"originalPtr", wasm_type::i32}, {"originalSize", wasm_type::i32}, {"alignment", wasm_type::i32}, {"newSize", wasm_type::i32}});
+    auto& cabi_body = cabi_func.body();
+    cabi_body.global_get("heap_ptr");
+    cabi_body.global_get("heap_ptr");
+    cabi_body.local_get("newSize");
+    cabi_body.add(wasm_type::i32);
+    cabi_body.global_set("heap_ptr");
 
     for (auto& literal: module_def.string_literals)
     {
@@ -98,33 +119,17 @@ void emitter::generate(node_module &module_def)
         emit(*import_def);
     }
 
-    output_ << "  (memory (;0;) 2)\n";
-    output_ << "  (data (i32.const 100) \"" << data_buffer << "\")\n";
-    output_ << "  (global $heap_ptr (mut i32) (i32.const 1024))\n";
-    output_ << "  (export \"memory\" (memory 0))\n";
-    output_ << "  (export \"_start\" (func $_start))\n";
-    output_ << "  (func $cabi_realloc (param $originalPtr i32)\n";
-    output_ << "                      (param $originalSize i32)\n";
-    output_ << "                      (param $alignment i32)\n";
-    output_ << "                      (param $newSize i32)\n";
-    output_ << "    (result i32)\n";
-
-    output_ << "      global.get $heap_ptr\n";
-    output_ << "      global.get $heap_ptr\n";
-    output_ << "      local.get $newSize\n";
-    output_ << "      i32.add\n";
-    output_ << "      global.set $heap_ptr\n";
-
-    output_ << "  )\n";
-
     for (const auto &func_def : module_def.functions)
     {
         emit(*func_def);
     }
 
-    output_ << ")\n";
+    cur_mod->append_data_section(*cur_data);
+
+    ir_module.dump(output_);
 
     current_module = nullptr;
+    cur_mod = nullptr;
 }
 
 void emitter::emit(ast_node &node)
@@ -137,13 +142,20 @@ void emitter::emit(ast_node &node)
 
 void emitter::emit(const node_import_definition &import_def)
 {
-    output_ << "  (import \"" << import_def.ns_name << "\" ";
-    // TODO: this is really ugly, but unfortunately, the "plain" name is only needed
-    // in the import definition of WAT
-    output_ << "\"" << import_def.function_head->name << "\" ";
+    arguments_type args;
+    auto function_name = import_def.function_head->name;
+    for (const auto &param : import_def.function_head->signature.parameters)
+    {
+        args.push_back({param.name, from_type_kind(param.type_spec)});
+    }
+    // TODO: we should actually use the alias name here if it is defined
+    auto& import_func = cur_mod->create_function(import_def.function_head->name.c_str(),
+        from_type_kind(import_def.function_head->signature.return_type),
+        args
+    );
+    import_func.import_from(import_def.ns_name.c_str(), import_def.function_head->name.c_str());
 
     emit(*import_def.function_head);
-    output_ << "))\n";
 }
 
 void emitter::emit(const node_function_head &function_head)
@@ -153,9 +165,20 @@ void emitter::emit(const node_function_head &function_head)
 
 void emitter::emit(const node_function_definition &func_def)
 {
-    output_ << "  ";
+    arguments_type args;
+    auto function_name = func_def.function_head->name;
+    for (const auto &param : func_def.function_head->signature.parameters)
+    {
+        args.push_back({param.name, from_type_kind(param.type_spec)});
+    }
+    auto &func = cur_mod->create_function(function_name.c_str(), from_type_kind(func_def.function_head->signature.return_type), args);
+    if (func_def.exported)
+    {
+        cur_mod->export_as(function_name.c_str(), func);
+    }
+    cur_block = &func.body();
+
     emit(*func_def.function_head);
-    output_ << "\n";
 
     for (auto& [identifier, symbol] : func_def.function_scope->symbol_table)
     {
@@ -163,23 +186,21 @@ void emitter::emit(const node_function_definition &func_def)
         {
             if (t_t::is_of<t_t::string>(symbol.symbol_type))
             {
-                output_ << "      (local " << create_wasm_name(identifier) << "_ptr i32)\n";
-                output_ << "      (local " << create_wasm_name(identifier) << "_size i32)\n";
+                func.allocate_local((identifier+"_ptr").c_str(), wasm_type::i32);
+                func.allocate_local((identifier+"_size").c_str(), wasm_type::i32);
             }
             else
             {
-                output_ << "      (local " << create_wasm_name(identifier) << " i32)\n";
+                func.allocate_local(identifier.c_str(), wasm_type::i32);
             }
         }
     }
-    output_ << "      (local $_rec_ptr i32)\n"; // Pointer used during record initialisations
+    func.allocate_local("_rec_ptr", wasm_type::i32);
 
     for (const auto &expression : func_def.code)
     {
         emit(*expression);
     }
-
-    output_ << "  )\n";
 }
 
 void emitter::emit(const node_record_definition& record_def)
@@ -189,47 +210,45 @@ void emitter::emit(const node_record_definition& record_def)
 void emitter::emit(const node_if_expression& if_expr)
 {
     emit(*if_expr.condition);
-    output_ << "      if";
-    if (!t_t::is_of<t_t::void_type>(if_expr.assigned_type))
-    {
-        output_ << " (result " << type_mapping(if_expr.assigned_type) << ")";
-    }
-    output_ << "\n";
+    auto [then_block, else_block] = cur_block->if_block(from_type_kind(if_expr.assigned_type));
 
+    auto* prev_block = cur_block;
+    cur_block = &then_block;
     for (const auto& expression : if_expr.then_code)
     {
         emit(*expression);
     }
     if (!if_expr.then_code.empty())
     {
-        output_ << "      else\n";
+        cur_block = &else_block;
         for (const auto& expression : if_expr.else_code)
         {
             emit(*expression);
         }
     }
-    output_ << "      end\n";
+    cur_block = prev_block;
 }
 
 void emitter::emit(const node_while_expression& while_expr)
 {
-    uint32_t while_id = id_gen++;
+    wasm_block* prev_block = cur_block;
 
-    output_ << "      block $while_exit" << while_id << "\n";
-    output_ << "      loop $while_block" << while_id << "\n";
+    wasm_block& while_exit = cur_block->block(wasm_type::none);
+    wasm_block& while_block = while_exit.loop(wasm_type::none);
+    cur_block = &while_block;
 
     emit(*while_expr.condition);
-    output_ << "      i32.eqz\n";  // invert the condition
-    output_ << "      br_if $while_exit" << while_id << "\n";
+
+    cur_block->eqz(wasm_type::i32);
+    cur_block->br_if(while_exit.label().c_str());
 
     for (const auto& expression : while_expr.while_code)
     {
         emit(*expression);
     }
-    output_ << "      br $while_block" << while_id << "\n";
+    cur_block->br(while_block.label().c_str());
 
-    output_ << "      end\n";
-    output_ << "      end\n";
+    cur_block = prev_block;
 }
 
 void emitter::emit(const node_function_call &func_call)
@@ -238,7 +257,7 @@ void emitter::emit(const node_function_call &func_call)
     {
         emit(*param);
     }
-    output_ << "      call " << create_wasm_name(func_call.function_name) << "\n";
+    cur_block->call(func_call.function_name.c_str());
 }
 
 void emitter::emit(const node_let_expression& let_expression)
@@ -253,24 +272,24 @@ void emitter::emit(const node_let_expression& let_expression)
     emit(*let_expression.init_expression);
     if (t_t::is_of<t_t::string>(let_expression.symbol_ref.get().symbol_type))
     {
-        output_ << "      local.set " << create_wasm_name(let_expression.symbol_ref.get().name + "_ptr") << "\n";
-        output_ << "      local.set " << create_wasm_name(let_expression.symbol_ref.get().name + "_size") << "\n";
+        cur_block->local_set((let_expression.symbol_ref.get().name+"_ptr").c_str());
+        cur_block->local_set((let_expression.symbol_ref.get().name+"_size").c_str());
     }
     else
     {
-        output_ << "      local.set " << let_expression.symbol_ref.get().index_addr << "\n";
+        cur_block->local_set(let_expression.symbol_ref.get().name.c_str());
     }
 }
 
 void emitter::emit(const node_record_initialisation& record_init)
 {
     size_t record_size = type_size(record_init.type_spec);
-    output_ << "      i32.const 0\n";                     // originalPtr
-    output_ << "      i32.const 0\n";                     // originalSize
-    output_ << "      i32.const 4\n";                     // alignment
-    output_ << "      i32.const " << record_size << "\n"; // newSize
-    output_ << "      call $cabi_realloc\n";
-    output_ << "      local.set $_rec_ptr\n";
+    cur_block->const_val(wasm_type::i32, 0);
+    cur_block->const_val(wasm_type::i32, 0);
+    cur_block->const_val(wasm_type::i32, 4);
+    cur_block->const_val(wasm_type::i32, record_size);
+    cur_block->call("cabi_realloc");
+    cur_block->local_set("_rec_ptr");
 
     // TODO: semantic check should make sure, that the type_spec really is a record
     auto& record_type = std::get<t_t::record>(record_init.type_spec);
@@ -281,7 +300,7 @@ void emitter::emit(const node_record_initialisation& record_init)
     for (const auto& field : record_type.fields)
     {
         // get the address for the field to initialise
-        output_ << "      local.get $_rec_ptr\n";
+        cur_block->local_get("_rec_ptr");
 
         // We go through the record definition to keep the order of the fields as given
         // in the definition; we assume, that field initialisations can be out of the
@@ -298,14 +317,14 @@ void emitter::emit(const node_record_initialisation& record_init)
         // TODO: Make sure that every field of the type definition is initialised
 
         // save the value in the record at the current offset
-        output_ << "      i32.store offset=" << offset << "\n";
+        cur_block->store(wasm_type::i32, offset);
 
         offset += type_size(*field.type_spec);
     }
 
     // after record initialisation, leave the pointer of the newly created record
     // on the stack
-    output_ << "      local.get $_rec_ptr\n";
+    cur_block->local_get("_rec_ptr");
 }
 
 void emitter::emit(const node_field_deref& field_deref)
@@ -315,7 +334,7 @@ void emitter::emit(const node_field_deref& field_deref)
         // TODO: for the moment we can only handle variables of types strings
         // but not strings that are fields of records
         auto var_name = std::get<node_var_reference>(field_deref.object->value).name;
-        output_ << "      local.get $" << var_name << "_" << field_deref.fieldname << "\n";
+        cur_block->local_get((var_name + "_"+field_deref.fieldname).c_str());
     }
     else
     {
@@ -323,7 +342,7 @@ void emitter::emit(const node_field_deref& field_deref)
         auto maybe_size = record_field_offset(field_deref.object_type, field_deref.fieldname);
         assert(maybe_size.has_value() && "A record field should have its offset calculated by this point");
 
-        output_ << "      i32.load offset=" << maybe_size.value() << "\n";
+        cur_block->load(wasm_type::i32, maybe_size.value());
     }
 }
 
@@ -334,44 +353,44 @@ void emitter::emit(const node_expression &root)
     switch (root.operation)
     {
     case op_minus:
-        output_ << "      i32.sub\n";
+        cur_block->sub(wasm_type::i32);
         break;
     case op_plus:
-        output_ << "      i32.add\n";
+        cur_block->add(wasm_type::i32);
         break;
     case op_multiply:
-        output_ << "      i32.mul\n";
+        cur_block->mul(wasm_type::i32);
         break;
     case op_division:
-        output_ << "      i32.div_u\n";
+        cur_block->div(wasm_type::i32);
         break;
     case op_modulus:
-        output_ << "      i32.rem_u\n";
+        cur_block->mod(wasm_type::i32);
         break;
     case op_assignment:
         if (std::holds_alternative<node_pointer_deref>(root.left->value))
         {
             if (t_t::is_of<t_t::u8>(assigned_node_type(*root.left)))
             {
-                output_ << "      i32.store8\n";
+                cur_block->store(wasm_type::i8);
                 break;
             }
             else
             {
-                output_ << "      i32.store\n";
+                cur_block->store(wasm_type::i32);
                 break;
             }
         }
         else
         {
-            output_ << "      local.set " << std::get<node_var_reference>(root.left->value).symbol_ref.get().index_addr << "\n";
+            cur_block->local_set(std::get<node_var_reference>(root.left->value).symbol_ref.get().name.c_str());
             break;
         }
     case op_conversion:
         if ((t_t::is_of<t_t::void_type>(assigned_node_type(*root.right))) &&
             (!t_t::is_of<t_t::void_type>(assigned_node_type(*root.left))))
         {
-            output_ << "      drop\n";
+            cur_block->drop();
         }
         break;
     }
@@ -380,15 +399,14 @@ void emitter::emit(const node_expression &root)
 void emitter::emit(const node_string_literal& literal)
 {
     uint32_t ptr = current_module->string_literals[literal.table_index].start_address;
-    output_ << "      i32.const " << literal.size << "\n";
-    output_ << "      i32.const " << ptr << "\n";
+    cur_block->const_val(wasm_type::i32, literal.size);
+    cur_block->const_val(wasm_type::i32, ptr);
 }
 
 void emitter::emit(const node_char_literal& literal)
 {
-    output_ << "      i32.const " << literal.ch << "\n";
+    cur_block->const_val(wasm_type::i32, literal.ch);
 }
-
 
 void emitter::emit(const node_type_spec& spec)
 {
@@ -396,12 +414,12 @@ void emitter::emit(const node_type_spec& spec)
 
 void emitter::emit(const node_bool_const& bool_const)
 {
-    output_ << "      i32.const " << (bool_const.value ? "1" : "0") << "\n";
+    cur_block->const_val(wasm_type::i32, bool_const.value ? 1 : 0);
 }
 
 void emitter::emit(const node_number &number)
 {
-    output_ << "      i32.const " << number.number << "\n";
+    cur_block->const_val(wasm_type::i32, number.number);
 }
 
 void emitter::emit(const node_var_reference &variable)
@@ -410,7 +428,7 @@ void emitter::emit(const node_var_reference &variable)
     // handle the storing of the value differently
     if (variable.context == assign_context::rhs)
     {
-        output_ << "      local.get " << variable.symbol_ref.get().index_addr << "\n";
+        cur_block->local_get(variable.symbol_ref.get().name.c_str());
     }
 }
 
@@ -421,75 +439,26 @@ void emitter::emit(const node_pointer_deref& ptr_deref)
     {
         if (t_t::is_of<t_t::u8>(ptr_deref.assigned_type))
         {
-            output_ << "      i32.load8_u\n";
+            cur_block->load(wasm_type::u8);
         }
         else
         {
-            output_ << "      i32.load\n";
+            cur_block->load(wasm_type::i32);
         }
     }
     else
     {
         // in LHS context we have to get address, which in our
         // case means to get the index of the variable
-        auto var_index = std::get<node_var_reference>(ptr_deref.pointer_expression->value).symbol_ref.get().index_addr;
-        output_ << "      local.get " << var_index << "\n";
+        cur_block->local_get(std::get<node_var_reference>(ptr_deref.pointer_expression->value).symbol_ref.get().name.c_str());
     }
 }
 
 void emitter::emit_function_signature(const std::string &function_name, const function_signature &signature)
 {
-    output_ << "(func " << create_wasm_name(function_name);
-
-    for (const auto &param : signature.parameters)
-    {
-        output_ << " (param $" << param.name << " " << type_mapping(param.type_spec) << ")";
-    }
-
-    if (!t_t::is_of<t_t::void_type>(signature.return_type))
-    {
-        output_ << " (result " << type_mapping(signature.return_type) << ")";
-    }
 }
 
 uint32_t emitter::allocate_data(const std::string& data)
 {
-    auto alloc_address = data_offset;
-    data_offset += data.size();
-
-    for (const char& c : data) {
-        switch (c) {
-            case '\\':
-                data_buffer += "\\\\";
-                break;
-            case '\'':
-                data_buffer += "\\\'";
-                break;
-            case '\"':
-                data_buffer += "\\\"";
-                break;
-            case '\t':
-                data_buffer += "\\t";
-                break;
-            case '\r':
-                data_buffer += "\\r";
-                break;
-            case '\n':
-                data_buffer += "\\n";
-                break;
-            default:
-                if (c>='\x20')
-                {
-                    data_buffer += std::string(1, c);
-                }
-                else
-                {
-                    std::ostringstream oss;
-                    oss << "\\" << std::uppercase << std::hex << std::setw(2) << std::setfill('0') 
-                        << ((unsigned int)c & 0xff);
-                    data_buffer +=  oss.str();
-                }
-        }
-    }
-    return alloc_address;
+    return cur_data->allocate_data(data);
 }

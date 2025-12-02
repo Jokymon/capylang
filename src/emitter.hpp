@@ -1,10 +1,15 @@
 #include "parser.hpp"
 #include <ostream>
 
+class wasm_block;
+class wasm_data_section;
+class wasm_module;
+
 class emitter
 {
 public:
     explicit emitter(std::ostream &output);
+    ~emitter();
 
     void generate(node_module &module_def);
 
@@ -34,10 +39,10 @@ private:
     uint32_t allocate_data(const std::string& data);
 
     std::ostream &output_;
-    std::string data_buffer;
-    uint32_t data_offset;
-
-    uint32_t id_gen;
 
     node_module* current_module;
+
+    wasm_data_section* cur_data;
+    wasm_module* cur_mod;
+    wasm_block* cur_block;
 };
