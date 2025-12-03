@@ -9,10 +9,14 @@ std::string repr_wasm_type(wasm_type typ)
     switch (typ) {
         case wasm_type::none:
             return "";
-        case wasm_type::i8:
         case wasm_type::u8:
+        case wasm_type::u16:
+        case wasm_type::u32:
+        case wasm_type::i8:
+        case wasm_type::i16:
         case wasm_type::i32:
             return "i32";
+        case wasm_type::u64:
         case wasm_type::i64:
             return "i64";
         case wasm_type::f32:
@@ -28,12 +32,16 @@ std::string sign_wasm_type(wasm_type typ)
         case wasm_type::none:
             return "";
         case wasm_type::i8:
+        case wasm_type::i16:
         case wasm_type::i32:
         case wasm_type::i64:
         case wasm_type::f32:
         case wasm_type::f64:
             return "s";
         case wasm_type::u8:
+        case wasm_type::u16:
+        case wasm_type::u32:
+        case wasm_type::u64:
             return "u";
     }
 }
@@ -42,14 +50,19 @@ std::string size_wasm_type(wasm_type typ)
 {
     switch (typ) {
         case wasm_type::none:
+        case wasm_type::u32:
         case wasm_type::i32:
         case wasm_type::f32:
+        case wasm_type::u64:
         case wasm_type::i64:
         case wasm_type::f64:
             return "";
         case wasm_type::i8:
         case wasm_type::u8:
             return "8";
+        case wasm_type::i16:
+        case wasm_type::u16:
+            return "16";
     }
 }
 
@@ -199,13 +212,13 @@ void wasm_block::add(wasm_type type)
 void wasm_block::div(wasm_type type)
 {
     instructions.push_back(std::make_unique<wasm_simple_statement>(
-        std::format("{}.div_u", repr_wasm_type(type))));
+        std::format("{}.div_{}", repr_wasm_type(type), sign_wasm_type(type))));
 }
 
 void wasm_block::mod(wasm_type type)
 {
     instructions.push_back(std::make_unique<wasm_simple_statement>(
-        std::format("{}.rem_u", repr_wasm_type(type))));
+        std::format("{}.rem_{}", repr_wasm_type(type), sign_wasm_type(type))));
 }
 
 void wasm_block::mul(wasm_type type)
