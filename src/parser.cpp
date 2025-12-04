@@ -108,7 +108,6 @@ void dump_node(const node_while_expression& n, size_t indent)
     {
         dump_ast(*expression, indent+4);
     }
-
 }
 
 void dump_node(const node_type_spec& n, size_t indent)
@@ -164,6 +163,15 @@ void dump_node(const node_import_definition& n, size_t indent)
     std::string ind = std::string(indent, ' ');
 
     std::cout << ind << "Import definition: TODO\n";
+}
+
+void dump_node(const node_global& n, size_t indent)
+{
+    std::string ind = std::string(indent, ' ');
+
+    std::cout << ind << "Global:\n";
+    std::cout << ind << "  " << n.name << "=\n";
+    //dump_ast(*n.init_expression, indent+4);
 }
 
 void dump_node(const node_function_call& n, size_t indent)
@@ -529,6 +537,12 @@ node_module parser::parse_module()
         capy_module.imports.push_back(std::make_unique<ast_node>(std::move(import_def)));
     }
 
+    while (capy_lexer.ahead_is_sym(token_symbol::sym_kw_global))
+    {
+        auto global_def = parse_global();
+        capy_module.globals.push_back(std::make_unique<ast_node>(std::move(global_def)));
+    }
+
     while (capy_lexer.ahead_is_sym(token_symbol::sym_kw_record))
     {
         auto record_def = parse_record_definition();
@@ -651,6 +665,69 @@ ast_node parser::parse_import_definition()
         namespace_name.name,
         std::make_unique<node_function_head>(std::move(function_head)),
         alias_name);
+}
+
+ast_node parser::parse_global()
+{
+    // eat the 'global' keyword
+    auto start_location = capy_lexer.expect<token_symbol>().location;
+
+    bool is_mutable = false;
+    if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_mut))
+    {
+        // eat the 'mut' keyword
+        capy_lexer.expect<token_symbol>();
+        is_mutable = true;
+    }
+
+    if (!capy_lexer.ahead_is<token_identifier>())
+    {
+        append_error("Expecting a variable name after 'global' keyword");
+    }
+    auto variable_name = capy_lexer.parse_or_default<token_identifier>();
+
+    if (!capy_lexer.expect_symbol(token_symbol::sym_colon))
+    {
+        append_error("Expecting a ':' after variable name in 'global' expression");
+    }
+
+    auto type_spec_node = parse_type_reference();
+    auto type_spec = std::get<node_type_spec>(type_spec_node.value).type_spec;
+
+    auto new_symbol = symbol{
+        .name = variable_name.name,
+        .symbol_type = type_spec,
+        .kind = symbol_kind::global_var,
+        .mutab = is_mutable,
+        .is_assigned = false,
+        .index_addr = current_scope->symbol_table.size(),
+    };
+    current_scope->symbol_table[variable_name.name] = new_symbol;
+
+    int32_t init_value = 0;
+    if (!capy_lexer.ahead_is_sym(token_symbol::sym_equal))
+    {
+        append_error("Globals need an initialisation value");
+    }
+    else
+    {
+        capy_lexer.expect_symbol(token_symbol::sym_equal);
+
+        auto initializer = parse_number();
+        init_value = std::get<node_number>(initializer.value).number;
+        current_scope->symbol_table[variable_name.name].is_assigned = true;
+    }
+
+    // eat the final semicolon
+    auto end_token = capy_lexer.expect<token_symbol>();
+
+    return make_located<node_global>(
+        start_location.start,
+        end_token.location.end,
+        variable_name.name,
+        type_spec,
+        current_scope->symbol_table[variable_name.name],
+        init_value);
 }
 
 ast_node parser::parse_function_definition()

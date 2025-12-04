@@ -549,11 +549,16 @@ void wasm_module::dump(std::ostream &output) const
     for (const auto& global : globals)
     {
         output << ind << "(global $" << global.name;
-        output << " (";
         if (global.access==access_type::mut) {
-            output << "mut ";
+            output << " (mut ";
+            output << repr_wasm_type(global.typ);
+            output << ")";
         }
-        output << repr_wasm_type(global.typ) << ") (";
+        else
+        {
+            output << " " << repr_wasm_type(global.typ);
+        }
+        output << " (";
         output << repr_wasm_type(global.typ) << ".const ";
         output << global.initvalue;
         output << "))\n";

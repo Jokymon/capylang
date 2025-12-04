@@ -16,6 +16,7 @@ public:
     void emit(ast_node& node);
 
     void emit(const node_import_definition& import_def);
+    void emit(const node_global& global_def);
     void emit(const node_function_head& function_head);
     void emit(const node_function_definition& func_def);
     void emit(const node_record_definition& record_def);

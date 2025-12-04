@@ -119,6 +119,11 @@ void emitter::generate(node_module &module_def)
         emit(*import_def);
     }
 
+    for (const auto &global_def : module_def.globals)
+    {
+        emit(*global_def);
+    }
+
     for (const auto &func_def : module_def.functions)
     {
         emit(*func_def);
@@ -156,6 +161,35 @@ void emitter::emit(const node_import_definition &import_def)
     import_func.import_from(import_def.ns_name.c_str(), import_def.function_head->name.c_str());
 
     emit(*import_def.function_head);
+}
+
+void emitter::emit(const node_global& global_def)
+{
+    // if (!global_def.init_expression)
+    // {
+    //     // TODO: maybe all globals should be initialised
+    //     // The variable is not initialised, so we don't need to evaluate any
+    //     // initialiser expressions
+    //     return;
+    // }
+
+    // emit(*global_def.init_expression);
+    // if (t_t::is_of<t_t::string>(global_def.symbol_ref.get().symbol_type))
+    // {
+    //     cur_block->global_set((global_def.symbol_ref.get().name+"_ptr").c_str());
+    //     cur_block->global_set((global_def.symbol_ref.get().name+"_size").c_str());
+    // }
+    // else
+    // {
+    //     cur_block->global_set(global_def.symbol_ref.get().name.c_str());
+    // }
+    auto mutability = global_def.symbol_ref.get().mutab ?
+                            wasm_module::access_type::mut :
+                            wasm_module::access_type::immut;
+    cur_mod->create_global(global_def.symbol_ref.get().name.c_str(),
+                           wasm_type::i32,
+                           mutability,
+                           global_def.init_value);
 }
 
 void emitter::emit(const node_function_head &function_head)
@@ -383,7 +417,15 @@ void emitter::emit(const node_expression &root)
         }
         else
         {
-            cur_block->local_set(std::get<node_var_reference>(root.left->value).symbol_ref.get().name.c_str());
+            auto symbol = std::get<node_var_reference>(root.left->value).symbol_ref;
+            if (symbol.get().kind == symbol_kind::global_var)
+            {
+                cur_block->global_set(symbol.get().name.c_str());                
+            }
+            else
+            {
+                cur_block->local_set(symbol.get().name.c_str());
+            }
             break;
         }
     case op_conversion:
@@ -428,7 +470,15 @@ void emitter::emit(const node_var_reference &variable)
     // handle the storing of the value differently
     if (variable.context == assign_context::rhs)
     {
-        cur_block->local_get(variable.symbol_ref.get().name.c_str());
+        auto symbol = variable.symbol_ref;
+        if (symbol.get().kind == symbol_kind::global_var)
+        {
+            cur_block->global_get(symbol.get().name.c_str());
+        }
+        else
+        {
+            cur_block->local_get(symbol.get().name.c_str());
+        }    
     }
 }
 

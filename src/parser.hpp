@@ -169,12 +169,13 @@ struct node_record_initialisation;
 struct node_field_deref;
 struct node_function_head;
 struct node_import_definition;
+struct node_global;
 struct node_function_call;
 struct node_function_definition;
 struct node_expression;
 struct node_module;
 
-using ast_node_raw = std::variant<node_number, node_char_literal, node_bool_const, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_if_expression, node_while_expression, node_type_spec, node_record_definition, node_record_initialisation, node_field_deref, node_import_definition, node_function_call, node_function_definition, node_expression>;
+using ast_node_raw = std::variant<node_number, node_char_literal, node_bool_const, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_if_expression, node_while_expression, node_type_spec, node_record_definition, node_record_initialisation, node_field_deref, node_import_definition, node_global, node_function_call, node_function_definition, node_expression>;
 using ast_node = located<ast_node_raw>;
 
 void dump_module(const node_module& module, size_t indent=0);
@@ -297,6 +298,15 @@ struct node_import_definition
     std::optional<std::string> alias;
 };
 
+struct node_global
+{
+    std::string name;
+    type_kind assigned_type;
+    std::reference_wrapper<symbol> symbol_ref;
+    int32_t init_value;
+    //std::unique_ptr<ast_node> init_expression;
+};
+
 struct node_function_call
 {
     std::string function_name;
@@ -323,6 +333,7 @@ struct node_expression
 struct node_module : public located_node
 {
     std::vector<std::unique_ptr<ast_node>> imports;
+    std::vector<std::unique_ptr<ast_node>> globals;
     std::vector<std::unique_ptr<ast_node>> functions;
     std::vector<std::unique_ptr<ast_node>> typedefs;
 
@@ -359,6 +370,7 @@ private:
     void parse_parameters(std::vector<param_spec>& parameters);
     void parse_function_signature(function_signature& signature);
     ast_node parse_import_definition();
+    ast_node parse_global();
     ast_node parse_function_definition();
     node_function_head parse_function_head();
     ast_node parse_expression(int min_precedence = 0);
