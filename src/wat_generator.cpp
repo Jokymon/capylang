@@ -321,6 +321,12 @@ void wat_generator::generate(const wasm_op_type& inst, std::ostream &output, siz
         case wasm_op::imul:
             output << ".mul\n";
             break;
+        case wasm_op::eq:
+            output << ".eq\n";
+            break;
+        case wasm_op::ne:
+            output << ".ne\n";
+            break;
         case wasm_op::eqz:
             output << ".eqz\n";
             break;

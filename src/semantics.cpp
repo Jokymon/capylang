@@ -380,6 +380,10 @@ void semantic_analyser::process(source_range location, node_expression &n)
                 "Trying to assign to non-lvalue expression");
         }
     }
+    else if ((n.operation == op_equals) || (n.operation == op_notequals))
+    {
+        n.assigned_type = t_t::boolean{};
+    }
     else if ((lhs_type == rhs_type) && (!t_t::is_of<t_t::unassigned>(lhs_type)))
     {
         n.assigned_type = lhs_type;

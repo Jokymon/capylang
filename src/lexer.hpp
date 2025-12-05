@@ -64,8 +64,10 @@ struct token_symbol : public located_token
         sym_comma,
         sym_dcolon,
         sym_dquote,
+        sym_eqeq,
         sym_equal,
         sym_minus,
+        sym_noteq,
         sym_percent,
         sym_period,
         sym_plus,
@@ -92,6 +94,9 @@ enum operator_type
     op_plus,
     op_minus,
     op_assignment,
+
+    op_equals,
+    op_notequals,
 
     op_conversion,
 };

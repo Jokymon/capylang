@@ -179,6 +179,16 @@ void wasm_block::store(wasm_type type, size_t offset)
     instructions.push_back(std::make_unique<wasm_statement>(wasm_op_align_offset(wasm_op::store, type, 0, offset)));
 }
 
+void wasm_block::eq(wasm_type type)
+{
+    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type(wasm_op::eq, type)));
+}
+
+void wasm_block::ne(wasm_type type)
+{
+    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type(wasm_op::ne, type)));
+}
+
 void wasm_block::eqz(wasm_type type)
 {
     instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type(wasm_op::eqz, type)));

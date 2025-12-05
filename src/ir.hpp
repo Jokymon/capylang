@@ -48,6 +48,8 @@ enum class wasm_op
     idiv,
     irem,
 
+    eq,
+    ne,
     eqz,
 
     br,
@@ -201,6 +203,8 @@ public:
     void sub(wasm_type type);
     void load(wasm_type type, size_t offset=0);
     void store(wasm_type type, size_t offset=0);
+    void eq(wasm_type type);
+    void ne(wasm_type type);
     void eqz(wasm_type type);
     void br(wasm_branch_label branch_label);
     void br_if(wasm_branch_label branch_label);

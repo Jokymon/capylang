@@ -99,6 +99,36 @@ def test_correct_priority_of_plus_and_multiply():
 
 
 @pytest.mark.good
+def test_eq_has_lower_precedence_than_plus():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let b: bool = 1u32 + 5u32 == 3u32 + 3u32;
+    proc_exit(5u32 + b as u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 6
+
+
+@pytest.mark.good
+def test_neq_has_lower_precedence_than_plus():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let b: bool = 1u32 + 5u32 != 3u32 + 3u32;
+    proc_exit(5u32 + b as u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 5
+
+
+@pytest.mark.good
 def test_u8_deref_on_rhs():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
