@@ -81,7 +81,7 @@ void dump_node(const node_let_expression& n, size_t indent)
 void dump_node(const node_if_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
-    std::cout << ind << "If\n";
+    std::cout << ind << "If: " << repr_type(n.assigned_type) << "\n";
     std::cout << ind << "  Condition:\n";
     dump_ast(*n.condition, indent+4);
     std::cout << ind << "  Then-Body:\n";
@@ -205,7 +205,8 @@ void dump_node(const node_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Expression; op " << repr_op(n.operation) << "\n";
+    std::cout << ind << "Expression; op: " << repr_op(n.operation) 
+            << "; type: " << repr_type(n.assigned_type) << "\n";
     
     dump_ast(*n.left, indent+4);
     dump_ast(*n.right, indent+4);

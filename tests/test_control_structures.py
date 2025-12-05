@@ -59,6 +59,47 @@ fn _start() {
 
 
 @pytest.mark.good
+def test_assignment_on_last_line_in_if_works():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let condition: bool = true;
+    let mut value: u32 = 8u32;
+
+    if condition {
+        value = 9u32;
+    }
+    proc_exit(value)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 9
+
+
+@pytest.mark.good
+def test_assignment_to_deref_pointer_on_last_line_in_if_works():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let condition: bool = true;
+    let mut value: *u32 = 100u32 as *u32;
+    *value = 8u32;
+
+    if condition {
+        *value = 9u32;
+    }
+    proc_exit(*value)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 9
+
+
+@pytest.mark.good
 def test_if_is_an_expression_with_return():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
@@ -85,11 +126,11 @@ import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 @export
 fn _start() {
-    let condition: bool = true;
-    let value: u32 = 10u32;
+    let mut condition: bool = true;
+    let mut value: u32 = 10u32;
 
     while condition {
-        value = value + 1;
+        value = value + 1u32;
         condition = false;
     }
 
@@ -98,6 +139,47 @@ fn _start() {
     exit_code, _ = tools.run_test_code(tools.get_doc_str())
 
     assert exit_code == 11
+
+
+@pytest.mark.good
+def test_assignment_on_last_line_in_while_works():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let condition: bool = false;
+    let mut value: u32 = 8u32;
+
+    while condition {
+        value = 9u32;
+    }
+    proc_exit(value)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 8
+
+
+@pytest.mark.good
+def test_assignment_to_deref_pointer_on_last_line_in_while_works():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let condition: bool = false;
+    let mut value: *u32 = 100u32 as *u32;
+    *value = 8u32;
+
+    while condition {
+        *value = 9u32;
+    }
+    proc_exit(*value)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 8
 
 
 # ----------------------------------------

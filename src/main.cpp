@@ -40,13 +40,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    semantic_analyser analyser;
+    analyser.semantic_analysis(root_node);
     if (args.dump_ast) {
         dump_module(root_node);
         return 0;
     }
 
-    semantic_analyser analyser;
-    analyser.semantic_analysis(root_node);
     if (!analyser.errors.empty())
     {
         for (const auto& error : analyser.errors)

@@ -58,6 +58,8 @@ type_kind assigned_node_type(const ast_node &node)
             return n.type_spec;
         } else if constexpr (std::is_same_v<T, node_if_expression>) {
             return n.assigned_type;
+        } else if constexpr (std::is_same_v<T, node_while_expression>) {
+            return t_t::void_type{};
         } else if constexpr (std::is_same_v<T, node_type_spec>) {
             return n.type_spec;
         } else if constexpr (std::is_same_v<T, node_field_deref>) {
@@ -276,6 +278,16 @@ void semantic_analyser::process(source_range location, node_if_expression &n)
     n.assigned_type = then_return_type;
 }
 
+void semantic_analyser::process(source_range location, node_while_expression &n)
+{
+    visit(*n.condition);
+
+    for (const auto &expression : n.while_code)
+    {
+        visit(*expression);
+    }
+}
+
 void semantic_analyser::process(source_range location, node_let_expression &n)
 {
     if (!n.init_expression)
@@ -345,10 +357,10 @@ void semantic_analyser::process(source_range location, node_expression &n)
     // propagate the type upwards based on the operands
     if (n.operation == op_assignment)
     {
+        n.assigned_type = t_t::void_type{};
         if (std::holds_alternative<node_pointer_deref>(n.left->value) ||
             std::holds_alternative<node_var_reference>(n.left->value))
         {
-            n.assigned_type = t_t::void_type{};
             auto* var_node = std::get_if<node_var_reference>(&n.left->value);
             if (var_node!=nullptr)
             {
@@ -415,6 +427,8 @@ void semantic_analyser::visit(ast_node &root)
         } else if constexpr (std::is_same_v<T, node_function_call>) {
             process(root.location, n);
         } else if constexpr (std::is_same_v<T, node_if_expression>) {
+            process(root.location, n);
+        } else if constexpr (std::is_same_v<T, node_while_expression>) {
             process(root.location, n);
         } else if constexpr (std::is_same_v<T, node_let_expression>) {
             process(root.location, n);
