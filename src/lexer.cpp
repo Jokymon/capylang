@@ -83,6 +83,8 @@ std::string token_symbol::to_string() const
         return "while";
     case sym_arrow:
         return "->";
+    case sym_at:
+        return "@";
     case sym_colon:
         return ":";
     case sym_comma:
@@ -439,6 +441,11 @@ token lexer::parse_token()
     {
         get_char();
         return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_equal};
+    }
+    else if (ch == '@')
+    {
+        get_char();
+        return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_at};
     }
     else if (ch == '(')
     {

@@ -323,35 +323,67 @@ node_module parser::parse_module()
     capy_module.module_scope = std::make_unique<scope>();
     current_scope = capy_module.module_scope.get();
 
-    while (capy_lexer.ahead_is_sym(token_symbol::sym_kw_import))
-    {
-        auto import_def = parse_import_definition();
-
-        capy_module.imports.push_back(std::make_unique<ast_node>(std::move(import_def)));
-    }
-
-    while (capy_lexer.ahead_is_sym(token_symbol::sym_kw_global))
-    {
-        auto global_def = parse_global();
-        capy_module.globals.push_back(std::make_unique<ast_node>(std::move(global_def)));
-    }
-
-    while (capy_lexer.ahead_is_sym(token_symbol::sym_kw_record))
-    {
-        auto record_def = parse_record_definition();
-        capy_module.typedefs.push_back(std::make_unique<ast_node>(std::move(record_def)));
-    }
-
-    while (capy_lexer.ahead_is_sym(token_symbol::sym_kw_fn) || 
+    while (capy_lexer.ahead_is_sym(token_symbol::sym_at) ||
+            capy_lexer.ahead_is_sym(token_symbol::sym_kw_import) ||
+            capy_lexer.ahead_is_sym(token_symbol::sym_kw_global) ||
+            capy_lexer.ahead_is_sym(token_symbol::sym_kw_record) ||
+            capy_lexer.ahead_is_sym(token_symbol::sym_kw_fn) ||
             capy_lexer.ahead_is_sym(token_symbol::sym_kw_export))
     {
-        auto function = parse_function_definition();
+        if (capy_lexer.ahead_is_sym(token_symbol::sym_at))
+        {
+            parse_attribute();
+        }
+        else if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_import))
+        {
+            auto import_def = parse_import_definition();
 
-        capy_module.functions.push_back(std::make_unique<ast_node>(std::move(function)));
+            capy_module.imports.push_back(std::make_unique<ast_node>(std::move(import_def)));
+        }
+        else if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_global))
+        {
+            auto global_def = parse_global();
+            capy_module.globals.push_back(std::make_unique<ast_node>(std::move(global_def)));
+        }
+        else if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_record))
+        {
+            auto record_def = parse_record_definition();
+            capy_module.typedefs.push_back(std::make_unique<ast_node>(std::move(record_def)));
+        }
+        else if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_fn) || 
+                capy_lexer.ahead_is_sym(token_symbol::sym_kw_export))
+        {
+            auto function = parse_function_definition();
+
+            capy_module.functions.push_back(std::make_unique<ast_node>(std::move(function)));
+        }
     }
 
     current_module = nullptr;
     return capy_module;
+}
+
+void parser::parse_attribute()
+{
+    capy_lexer.expect_symbol(token_symbol::sym_at);
+    capy_lexer.expect<token_identifier>();
+
+    if (capy_lexer.ahead_is_sym(token_symbol::sym_paren_open))
+    {
+        capy_lexer.expect_symbol(token_symbol::sym_paren_open);
+        while (!capy_lexer.ahead_is_sym(token_symbol::sym_paren_close))
+        {
+            capy_lexer.expect<token_identifier>();
+            capy_lexer.expect_symbol(token_symbol::sym_equal);
+            parse_primary();
+
+            if (capy_lexer.ahead_is_sym(token_symbol::sym_comma))
+            {
+                capy_lexer.expect_symbol(token_symbol::sym_comma);
+            }
+        }
+        capy_lexer.expect_symbol(token_symbol::sym_paren_close);
+    }
 }
 
 void parser::parse_function_signature(function_signature &signature)

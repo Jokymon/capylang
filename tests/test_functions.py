@@ -19,6 +19,40 @@ export fn _start() {
 
 
 @pytest.mark.good
+def test_functions_can_have_simple_attributes():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn bla() { }
+
+@exp
+export fn _start() {
+    bla();
+    proc_exit(4u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 4
+
+
+@pytest.mark.good
+def test_functions_can_have_complex_attributes():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@imp(ns="wasi_snapshort_preview1", name="proc_exit")
+fn pce(exit_code: u32)
+{ }
+
+export fn _start() {
+    proc_exit(4u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 4
+
+
+@pytest.mark.good
 def test_function_can_be_exported():
     # This test doesn't check that the 'export'ed function is actually exported
     # in the resulting WASM. It only makes sure, the 'export' keyword is
