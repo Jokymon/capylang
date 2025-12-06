@@ -7,7 +7,8 @@ def test_location_of_incomplete_expression():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-export fn _start() {
+@export
+fn _start() {
     let a: u32 = 4u32+
 }"""
     exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
@@ -15,7 +16,7 @@ export fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:5:23: Expected a primary (function call, number, variable)\n"
+        == "filename:6:23: Expected a primary (function call, number, variable)\n"
     )
 
 
@@ -24,7 +25,8 @@ def test_undefined_variable():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-export fn _start() {
+@export
+fn _start() {
     proc_exit(a_name)
 }"""
     exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
@@ -32,5 +34,5 @@ export fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:5:15: Undefined variable: 'a_name'\n"
+        == "filename:6:15: Undefined variable: 'a_name'\n"
     )

@@ -10,7 +10,8 @@ def test_missing_colon_for_parameter_types():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code u32) as proc_exit;
 
-export fn _start() {
+@export
+fn _start() {
     proc_exit(10)
 }
 """
@@ -28,7 +29,8 @@ def test_missing_open_bracket_for_parameters():
     """
 import wasi_snapshot_preview1::proc_exit exit_code: u32) as proc_exit;
 
-export fn _start() {
+@export
+fn _start() {
     proc_exit(10)
 }
 """
@@ -46,7 +48,8 @@ def test_missing_closing_bracket_for_parameters():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32 as proc_exit;
 
-export fn _start() {
+@export
+fn _start() {
     proc_exit(10)
 }
 """
@@ -64,7 +67,8 @@ def test_missing_function_identifier():
     """
 import wasi_snapshot_preview1:: (exit_code: u32) as proc_exit;
 
-export fn _start() {
+@export
+fn _start() {
     proc_exit(10)
 }
 """
@@ -73,7 +77,7 @@ export fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:2:32: Expecting a function name\nfilename:5:18: Function 'proc_exit' is not defined\n"
+        == "filename:2:32: Expecting a function name\nfilename:6:18: Function 'proc_exit' is not defined\n"
     )
 
 
@@ -86,7 +90,8 @@ def test_undefined_function():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-export fn _start() {
+@export
+fn _start() {
     proc_exit(add2(10, 20))
 }
 """
@@ -95,7 +100,7 @@ export fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:5:27: Function 'add2' is not defined\n"
+        == "filename:6:27: Function 'add2' is not defined\n"
     )
 
 
@@ -108,7 +113,8 @@ fn add2(a: u32) -> u32 {
     a + 2u32
 }
 
-export fn _start() {
+@export
+fn _start() {
     proc_exit(add2(10, 20))
 }
 """
@@ -117,7 +123,7 @@ export fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:9:15: Function 'add2' expects signature (u32); called with signature (s32, s32)\n"
+        == "filename:10:15: Function 'add2' expects signature (u32); called with signature (s32, s32)\n"
     )
 
 
@@ -130,7 +136,8 @@ fn const_u32() -> u32 {
     34
 }
 
-export fn _start() {
+@export
+fn _start() {
     proc_exit(const_u32())
 }
 """

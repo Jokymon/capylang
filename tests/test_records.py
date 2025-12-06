@@ -11,7 +11,8 @@ record s {
     field1: u32,
 };
 
-export fn _start() {
+@export
+fn _start() {
     let v: s = s{
         field1=18,
     };
@@ -36,7 +37,8 @@ record s1 {
     sub: s2,
 };
 
-export fn _start() {
+@export
+fn _start() {
     let v2: s2 = s2{
         field1=18,
     };
@@ -61,7 +63,8 @@ record s {
     field1: u32,
 };
 
-export fn _start() {
+@export
+fn _start() {
     let v: s = s{
         field1=18,
     };
@@ -73,7 +76,7 @@ export fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:12:17: Missing field name after '.'\n"
+        == "filename:13:17: Missing field name after '.'\n"
     )
 
 
@@ -82,7 +85,8 @@ def test_failure_dereferencing_non_record_type():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-export fn _start() {
+@export
+fn _start() {
     let v: u32 = 32u32;
     proc_exit(v.field1)
 }
@@ -92,7 +96,7 @@ export fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:6:15: Dereferencing non-record variable or field 'v'\nfilename:6:15: Unknown record field 'field1'\nfilename:6:5: Function 'proc_exit' expects signature (u32); called with signature (!unassigned)\n"
+        == "filename:7:15: Dereferencing non-record variable or field 'v'\nfilename:7:15: Unknown record field 'field1'\nfilename:7:5: Function 'proc_exit' expects signature (u32); called with signature (!unassigned)\n"
     )
 
 
@@ -105,7 +109,8 @@ record s {
     field1: u32,
 };
 
-export fn _start() {
+@export
+fn _start() {
     let v: s = s{
         field1=w,
     };
@@ -117,7 +122,7 @@ export fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:10:16: Undefined variable: 'w'\n"
+        == "filename:11:16: Undefined variable: 'w'\n"
     )
 
 
@@ -130,7 +135,8 @@ record s {
     field1: u32,
 };
 
-export fn _start() {
+@export
+fn _start() {
     let w: u32 = 3u32;
     let v: s = s{
         field1=w.a,
@@ -143,7 +149,7 @@ export fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:11:16: Dereferencing non-record variable or field 'w'\nfilename:11:16: Unknown record field 'a'\n"
+        == "filename:12:16: Dereferencing non-record variable or field 'w'\nfilename:12:16: Unknown record field 'a'\n"
     )
 
 
@@ -156,7 +162,8 @@ record s {
     field1: u32,
 };
 
-export fn _start() {
+@export
+fn _start() {
     let v: s = s{
         field1=18,
     };
@@ -168,7 +175,7 @@ export fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:12:15: Unknown record field 'fld'\nfilename:12:5: Function 'proc_exit' expects signature (u32); called with signature (!unassigned)\n"
+        == "filename:13:15: Unknown record field 'fld'\nfilename:13:5: Function 'proc_exit' expects signature (u32); called with signature (!unassigned)\n"
     )
 
 
@@ -181,7 +188,8 @@ record s {
     field1: u32,
 };
 
-export fn _start() {
+@export
+fn _start() {
     let v: s = s{
         field1=12,
         fld=18,
@@ -194,7 +202,7 @@ export fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:11:9: Unknown record field 'fld'\n"
+        == "filename:12:9: Unknown record field 'fld'\n"
     )
 
 
@@ -207,7 +215,8 @@ record s {
     field1: u32,
 };
 
-export fn _start() {
+@export
+fn _start() {
     let v: s = s{
     };
     proc_exit(v.field1)
@@ -218,5 +227,5 @@ export fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:9:16: Record field 'field1' not initialised\n"
+        == "filename:10:16: Record field 'field1' not initialised\n"
     )

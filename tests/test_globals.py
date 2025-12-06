@@ -9,7 +9,8 @@ import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 global value: u32 = 10u32;
 
-export fn _start() {
+@export
+fn _start() {
     proc_exit(value)
 }"""
     exit_code, _ = tools.run_test_code(tools.get_doc_str())
@@ -24,7 +25,8 @@ import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 global mut value: u32 = 10u32;
 
-export fn _start() {
+@export
+fn _start() {
     value = 11u32;
     proc_exit(value)
 }"""
@@ -42,7 +44,8 @@ import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 global value: u32 = 10u32;
 
-export fn _start() {
+@export
+fn _start() {
     value = 11u32;
     proc_exit(value)
 }"""
@@ -51,7 +54,7 @@ export fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:7:5: Can't assign to immutable variable 'value'\n"
+        == "filename:8:5: Can't assign to immutable variable 'value'\n"
     )
 
 
@@ -62,7 +65,8 @@ import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 global value: u32;
 
-export fn _start() {
+@export
+fn _start() {
     proc_exit(value)
 }"""
     exit_code, stderr = tools.compile_test_code(tools.get_doc_str())

@@ -283,6 +283,18 @@ std::optional<type_kind> type_from_id(const std::string &id)
     return std::nullopt;
 }
 
+bool node_function_definition::has_attribute(const std::string& attr_name) const
+{
+    for (const auto& attr : attributes)
+    {
+        if (attr.name == attr_name)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 parser::parser(lexer &l)
     : capy_lexer(l) {}
 
@@ -327,8 +339,7 @@ node_module parser::parse_module()
             capy_lexer.ahead_is_sym(token_symbol::sym_kw_import) ||
             capy_lexer.ahead_is_sym(token_symbol::sym_kw_global) ||
             capy_lexer.ahead_is_sym(token_symbol::sym_kw_record) ||
-            capy_lexer.ahead_is_sym(token_symbol::sym_kw_fn) ||
-            capy_lexer.ahead_is_sym(token_symbol::sym_kw_export))
+            capy_lexer.ahead_is_sym(token_symbol::sym_kw_fn))
     {
         if (capy_lexer.ahead_is_sym(token_symbol::sym_at))
         {
@@ -350,8 +361,7 @@ node_module parser::parse_module()
             auto record_def = parse_record_definition();
             capy_module.typedefs.push_back(std::make_unique<ast_node>(std::move(record_def)));
         }
-        else if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_fn) || 
-                capy_lexer.ahead_is_sym(token_symbol::sym_kw_export))
+        else if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_fn))
         {
             auto function = parse_function_definition();
 
@@ -366,7 +376,8 @@ node_module parser::parse_module()
 void parser::parse_attribute()
 {
     capy_lexer.expect_symbol(token_symbol::sym_at);
-    capy_lexer.expect<token_identifier>();
+    auto attribute_name = capy_lexer.expect<token_identifier>();
+    collected_attributes.push_back(capy_attribute{attribute_name.name});
 
     if (capy_lexer.ahead_is_sym(token_symbol::sym_paren_open))
     {
@@ -557,27 +568,11 @@ ast_node parser::parse_global()
 
 ast_node parser::parse_function_definition()
 {
-    bool exported = false;
+    auto attributes = collected_attributes;
+    collected_attributes.clear();
 
     auto start_token = capy_lexer.expect<token_symbol>();
     auto start_range = start_token.location;
-
-    if (start_token.sym_type == token_symbol::sym_kw_export)
-    {
-        exported = true;
-
-        if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_fn))
-        {
-            // all good, the 'fn' follows the 'export
-            capy_lexer.expect_symbol(token_symbol::sym_kw_fn);
-        }
-        else
-        {
-            // not good, we were expecting an 'fn' but got
-            // something different
-            append_error("Expecting keyword 'fn' after 'export'");
-        }
-    }
 
     auto function_head = parse_function_head();
 
@@ -599,10 +594,10 @@ ast_node parser::parse_function_definition()
     return make_located<node_function_definition>(
         start_range.start,
         end_range.end,
+        attributes,
         std::make_unique<node_function_head>(std::move(function_head)),
         std::move(function_body),
-        std::move(func_scope),
-        exported
+        std::move(func_scope)
     );
 }
 

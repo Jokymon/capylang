@@ -7,7 +7,8 @@ def test_simple_procedure_definition():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-export fn _start() {
+@export
+fn _start() {
     proc_exit(2u32)
 }"""
     exit_code, _ = tools.run_test_code(tools.get_doc_str())
@@ -24,7 +25,8 @@ fn bla() -> u32 {
     (2 + 3) as u32
 }
 
-export fn _start() {
+@export
+fn _start() {
     proc_exit(bla())
 }"""
     exit_code, _ = tools.run_test_code(tools.get_doc_str())
@@ -41,7 +43,8 @@ fn bla() -> *u32 {
     100u32 as *u32
 }
 
-export fn _start() {
+@export
+fn _start() {
     let a: *u32 = bla();
     proc_exit(*a)
 }"""
@@ -59,7 +62,8 @@ fn foo() {
     proc_exit(2u32)
 }
 
-export fn _start() {
+@export
+fn _start() {
     proc_exit(2u32)
 }"""
     exit_code, _ = tools.run_test_code(tools.get_doc_str())
@@ -76,7 +80,8 @@ fn foo(a: s32, b: s32) -> s32 {
     4
 }
 
-export fn _start() {
+@export
+fn _start() {
     proc_exit(foo(1, 2) as u32)
 }"""
     exit_code, _ = tools.run_test_code(tools.get_doc_str())
@@ -93,7 +98,8 @@ fn add2(a: u32) -> u32 {
     a + 2u32
 }
 
-export fn _start() {
+@export
+fn _start() {
     proc_exit(add2(3u32))
 }"""
     exit_code, _ = tools.run_test_code(tools.get_doc_str())
@@ -110,7 +116,8 @@ fn exit_early(a: u32) {
     proc_exit(a)
 }
 
-export fn _start() {
+@export
+fn _start() {
     exit_early(34u32);
     proc_exit(3u32)
 }"""
@@ -128,7 +135,8 @@ fn add2(a: u32) -> u32 {
     a + 2u32
 }
 
-export fn _start() {
+@export
+fn _start() {
     // the following line should just be executed without
     // leaving a value on the stack
     add2(34u32);
@@ -146,7 +154,8 @@ def test_import_alias_name_can_be_used():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as pe;
 
-export fn _start() {
+@export
+fn _start() {
     pe(3u32)
 }"""
     exit_code, _ = tools.run_test_code(tools.get_doc_str())

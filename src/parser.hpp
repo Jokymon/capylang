@@ -20,6 +20,11 @@ struct located_node
     source_range location;
 };
 
+struct capy_attribute
+{
+    std::string name;
+};
+
 struct node_number;
 struct node_char_literal;
 struct node_bool_const;
@@ -182,10 +187,12 @@ struct node_function_call
 
 struct node_function_definition
 {
+    std::vector<capy_attribute> attributes;
+    bool has_attribute(const std::string& attr_name) const;
+
     std::unique_ptr<node_function_head> function_head;
     std::vector<std::unique_ptr<ast_node>> code;
     std::unique_ptr<scope> function_scope;
-    bool exported;
 };
 
 struct node_expression
@@ -256,6 +263,7 @@ private:
 
     size_t collect_literal(const std::string& literal);
 
+    std::vector<capy_attribute> collected_attributes;
     scope* current_scope;
     node_module* current_module;
 };

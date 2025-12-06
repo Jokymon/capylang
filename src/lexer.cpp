@@ -63,8 +63,6 @@ std::string token_symbol::to_string() const
         return "as";
     case sym_kw_else:
         return "else";
-    case sym_kw_export:
-        return "export";
     case sym_kw_fn:
         return "fn";
     case sym_kw_global:
@@ -517,10 +515,6 @@ token lexer::parse_identifier_or_keyword()
     if (id_name == "else")
     {
         return token_symbol{start_position, look_ahead_position, token_symbol::sym_kw_else};
-    }
-    else if (id_name == "export")
-    {
-        return token_symbol{start_position, look_ahead_position, token_symbol::sym_kw_export};
     }
     else if (id_name == "fn")
     {

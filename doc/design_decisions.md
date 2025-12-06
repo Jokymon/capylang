@@ -61,3 +61,14 @@ We expect the following advantages:
 
 The disadvantage is, that we might have to take some additional steps, to check, that a found symbol actual has the
 kind we need. But we currently expect this to cause minor issues when compared to the advantages.
+
+## Attributes
+
+We use the concept of attributes to mark functions and later potentially also other elements. We use the Python-like
+notation with identifiers starting with `@` and keeping every attribute on its own line. Simple attributes can just
+be one identifier, complex attributes could look like function calls with named parameters, but the parameter values
+can only be simple values like bools, numbers, characters or strings. Other, more general expressions shall not be
+supported to keep this part of the compiler simple.
+Compiler-recognized/builtin attributes are:
+
+ * `export` to mark a function as exported from a WASM module

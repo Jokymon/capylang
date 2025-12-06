@@ -7,7 +7,8 @@ def test_assigning_bool():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-export fn _start() {
+@export
+fn _start() {
     let b: bool = true;
     proc_exit(30u32)
 }"""
@@ -21,7 +22,8 @@ def test_a_boolean_true_is_a_1():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-export fn _start() {
+@export
+fn _start() {
     let b: bool = true;
     proc_exit(b as u32 + 5u32)
 }"""
@@ -35,7 +37,8 @@ def test_a_boolean_false_is_a_0():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
-export fn _start() {
+@export
+fn _start() {
     let b: bool = false;
     proc_exit(b as u32 + 5u32)
 }"""
