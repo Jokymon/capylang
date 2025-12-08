@@ -228,18 +228,19 @@ struct parse_error
 class parser
 {
 public:
-    explicit parser(lexer &l);
+    explicit parser(std::shared_ptr<lexer> l);
 
     std::vector<parse_error> errors;
     node_module parse();
 
 private:
-    lexer &capy_lexer;
+    std::shared_ptr<lexer> capy_lexer;
 
     void append_error(const std::string &error_message);
     void append_error_at(source_position location, const std::string &error_message);
 
     node_module parse_module();
+    void parse_module_body();
     void parse_attribute();
     void parse_parameters(std::vector<param_spec>& parameters);
     void parse_function_signature(function_signature& signature);

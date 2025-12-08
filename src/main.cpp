@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    lexer capylexer{infile, args.input_path};
+    std::shared_ptr<lexer> capylexer = std::make_shared<lexer>(infile, args.input_path);
     parser capyparser{capylexer};
     auto root_node = capyparser.parse();
 
@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
     {
         for (const auto& error : analyser.errors)
         {
-            std::cerr << args.input_path << ":" << error.error_location.line << ":" << error.error_location.column << ": " << error.error_message << "\n";
+            std::cerr << error.error_location.filename << ":" << error.error_location.line << ":" << error.error_location.column << ": " << error.error_message << "\n";
         }
         return 1;
     }

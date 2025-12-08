@@ -99,16 +99,6 @@ void emitter::generate(node_module &module_def)
     auto& memory = ir_module.create_memory(2);
     ir_module.export_as("memory", memory);
 
-    ir_module.create_global("heap_ptr", wasm_type::i32, wasm_module::access_type::mut, 1024);
-    auto& cabi_func = ir_module.create_function("cabi_realloc", wasm_type::i32,
-                                               {{"originalPtr", wasm_type::i32}, {"originalSize", wasm_type::i32}, {"alignment", wasm_type::i32}, {"newSize", wasm_type::i32}});
-    auto& cabi_body = cabi_func.body();
-    cabi_body.global_get("heap_ptr");
-    cabi_body.global_get("heap_ptr");
-    cabi_body.local_get("newSize");
-    cabi_body.add(wasm_type::i32);
-    cabi_body.global_set("heap_ptr");
-
     for (auto& literal: module_def.string_literals)
     {
         literal.start_address = allocate_data(literal.literal);

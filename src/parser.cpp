@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <iostream>
 #include <memory>
+#include <sstream>
 #include <string>
 
 static symbol ERROR_PLACEHOLDER_SYM = symbol{
@@ -295,13 +296,13 @@ bool node_function_definition::has_attribute(const std::string& attr_name) const
     return false;
 }
 
-parser::parser(lexer &l)
+parser::parser(std::shared_ptr<lexer> l)
     : capy_lexer(l) {}
 
 node_module parser::parse()
 {
     auto root = parse_module();
-    if (!capy_lexer.ahead_is<token_eof>())
+    if (!capy_lexer->ahead_is<token_eof>())
     {
         append_error("Unexpected trailing code after function definition");
     }
@@ -310,7 +311,7 @@ node_module parser::parse()
 
 void parser::append_error(const std::string &error_message)
 {
-    auto current_pos = capy_lexer.current_source_position();
+    auto current_pos = capy_lexer->current_source_position();
 
     errors.emplace_back(parse_error(
         current_pos,
@@ -335,87 +336,108 @@ node_module parser::parse_module()
     capy_module.module_scope = std::make_unique<scope>();
     current_scope = capy_module.module_scope.get();
 
-    while (capy_lexer.ahead_is_sym(token_symbol::sym_at) ||
-            capy_lexer.ahead_is_sym(token_symbol::sym_kw_import) ||
-            capy_lexer.ahead_is_sym(token_symbol::sym_kw_global) ||
-            capy_lexer.ahead_is_sym(token_symbol::sym_kw_record) ||
-            capy_lexer.ahead_is_sym(token_symbol::sym_kw_fn))
-    {
-        if (capy_lexer.ahead_is_sym(token_symbol::sym_at))
-        {
-            parse_attribute();
-        }
-        else if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_import))
-        {
-            auto import_def = parse_import_definition();
+    std::string library_code = R"(
+global mut heap_ptr: u32 = 1024;
 
-            capy_module.imports.push_back(std::make_unique<ast_node>(std::move(import_def)));
-        }
-        else if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_global))
-        {
-            auto global_def = parse_global();
-            capy_module.globals.push_back(std::make_unique<ast_node>(std::move(global_def)));
-        }
-        else if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_record))
-        {
-            auto record_def = parse_record_definition();
-            capy_module.typedefs.push_back(std::make_unique<ast_node>(std::move(record_def)));
-        }
-        else if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_fn))
-        {
-            auto function = parse_function_definition();
+fn cabi_realloc(originalPtr: u32, originalSize: u32, alignment: u32, newSize: u32) -> u32
+{
+    let old_heap: u32 = heap_ptr;
+    heap_ptr = heap_ptr + newSize;
+    old_heap
+}
+)";
+    std::istringstream lib_stream{library_code};
+    auto previous_lexer = capy_lexer;
+    capy_lexer = std::make_shared<lexer>(lib_stream, "stdlib");
+    parse_module_body();
+    capy_lexer = previous_lexer;
 
-            capy_module.functions.push_back(std::make_unique<ast_node>(std::move(function)));
-        }
-    }
+    parse_module_body();
 
     current_module = nullptr;
     return capy_module;
 }
 
+void parser::parse_module_body()
+{
+    while (capy_lexer->ahead_is_sym(token_symbol::sym_at) ||
+            capy_lexer->ahead_is_sym(token_symbol::sym_kw_import) ||
+            capy_lexer->ahead_is_sym(token_symbol::sym_kw_global) ||
+            capy_lexer->ahead_is_sym(token_symbol::sym_kw_record) ||
+            capy_lexer->ahead_is_sym(token_symbol::sym_kw_fn))
+    {
+        if (capy_lexer->ahead_is_sym(token_symbol::sym_at))
+        {
+            parse_attribute();
+        }
+        else if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_import))
+        {
+            auto import_def = parse_import_definition();
+
+            current_module->imports.push_back(std::make_unique<ast_node>(std::move(import_def)));
+        }
+        else if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_global))
+        {
+            auto global_def = parse_global();
+            current_module->globals.push_back(std::make_unique<ast_node>(std::move(global_def)));
+        }
+        else if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_record))
+        {
+            auto record_def = parse_record_definition();
+            current_module->typedefs.push_back(std::make_unique<ast_node>(std::move(record_def)));
+        }
+        else if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_fn))
+        {
+            auto function = parse_function_definition();
+
+            current_module->functions.push_back(std::make_unique<ast_node>(std::move(function)));
+        }
+    }
+}
+
 void parser::parse_attribute()
 {
-    capy_lexer.expect_symbol(token_symbol::sym_at);
-    auto attribute_name = capy_lexer.expect<token_identifier>();
+    capy_lexer->expect_symbol(token_symbol::sym_at);
+    auto attribute_name = capy_lexer->expect<token_identifier>();
     collected_attributes.push_back(capy_attribute{attribute_name.name});
 
-    if (capy_lexer.ahead_is_sym(token_symbol::sym_paren_open))
+    if (capy_lexer->ahead_is_sym(token_symbol::sym_paren_open))
     {
-        capy_lexer.expect_symbol(token_symbol::sym_paren_open);
-        while (!capy_lexer.ahead_is_sym(token_symbol::sym_paren_close))
+        capy_lexer->expect_symbol(token_symbol::sym_paren_open);
+        while (!capy_lexer->ahead_is_sym(token_symbol::sym_paren_close))
         {
-            capy_lexer.expect<token_identifier>();
-            capy_lexer.expect_symbol(token_symbol::sym_equal);
+            capy_lexer->expect<token_identifier>();
+            capy_lexer->expect_symbol(token_symbol::sym_equal);
             parse_primary();
 
-            if (capy_lexer.ahead_is_sym(token_symbol::sym_comma))
+            if (capy_lexer->ahead_is_sym(token_symbol::sym_comma))
             {
-                capy_lexer.expect_symbol(token_symbol::sym_comma);
+                capy_lexer->expect_symbol(token_symbol::sym_comma);
             }
         }
-        capy_lexer.expect_symbol(token_symbol::sym_paren_close);
+        capy_lexer->expect_symbol(token_symbol::sym_paren_close);
     }
 }
 
 void parser::parse_function_signature(function_signature &signature)
 {
-    if (!capy_lexer.expect_symbol(token_symbol::sym_paren_open))
+    if (!capy_lexer->expect_symbol(token_symbol::sym_paren_open))
     {
         append_error("Expecting an opening bracket '(' for function parameters");
     }
 
     parse_parameters(signature.parameters);
 
-    if (!capy_lexer.expect_symbol(token_symbol::sym_paren_close))
+    if (!capy_lexer->expect_symbol(token_symbol::sym_paren_close))
     {
         append_error("Expecting an closing bracket ')' for function parameters");
     }
 
     std::optional<type_kind> return_type = t_t::void_type{};
 
-    if (capy_lexer.ahead_is_sym(token_symbol::sym_arrow))
+    if (capy_lexer->ahead_is_sym(token_symbol::sym_arrow))
     {
-        capy_lexer.next_token();
+        capy_lexer->next_token();
 
         auto type_spec_node = parse_type_reference();
         return_type = std::get<node_type_spec>(type_spec_node.value).type_spec;
@@ -426,10 +448,10 @@ void parser::parse_function_signature(function_signature &signature)
 
 void parser::parse_parameters(std::vector<param_spec> &parameters)
 {
-    while (capy_lexer.ahead_is<token_identifier>())
+    while (capy_lexer->ahead_is<token_identifier>())
     {
-        auto param_name = capy_lexer.expect<token_identifier>();
-        if (!capy_lexer.expect_symbol(token_symbol::sym_colon))
+        auto param_name = capy_lexer->expect<token_identifier>();
+        if (!capy_lexer->expect_symbol(token_symbol::sym_colon))
         {
             append_error("Expecting a colon ':' between parameter name and parameter type");
         }
@@ -440,9 +462,9 @@ void parser::parse_parameters(std::vector<param_spec> &parameters)
         parameters.emplace_back(param_name.name, type_spec);
 
         // eat the comma between the parameters
-        if (capy_lexer.ahead_is_sym(token_symbol::sym_comma))
+        if (capy_lexer->ahead_is_sym(token_symbol::sym_comma))
         {
-            capy_lexer.expect<token_symbol>();
+            capy_lexer->expect<token_symbol>();
         }
     }
 }
@@ -451,15 +473,15 @@ ast_node parser::parse_import_definition()
 {
     // Eat the 'import' keyword that we already established in
     // the calling function
-    auto start_range = capy_lexer.expect<token_symbol>().location;
+    auto start_range = capy_lexer->expect<token_symbol>().location;
 
-    if (!capy_lexer.ahead_is<token_identifier>())
+    if (!capy_lexer->ahead_is<token_identifier>())
     {
         append_error("Expecting a namespace identifier");
     }
-    auto namespace_name = capy_lexer.expect<token_identifier>();
+    auto namespace_name = capy_lexer->expect<token_identifier>();
 
-    if (!capy_lexer.expect_symbol(token_symbol::sym_dcolon))
+    if (!capy_lexer->expect_symbol(token_symbol::sym_dcolon))
     {
         append_error("Namespace is expected to be followed by '::' and a symbol name");
     }
@@ -468,22 +490,22 @@ ast_node parser::parse_import_definition()
 
     std::optional<std::string> alias_name;
 
-    if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_as))
+    if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_as))
     {
-        capy_lexer.next_token();
+        capy_lexer->next_token();
 
-        if (!capy_lexer.ahead_is<token_identifier>())
+        if (!capy_lexer->ahead_is<token_identifier>())
         {
             append_error("Expecting an alias identifier for imported symbol");
         }
-        auto alias_name = capy_lexer.expect<token_identifier>();
+        auto alias_name = capy_lexer->expect<token_identifier>();
     }
 
-    if (!capy_lexer.ahead_is_sym(token_symbol::sym_semicolon))
+    if (!capy_lexer->ahead_is_sym(token_symbol::sym_semicolon))
     {
         append_error("Expecting a closing ';' after import definition");
     }
-    auto end_range = capy_lexer.expect<token_symbol>().location;
+    auto end_range = capy_lexer->expect<token_symbol>().location;
 
     return make_located<node_import_definition>(
         start_range.start,
@@ -496,23 +518,23 @@ ast_node parser::parse_import_definition()
 ast_node parser::parse_global()
 {
     // eat the 'global' keyword
-    auto start_location = capy_lexer.expect<token_symbol>().location;
+    auto start_location = capy_lexer->expect<token_symbol>().location;
 
     bool is_mutable = false;
-    if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_mut))
+    if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_mut))
     {
         // eat the 'mut' keyword
-        capy_lexer.expect<token_symbol>();
+        capy_lexer->expect<token_symbol>();
         is_mutable = true;
     }
 
-    if (!capy_lexer.ahead_is<token_identifier>())
+    if (!capy_lexer->ahead_is<token_identifier>())
     {
         append_error("Expecting a variable name after 'global' keyword");
     }
-    auto variable_name = capy_lexer.parse_or_default<token_identifier>();
+    auto variable_name = capy_lexer->parse_or_default<token_identifier>();
 
-    if (!capy_lexer.expect_symbol(token_symbol::sym_colon))
+    if (!capy_lexer->expect_symbol(token_symbol::sym_colon))
     {
         append_error("Expecting a ':' after variable name in 'global' expression");
     }
@@ -531,13 +553,13 @@ ast_node parser::parse_global()
     current_scope->symbol_table[variable_name.name] = new_symbol;
 
     int32_t init_value = 0;
-    if (!capy_lexer.ahead_is_sym(token_symbol::sym_equal))
+    if (!capy_lexer->ahead_is_sym(token_symbol::sym_equal))
     {
         append_error("Globals need an initialisation value");
     }
     else
     {
-        capy_lexer.expect_symbol(token_symbol::sym_equal);
+        capy_lexer->expect_symbol(token_symbol::sym_equal);
 
         auto initializer = parse_number();
         init_value = std::get<node_number>(initializer.value).number;
@@ -545,7 +567,7 @@ ast_node parser::parse_global()
     }
 
     // eat the final semicolon
-    auto end_token = capy_lexer.expect<token_symbol>();
+    auto end_token = capy_lexer->expect<token_symbol>();
 
     return make_located<node_global>(
         start_location.start,
@@ -561,12 +583,12 @@ ast_node parser::parse_function_definition()
     auto attributes = collected_attributes;
     collected_attributes.clear();
 
-    auto start_token = capy_lexer.expect<token_symbol>();
+    auto start_token = capy_lexer->expect<token_symbol>();
     auto start_range = start_token.location;
 
     auto function_head = parse_function_head();
 
-    if (!capy_lexer.expect_symbol(token_symbol::sym_curly_open))
+    if (!capy_lexer->expect_symbol(token_symbol::sym_curly_open))
     {
         append_error("Expecting an opening brace '{' for function body definition");
     }
@@ -589,7 +611,7 @@ ast_node parser::parse_function_definition()
 
     std::vector<std::unique_ptr<ast_node>> function_body;
     parse_body(function_body);
-    auto end_range = capy_lexer.expect<token_symbol>().location;
+    auto end_range = capy_lexer->expect<token_symbol>().location;
 
     current_scope = current_scope->parent;
 
@@ -605,11 +627,11 @@ ast_node parser::parse_function_definition()
 
 node_function_head parser::parse_function_head()
 {
-    if (!capy_lexer.ahead_is<token_identifier>())
+    if (!capy_lexer->ahead_is<token_identifier>())
     {
         append_error("Expecting a function name");
     }
-    auto function_name = capy_lexer.parse_or_default<token_identifier>();
+    auto function_name = capy_lexer->parse_or_default<token_identifier>();
     auto start_range = function_name.location;
 
     function_signature signature;
@@ -633,22 +655,22 @@ node_function_head parser::parse_function_head()
 
 ast_node parser::parse_expression(int min_precedence)
 {
-    if (capy_lexer.ahead_is_sym(token_symbol::sym_paren_open))
+    if (capy_lexer->ahead_is_sym(token_symbol::sym_paren_open))
     {
         // eat up the '(' token
-        auto start = capy_lexer.expect<token_symbol>().location;
+        auto start = capy_lexer->expect<token_symbol>().location;
 
         auto expression = parse_expression();
 
         // check for a closing )
-        if (capy_lexer.ahead_is_sym(token_symbol::sym_paren_close))
+        if (capy_lexer->ahead_is_sym(token_symbol::sym_paren_close))
         {
-            auto end = capy_lexer.expect<token_symbol>().location;
+            auto end = capy_lexer->expect<token_symbol>().location;
 
-            if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_as))
+            if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_as))
             {
                 // next token is a conversion operator, skip it
-                auto op_token = capy_lexer.expect<token_symbol>();
+                auto op_token = capy_lexer->expect<token_symbol>();
 
                 auto type_spec = parse_type_reference();
 
@@ -681,15 +703,15 @@ ast_node parser::parse_expression(int min_precedence)
             t_t::unassigned{}
         );
     }
-    else if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_if))
+    else if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_if))
     {
         return parse_if_expression();
     }
-    else if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_while))
+    else if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_while))
     {
         return parse_while_expression();
     }
-    else if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_let))
+    else if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_let))
     {
         return parse_let_expression();
     }
@@ -698,13 +720,13 @@ ast_node parser::parse_expression(int min_precedence)
         auto lhs = parse_primary();
         source_range start = lhs.location;
 
-        while (capy_lexer.ahead_is_operator())
+        while (capy_lexer->ahead_is_operator())
         {
-            auto op = op_from_symbol(capy_lexer.next_as<token_symbol>());
+            auto op = op_from_symbol(capy_lexer->next_as<token_symbol>());
             int prec = get_precedence(op);
             if (prec < min_precedence)
                 break;
-            auto op_token = capy_lexer.expect<token_symbol>();
+            auto op_token = capy_lexer->expect<token_symbol>();
 
             ast_node rhs;
             if (op == op_conversion)
@@ -735,23 +757,23 @@ ast_node parser::parse_expression(int min_precedence)
 ast_node parser::parse_function_call(source_range name_range, const std::string function_name)
 {
     // skip over the opening ( of the function call
-    capy_lexer.expect<token_symbol>();
+    capy_lexer->expect<token_symbol>();
 
     std::vector<std::unique_ptr<ast_node>> function_parameters;
-    while (!capy_lexer.ahead_is_sym(token_symbol::sym_paren_close))
+    while (!capy_lexer->ahead_is_sym(token_symbol::sym_paren_close))
     {
         auto parameter = parse_expression();
         function_parameters.emplace_back(std::make_unique<ast_node>(std::move(parameter)));
 
-        if (capy_lexer.ahead_is_sym(token_symbol::sym_comma))
+        if (capy_lexer->ahead_is_sym(token_symbol::sym_comma))
         {
             // eat the separating ','
-            capy_lexer.expect_symbol(token_symbol::sym_comma);
+            capy_lexer->expect_symbol(token_symbol::sym_comma);
         }
     }
 
     // TODO: check for closing )
-    auto end_location = capy_lexer.expect<token_symbol>().location;
+    auto end_location = capy_lexer->expect<token_symbol>().location;
 
     auto func = current_scope->lookup_function(function_name);
     if (!func.has_value())
@@ -778,11 +800,11 @@ ast_node parser::parse_function_call(source_range name_range, const std::string 
 ast_node parser::parse_if_expression()
 {
     // eat the 'if' keyword
-    auto start_location = capy_lexer.expect<token_symbol>().location;
+    auto start_location = capy_lexer->expect<token_symbol>().location;
 
     auto condition = parse_expression();
 
-    if (!capy_lexer.expect_symbol(token_symbol::sym_curly_open))
+    if (!capy_lexer->expect_symbol(token_symbol::sym_curly_open))
     {
         append_error("Expecting an opening brace '{' for if-body");
     }
@@ -792,21 +814,21 @@ ast_node parser::parse_if_expression()
     parse_body(then_body);
 
     // eat the closing '}' of the then-branch
-    auto end_range = capy_lexer.expect<token_symbol>().location;
+    auto end_range = capy_lexer->expect<token_symbol>().location;
 
-    if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_else))
+    if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_else))
     {
         // eat the 'else' keyword
-        auto start_location = capy_lexer.expect<token_symbol>().location;
+        auto start_location = capy_lexer->expect<token_symbol>().location;
 
-        if (!capy_lexer.expect_symbol(token_symbol::sym_curly_open))
+        if (!capy_lexer->expect_symbol(token_symbol::sym_curly_open))
         {
             append_error("Expecting an opening brace '{' for the else-body");
         }
 
         parse_body(else_body);
 
-        end_range = capy_lexer.expect<token_symbol>().location;
+        end_range = capy_lexer->expect<token_symbol>().location;
     }
 
     return make_located<node_if_expression>(
@@ -822,11 +844,11 @@ ast_node parser::parse_if_expression()
 ast_node parser::parse_while_expression()
 {
     // eat the 'while' keyword
-    auto start_location = capy_lexer.expect<token_symbol>().location;
+    auto start_location = capy_lexer->expect<token_symbol>().location;
 
     auto condition = parse_expression();
 
-    if (!capy_lexer.expect_symbol(token_symbol::sym_curly_open))
+    if (!capy_lexer->expect_symbol(token_symbol::sym_curly_open))
     {
         append_error("Expecting an opening brace '{' for while-body");
     }
@@ -835,7 +857,7 @@ ast_node parser::parse_while_expression()
     parse_body(while_body);
 
     // eat the closing '}' of the while block
-    auto end_range = capy_lexer.expect<token_symbol>().location;
+    auto end_range = capy_lexer->expect<token_symbol>().location;
 
     return make_located<node_while_expression>(
         start_location.start,
@@ -848,23 +870,23 @@ ast_node parser::parse_while_expression()
 ast_node parser::parse_let_expression()
 {
     // eat the 'let' keyword
-    auto start_location = capy_lexer.expect<token_symbol>().location;
+    auto start_location = capy_lexer->expect<token_symbol>().location;
 
     bool is_mutable = false;
-    if (capy_lexer.ahead_is_sym(token_symbol::sym_kw_mut))
+    if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_mut))
     {
         // eat the 'mut' keyword
-        capy_lexer.expect<token_symbol>();
+        capy_lexer->expect<token_symbol>();
         is_mutable = true;
     }
 
-    if (!capy_lexer.ahead_is<token_identifier>())
+    if (!capy_lexer->ahead_is<token_identifier>())
     {
         append_error("Expecting a variable name after 'let' keyword");
     }
-    auto variable_name = capy_lexer.parse_or_default<token_identifier>();
+    auto variable_name = capy_lexer->parse_or_default<token_identifier>();
 
-    if (!capy_lexer.expect_symbol(token_symbol::sym_colon))
+    if (!capy_lexer->expect_symbol(token_symbol::sym_colon))
     {
         append_error("Expecting a ':' after variable name in 'let' expression");
     }
@@ -882,9 +904,9 @@ ast_node parser::parse_let_expression()
     };
     current_scope->symbol_table[variable_name.name] = new_symbol;
 
-    if (capy_lexer.ahead_is_sym(token_symbol::sym_equal))
+    if (capy_lexer->ahead_is_sym(token_symbol::sym_equal))
     {
-        capy_lexer.expect_symbol(token_symbol::sym_equal);
+        capy_lexer->expect_symbol(token_symbol::sym_equal);
 
         auto initializer = parse_expression();
 
@@ -911,25 +933,25 @@ ast_node parser::parse_let_expression()
 ast_node parser::parse_record_definition()
 {
     // eat the 'record' keyword
-    auto start_range = capy_lexer.expect<token_symbol>().location;
+    auto start_range = capy_lexer->expect<token_symbol>().location;
 
-    if (!capy_lexer.ahead_is<token_identifier>())
+    if (!capy_lexer->ahead_is<token_identifier>())
     {
         append_error("'record' definition requires an identifier for the record");
     }
 
-    auto record_id = capy_lexer.expect<token_identifier>();
+    auto record_id = capy_lexer->expect<token_identifier>();
 
-    if (!capy_lexer.expect_symbol(token_symbol::sym_curly_open))
+    if (!capy_lexer->expect_symbol(token_symbol::sym_curly_open))
     {
         append_error("Expecting an opening brace '{' starting the record definition");
     }
     
     std::vector<t_t::record::field_spec> new_record_fields;
-    while (capy_lexer.ahead_is<token_identifier>())
+    while (capy_lexer->ahead_is<token_identifier>())
     {
-        auto field_id = capy_lexer.expect<token_identifier>();
-        if (!capy_lexer.expect_symbol(token_symbol::sym_colon))
+        auto field_id = capy_lexer->expect<token_identifier>();
+        if (!capy_lexer->expect_symbol(token_symbol::sym_colon))
         {
             append_error("Expecting a colon ':' after field name and before type specification");
         }
@@ -939,22 +961,22 @@ ast_node parser::parse_record_definition()
 
         new_record_fields.emplace_back(t_t::record::field_spec{field_id.name, std::make_unique<type_kind>(type_spec)});
 
-        if (!capy_lexer.expect_symbol(token_symbol::sym_comma))
+        if (!capy_lexer->expect_symbol(token_symbol::sym_comma))
         {
             append_error("Record field definitions must be terminated with a ','");
         }
     }
 
-    if (!capy_lexer.ahead_is_sym(token_symbol::sym_curly_close))
+    if (!capy_lexer->ahead_is_sym(token_symbol::sym_curly_close))
     {
         append_error("Record definition must be closed with a matching '}'");
     }
-    capy_lexer.expect<token_symbol>();
-    if (!capy_lexer.ahead_is_sym(token_symbol::sym_semicolon))
+    capy_lexer->expect<token_symbol>();
+    if (!capy_lexer->ahead_is_sym(token_symbol::sym_semicolon))
     {
         append_error("Record definition must be terminated with a semicolon");
     }
-    auto end_range = capy_lexer.expect<token_symbol>().location;
+    auto end_range = capy_lexer->expect<token_symbol>().location;
 
     auto* global_scope = current_scope->get_global_scope();
     global_scope->symbol_table[record_id.name] = symbol{
@@ -980,37 +1002,37 @@ ast_node parser::parse_record_initialisation(source_range name_range, const std:
     }
 
     // skipping the opening '{'
-    capy_lexer.expect<token_symbol>();
+    capy_lexer->expect<token_symbol>();
 
     std::vector<field_initialisation> fields;
 
-    while (capy_lexer.ahead_is<token_identifier>())
+    while (capy_lexer->ahead_is<token_identifier>())
     {
-        auto field_name = capy_lexer.expect<token_identifier>();
+        auto field_name = capy_lexer->expect<token_identifier>();
         auto field_position = field_name.location;
 
-        if (!capy_lexer.ahead_is_sym(token_symbol::sym_equal))
+        if (!capy_lexer->ahead_is_sym(token_symbol::sym_equal))
         {
             append_error("For field initialisation, field name must be followed by a '=' and an initialisation expression");
         }
-        capy_lexer.expect<token_symbol>();
+        capy_lexer->expect<token_symbol>();
 
         ast_node init_expression = parse_expression();
 
-        if (!capy_lexer.ahead_is_sym(token_symbol::sym_comma))
+        if (!capy_lexer->ahead_is_sym(token_symbol::sym_comma))
         {
             append_error("Field initialisations must be terminated by a comma");
         }
-        capy_lexer.expect<token_symbol>();
+        capy_lexer->expect<token_symbol>();
         
         fields.emplace_back(field_initialisation{field_position.start, field_name.name, std::make_unique<ast_node>(std::move(init_expression))});
     }
 
-    if (!capy_lexer.ahead_is_sym(token_symbol::sym_curly_close))
+    if (!capy_lexer->ahead_is_sym(token_symbol::sym_curly_close))
     {
         append_error("Record initialisation must be finished with a closing '}'");
     }
-    auto end_range = capy_lexer.expect<token_symbol>().location;
+    auto end_range = capy_lexer->expect<token_symbol>().location;
 
     return make_located<node_record_initialisation>(
         name_range.start,
@@ -1023,9 +1045,9 @@ ast_node parser::parse_record_initialisation(source_range name_range, const std:
 ast_node parser::parse_field_deref(type_kind base_type, ast_node object)
 {
     // eat the dot '.'
-    capy_lexer.expect<token_symbol>();
+    capy_lexer->expect<token_symbol>();
 
-    if (!capy_lexer.ahead_is<token_identifier>())
+    if (!capy_lexer->ahead_is<token_identifier>())
     {
         append_error("Missing field name after '.'");
         return make_located<node_field_deref>(
@@ -1036,7 +1058,7 @@ ast_node parser::parse_field_deref(type_kind base_type, ast_node object)
             base_type
         );
     }
-    auto field_name = capy_lexer.expect<token_identifier>();
+    auto field_name = capy_lexer->expect<token_identifier>();
     auto field_range = field_name.location;
 
     auto node = make_located<node_field_deref>(
@@ -1047,7 +1069,7 @@ ast_node parser::parse_field_deref(type_kind base_type, ast_node object)
         base_type
     );
 
-    if (capy_lexer.ahead_is_sym(token_symbol::sym_period))
+    if (capy_lexer->ahead_is_sym(token_symbol::sym_period))
     {
         if (!std::holds_alternative<t_t::record>(base_type))
         {
@@ -1075,12 +1097,12 @@ ast_node parser::parse_field_deref(type_kind base_type, ast_node object)
 
 ast_node parser::parse_primary()
 {
-    if (capy_lexer.ahead_is<token_identifier>())
+    if (capy_lexer->ahead_is<token_identifier>())
     {
-        auto id = capy_lexer.expect<token_identifier>();
+        auto id = capy_lexer->expect<token_identifier>();
         auto id_range = id.location;
 
-        if (capy_lexer.ahead_is_sym(token_symbol::sym_paren_open))
+        if (capy_lexer->ahead_is_sym(token_symbol::sym_paren_open))
         {
             return parse_function_call(id_range, id.name);
         }
@@ -1088,11 +1110,11 @@ ast_node parser::parse_primary()
         // can clearly distinguish them on a semantic level. When the identifier
         // before the opening '{' is a type, then this must be a record initialisation
         else if (current_scope->lookup_type(id.name).has_value() &&
-                 capy_lexer.ahead_is_sym(token_symbol::sym_curly_open))
+                 capy_lexer->ahead_is_sym(token_symbol::sym_curly_open))
         {
             return parse_record_initialisation(id_range, id.name);
         }
-        else if (capy_lexer.ahead_is_sym(token_symbol::sym_period))
+        else if (capy_lexer->ahead_is_sym(token_symbol::sym_period))
         {
             auto var = current_scope->lookup(id.name);
             if (!var.has_value())
@@ -1135,9 +1157,9 @@ ast_node parser::parse_primary()
                 assign_context::rhs);
         }
     }
-    else if (capy_lexer.ahead_is_sym(token_symbol::sym_star))
+    else if (capy_lexer->ahead_is_sym(token_symbol::sym_star))
     {
-        auto op_token = capy_lexer.expect<token_symbol>();
+        auto op_token = capy_lexer->expect<token_symbol>();
 
         auto pointer_expr = parse_primary();
 
@@ -1149,13 +1171,13 @@ ast_node parser::parse_primary()
             assign_context::rhs
         );
     }
-    else if (capy_lexer.ahead_is<token_integer>())
+    else if (capy_lexer->ahead_is<token_integer>())
     {
         return parse_number();
     }
-    else if (capy_lexer.ahead_is<token_string_literal>())
+    else if (capy_lexer->ahead_is<token_string_literal>())
     {
-        auto literal = capy_lexer.expect<token_string_literal>();
+        auto literal = capy_lexer->expect<token_string_literal>();
         auto literal_location = literal.location;
         auto literal_index = collect_literal(literal.str);
         return make_located<node_string_literal>(
@@ -1164,9 +1186,9 @@ ast_node parser::parse_primary()
             literal_index,
             literal.str.size());
     }
-    else if (capy_lexer.ahead_is<token_char_literal>())
+    else if (capy_lexer->ahead_is<token_char_literal>())
     {
-        auto literal = capy_lexer.expect<token_char_literal>();
+        auto literal = capy_lexer->expect<token_char_literal>();
         auto literal_location = literal.location;
         return make_located<node_char_literal>(
             literal_location.start,
@@ -1178,8 +1200,8 @@ ast_node parser::parse_primary()
         append_error("Expected a primary (function call, number, variable)");
         // just create one of the simplest primaries in case we couldn't parse one
         return make_located<node_number>(
-            capy_lexer.current_source_position(),
-            capy_lexer.current_source_position(),
+            capy_lexer->current_source_position(),
+            capy_lexer->current_source_position(),
             0,
             t_t::u32{});
     }
@@ -1188,20 +1210,20 @@ ast_node parser::parse_primary()
 ast_node parser::parse_type_reference()
 {
     bool is_pointer = false;
-    if (capy_lexer.ahead_is_sym(token_symbol::sym_star))
+    if (capy_lexer->ahead_is_sym(token_symbol::sym_star))
     {
         is_pointer = true;
-        capy_lexer.next_token();
+        capy_lexer->next_token();
     }
 
     source_range token_location;
-    token_location.start = capy_lexer.current_source_position();
-    token_location.end = capy_lexer.current_source_position();
+    token_location.start = capy_lexer->current_source_position();
+    token_location.end = capy_lexer->current_source_position();
     token_identifier type_name = {token_location, ""};
 
-    if (capy_lexer.ahead_is<token_identifier>())
+    if (capy_lexer->ahead_is<token_identifier>())
     {
-        type_name = capy_lexer.expect<token_identifier>();
+        type_name = capy_lexer->expect<token_identifier>();
         token_location = type_name.location;
     }
     else
@@ -1233,7 +1255,7 @@ ast_node parser::parse_type_reference()
 
 ast_node parser::parse_number()
 {
-    auto lhs = capy_lexer.expect<token_integer>();
+    auto lhs = capy_lexer->expect<token_integer>();
     auto lhs_location = lhs.location;
 
     auto number_type = type_from_id(lhs.type_suffix);
@@ -1241,7 +1263,7 @@ ast_node parser::parse_number()
     {
         append_error("Number has an illegal suffix");
         return make_located<node_number>(
-            capy_lexer.current_source_position(),
+            capy_lexer->current_source_position(),
             lhs_location.end,
             0,
             t_t::u32{});
@@ -1256,15 +1278,15 @@ ast_node parser::parse_number()
 
 void parser::parse_body(std::vector<std::unique_ptr<ast_node>>& body)
 {
-    while (!capy_lexer.ahead_is_sym(token_symbol::sym_curly_close) &&
-           !capy_lexer.ahead_is<token_eof>())
+    while (!capy_lexer->ahead_is_sym(token_symbol::sym_curly_close) &&
+           !capy_lexer->ahead_is<token_eof>())
     {
         auto expression = parse_expression();
         body.emplace_back(std::make_unique<ast_node>(std::move(expression)));
 
-        if (capy_lexer.ahead_is_sym(token_symbol::sym_semicolon))
+        if (capy_lexer->ahead_is_sym(token_symbol::sym_semicolon))
         {
-            capy_lexer.expect_symbol(token_symbol::sym_semicolon);
+            capy_lexer->expect_symbol(token_symbol::sym_semicolon);
 
             // If the previous expression wasn't the last one in the body, then it
             // will have left a value on the stack and will make the WASM validation
@@ -1290,7 +1312,7 @@ void parser::parse_body(std::vector<std::unique_ptr<ast_node>>& body)
         }
     }
 
-    if (!capy_lexer.ahead_is_sym(token_symbol::sym_curly_close))
+    if (!capy_lexer->ahead_is_sym(token_symbol::sym_curly_close))
     {
         append_error("Expecting a closing brace '}' to terminate the body");
     }
