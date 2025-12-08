@@ -327,8 +327,8 @@ void parser::append_error_at(source_position location, const std::string &error_
 node_module parser::parse_module()
 {
     auto capy_module = node_module{
-        source_position{1, 1},
-        source_position{1, 1}};
+        source_position{"", 1, 1},
+        source_position{"", 1, 1}};
 
     current_module = &capy_module;
 

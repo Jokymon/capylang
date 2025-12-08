@@ -27,16 +27,15 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    lexer capylexer{infile};
+    lexer capylexer{infile, args.input_path};
     parser capyparser{capylexer};
     auto root_node = capyparser.parse();
-
 
     if (!capyparser.errors.empty())
     {
         for (const auto& error : capyparser.errors)
         {
-            std::cerr << args.input_path << ":" << error.error_location.line << ":" << error.error_location.column << ": " << error.error_message << "\n";
+            std::cerr << error.error_location.filename << ":" << error.error_location.line << ":" << error.error_location.column << ": " << error.error_message << "\n";
         }
         return 1;
     }

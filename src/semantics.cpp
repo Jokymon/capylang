@@ -127,7 +127,7 @@ void semantic_analyser::process(node_pointer_deref &n)
     if (!std::holds_alternative<t_t::pointer>(expression_type))
     {
         append_error_at(
-            source_position{0, 0},
+            source_position{"", 0, 0},
             "Can't dereference non-pointer type " + repr_type(expression_type)
         );
     }

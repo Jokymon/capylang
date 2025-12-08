@@ -6,6 +6,7 @@
 
 struct source_position
 {
+    std::string filename = "";
     size_t line = 1;
     size_t column = 1;
 };
@@ -115,7 +116,11 @@ std::string repr_token(const token &tok);
 class lexer
 {
 public:
-    explicit lexer(std::istream &input);
+    /// @brief Construct a new lexer object from an input_stream to read the characters from
+    /// and a file_path that is used as part of the location in error messages
+    /// @param input Input stream for reading the characters
+    /// @param file_path A file name or path representing the location of this input
+    explicit lexer(std::istream &input, const std::string& file_path);
 
     source_position current_source_position() const;
 
@@ -169,6 +174,7 @@ public:
 
 private:
     std::istream &input_;
+    std::string input_file_path;
     std::optional<token> lookahead_;
     source_position look_ahead_position;
     source_position current_position;

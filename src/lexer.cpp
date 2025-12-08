@@ -237,9 +237,11 @@ std::string repr_token(const token &tok)
                       tok);
 }
 
-lexer::lexer(std::istream &input)
-    : input_(input), lookahead_(std::nullopt), look_ahead_position{}, current_position{}
+lexer::lexer(std::istream &input, const std::string& file_path)
+    : input_(input), input_file_path(file_path), lookahead_(std::nullopt), look_ahead_position{}, current_position{}
 {
+    look_ahead_position.filename = file_path;
+    current_position.filename = file_path;
 }
 
 const token &lexer::peek_token()
