@@ -16,20 +16,25 @@ private:
     void append_error_at(source_position location, const std::string &error_message);
 
     void visit(ast_node &root);
-    void process(node_number &n);
+    void process(source_range location, node_number &n);
+    void process(source_range location, node_char_literal &n);
+    void process(source_range location, node_bool_const &n);
+    void process(source_range location, node_string_literal &n);
     void process(source_range location, node_var_reference &n);
-    void process(node_pointer_deref &n);
-    void process(node_type_spec &n);
+    void process(source_range location, node_pointer_deref &n);
+    void process(source_range location, node_type_spec &n);
+    void process(source_range location, node_record_definition &n);
     void process(source_range location, node_record_initialisation &n);
     void process(source_range location, node_field_deref &n);
     void process(source_range location, node_function_call &n);
     void process(source_range location, node_if_expression &n);
     void process(source_range location, node_while_expression &n);
     void process(source_range location, node_let_expression &n);
-    void process(node_import_definition &n);
-    void process(node_function_definition &n);
+    void process(source_range location, node_import_definition &n);
+    void process(source_range location, node_global &n);
+    void process(source_range location, node_function_definition &n);
     void process(source_range location, node_expression &n);
-    void process(node_module &n);
+    void process(source_range location, node_module &n);
 
     assign_context current_context;
 };

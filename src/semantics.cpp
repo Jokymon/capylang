@@ -96,7 +96,19 @@ void semantic_analyser::semantic_analysis(node_module &module)
     }
 }
 
-void semantic_analyser::process(node_number &n)
+void semantic_analyser::process(source_range location, node_number &n)
+{
+}
+
+void semantic_analyser::process(source_range location, node_char_literal &n)
+{
+}
+
+void semantic_analyser::process(source_range location, node_bool_const &n)
+{
+}
+
+void semantic_analyser::process(source_range location, node_string_literal &n)
 {
 }
 
@@ -119,7 +131,7 @@ void semantic_analyser::process(source_range location, node_var_reference &n)
     n.context = current_context;
 }
 
-void semantic_analyser::process(node_pointer_deref &n)
+void semantic_analyser::process(source_range location, node_pointer_deref &n)
 {
     n.context = current_context;
 
@@ -136,7 +148,11 @@ void semantic_analyser::process(node_pointer_deref &n)
     n.assigned_type = *std::get<t_t::pointer>(expression_type).base_type;
 }
 
-void semantic_analyser::process(node_type_spec &n)
+void semantic_analyser::process(source_range location, node_type_spec &n)
+{
+}
+
+void semantic_analyser::process(source_range location, node_record_definition &n)
 {
 }
 
@@ -312,11 +328,15 @@ void semantic_analyser::process(source_range location, node_let_expression &n)
     }
 }
 
-void semantic_analyser::process(node_import_definition &n)
+void semantic_analyser::process(source_range location, node_import_definition &n)
 {
 }
 
-void semantic_analyser::process(node_function_definition &n)
+void semantic_analyser::process(source_range location, node_global &n)
+{
+}
+
+void semantic_analyser::process(source_range location, node_function_definition &n)
 {
     auto declared_return_type = n.function_head->signature.return_type;
 
@@ -412,37 +432,7 @@ void semantic_analyser::process(source_range location, node_expression &n)
 
 void semantic_analyser::visit(ast_node &root)
 {
-    std::visit([&](auto &n) -> void
-                      {
-        using T = std::decay_t<decltype(n)>;
-
-        if constexpr (std::is_same_v<T, node_number>) {
-            process(n);
-        } else if constexpr (std::is_same_v<T, node_var_reference>) {
-            process(root.location, n);
-        } else if constexpr (std::is_same_v<T, node_pointer_deref>) {
-            process(n);
-        } else if constexpr (std::is_same_v<T, node_field_deref>) {
-            process(root.location, n);
-        } else if constexpr (std::is_same_v<T, node_record_initialisation>) {
-            process(root.location, n);
-        } else if constexpr (std::is_same_v<T, node_type_spec>) {
-            process(n);
-        } else if constexpr (std::is_same_v<T, node_function_call>) {
-            process(root.location, n);
-        } else if constexpr (std::is_same_v<T, node_if_expression>) {
-            process(root.location, n);
-        } else if constexpr (std::is_same_v<T, node_while_expression>) {
-            process(root.location, n);
-        } else if constexpr (std::is_same_v<T, node_let_expression>) {
-            process(root.location, n);
-        } else if constexpr (std::is_same_v<T, node_import_definition>) {
-            process(n);
-        } else if constexpr (std::is_same_v<T, node_function_definition>) {
-            process(n);
-        } else if constexpr (std::is_same_v<T, node_expression>) {
-            process(root.location, n);
-        } else {
-            // TODO: This should happen, maybe return special error
-        } }, root.value);
+    std::visit([&](auto &n) -> void {
+        process(root.location, n);
+    }, root.value);
 }
