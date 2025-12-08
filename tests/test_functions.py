@@ -20,6 +20,33 @@ fn _start() {
 
 
 @pytest.mark.good
+def test_function_arguments_have_their_own_scope():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+// To check that we have separte scopes, we define two functions taking a parameter 'a'
+// but each of them being a different type. Then we have to use that parameter in the
+// function according to the parameter type and not get any errors from semantic checks.
+fn foo(a: u32) -> u32 {
+    a + 1u32
+}
+
+fn bar(a: s32) -> s32 {
+    a + 1s32
+}
+
+@export
+fn _start() {
+    foo(2u32);
+    bar(5s32);
+    proc_exit(4u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 4
+
+
+@pytest.mark.good
 def test_functions_can_have_simple_attributes():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;

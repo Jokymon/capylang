@@ -426,8 +426,6 @@ void parser::parse_function_signature(function_signature &signature)
 
 void parser::parse_parameters(std::vector<param_spec> &parameters)
 {
-    uint32_t argument_index = 0;
-
     while (capy_lexer.ahead_is<token_identifier>())
     {
         auto param_name = capy_lexer.expect<token_identifier>();
@@ -438,14 +436,6 @@ void parser::parse_parameters(std::vector<param_spec> &parameters)
 
         auto type_spec_node = parse_type_reference();
         auto type_spec = std::get<node_type_spec>(type_spec_node.value).type_spec;
-
-        current_scope->symbol_table[param_name.name] = symbol{
-            .name = param_name.name,
-            .symbol_type = type_spec,
-            .kind = symbol_kind::argument,
-            .mutab = false,
-            .is_assigned = true,    // function parameters are 'assigned' from the function call
-            .index_addr = argument_index++};
 
         parameters.emplace_back(param_name.name, type_spec);
 
@@ -584,6 +574,18 @@ ast_node parser::parse_function_definition()
     auto func_scope = std::make_unique<scope>();
     func_scope->parent = current_scope;
     current_scope = func_scope.get();
+
+    uint32_t argument_index = 0;
+    for (const auto& param_spec : function_head.signature.parameters)
+    {
+        current_scope->symbol_table[param_spec.name] = symbol{
+        .name = param_spec.name,
+        .symbol_type = param_spec.type_spec,
+        .kind = symbol_kind::argument,
+        .mutab = false,
+        .is_assigned = true,    // function parameters are 'assigned' from the function call
+        .index_addr = argument_index++};
+    }
 
     std::vector<std::unique_ptr<ast_node>> function_body;
     parse_body(function_body);
