@@ -20,6 +20,30 @@ fn _start() {
 
 
 @pytest.mark.good
+def test_functions_can_be_called_recusively():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+global mut value: u32 = 0u32;
+
+fn recursive(count: u32) {
+    if (count!=0u32) {
+        value = value + 1u32;
+        recursive(count - 1u32);
+    }
+}
+
+@export
+fn _start() {
+    recursive(10u32);
+    proc_exit(value)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 10
+
+
+@pytest.mark.good
 def test_function_arguments_have_their_own_scope():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
