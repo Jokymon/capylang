@@ -19,10 +19,16 @@ wasm_type from_type_kind(const type_kind& type_spec)
 
         if constexpr (std::is_same_v<T, t_t::s32>) {
             return wasm_type::i32;
+        } else if constexpr (std::is_same_v<T, t_t::s16>) {
+            return wasm_type::i16;
+        } else if constexpr (std::is_same_v<T, t_t::s8>) {
+            return wasm_type::i8;
         } else if constexpr (std::is_same_v<T, t_t::u8>) {
             return wasm_type::u8;
+        } else if constexpr (std::is_same_v<T, t_t::u16>) {
+            return wasm_type::u16;
         } else if constexpr (std::is_same_v<T, t_t::u32>) {
-            return wasm_type::i32;
+            return wasm_type::u32;
         } else if constexpr (std::is_same_v<T, t_t::pointer>) {
             return wasm_type::i32;
         } else {
@@ -38,8 +44,14 @@ size_t type_size(const type_kind& type_spec)
 
         if constexpr (std::is_same_v<T, t_t::s32>) {
             return 4;
+        } else if constexpr (std::is_same_v<T, t_t::s16>) {
+            return 2;
+        } else if constexpr (std::is_same_v<T, t_t::s8>) {
+            return 1;
         } else if constexpr (std::is_same_v<T, t_t::u8>) {
             return 1;
+        } else if constexpr (std::is_same_v<T, t_t::u16>) {
+            return 2;
         } else if constexpr (std::is_same_v<T, t_t::u32>) {
             return 4;
         } else if constexpr (std::is_same_v<T, t_t::pointer>) {

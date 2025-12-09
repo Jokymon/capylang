@@ -21,7 +21,8 @@ uv run pytest tests/
    --> Wasm tools
    --> Wasmtime or other WASM runtimes
 
- * add other basic number types (f32, f64, s64, s16, s8, ...)
+ * add floating point number types
+ * design and add support for vector numeric types
  * add structured component model types (variant, list, record, result, ...)
  * implement a simple heap management concept (check the WAMR/Emscripten memory organisation)
  * Add structured types (struct, list, enum/unions)

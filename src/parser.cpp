@@ -261,6 +261,10 @@ std::optional<type_kind> type_from_id(const std::string &id)
     {
         return t_t::u32{};
     }
+    else if (id == "u16")
+    {
+        return t_t::u16{};
+    }
     else if (id == "u8")
     {
         return t_t::u8{};
@@ -268,6 +272,14 @@ std::optional<type_kind> type_from_id(const std::string &id)
     else if ((id == "s32") || (id == ""))
     {
         return t_t::s32{};
+    }
+    else if (id == "s16")
+    {
+        return t_t::s16{};
+    }
+    else if (id == "s8")
+    {
+        return t_t::s8{};
     }
     else if (id == "char")
     {

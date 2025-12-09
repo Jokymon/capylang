@@ -13,13 +13,16 @@ namespace t_t
     struct char_type;
     struct boolean;
     struct u8;
-    struct s32;
+    struct u16;
     struct u32;
+    struct s8;
+    struct s16;
+    struct s32;
     struct string;
     struct pointer;
     struct record;
 };
-using type_kind = std::variant<t_t::unassigned, t_t::void_type, t_t::char_type, t_t::boolean, t_t::s32, t_t::u8, t_t::u32, t_t::string, t_t::pointer, t_t::record>;
+using type_kind = std::variant<t_t::unassigned, t_t::void_type, t_t::char_type, t_t::boolean, t_t::u8, t_t::u16, t_t::u32, t_t::s8, t_t::s16, t_t::s32, t_t::string, t_t::pointer, t_t::record>;
 
 namespace t_t
 {
@@ -36,14 +39,23 @@ namespace t_t
     struct boolean{
         bool operator==(const boolean& other) const { return true; }
     };
-    struct s32{
-        bool operator==(const s32& other) const { return true; }
-    };
     struct u8{
         bool operator==(const u8& other) const { return true; }
     };
+    struct u16{
+        bool operator==(const u16& other) const { return true; }
+    };
     struct u32{
         bool operator==(const u32& other) const { return true; }
+    };
+    struct s8{
+        bool operator==(const s8& other) const { return true; }
+    };
+    struct s16{
+        bool operator==(const s16& other) const { return true; }
+    };
+    struct s32{
+        bool operator==(const s32& other) const { return true; }
     };
     struct string{
         bool operator==(const string& other) const { return true; }
