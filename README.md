@@ -21,17 +21,26 @@ uv run pytest tests/
    --> Wasm tools
    --> Wasmtime or other WASM runtimes
 
- * add floating point number types
- * design and add support for vector numeric types
- * add structured component model types (variant, list, record, result, ...)
- * implement a simple heap management concept (check the WAMR/Emscripten memory organisation)
- * Add structured types (struct, list, enum/unions)
- * Add some form of memory management
- * Add intrinsics
- * Make sure pointer types are correctly dereferenced; special checks for u8, u16, since we dereference u32 normally
- * Comparison operators and bool type
- * pub/export/... specification to explicitly mark exports of functions
+ * Extend comparisons with gt, lt, gte, lte and logic operators with short circuit eval
  * Early returns
+ * add floating point number types
+ * Add unicode code point support for characters (so far we only have it in strings)
+ * design and add support for vector numeric types
+ * add structured component model types (variant/enum, list, result, ...)
+ * Extend the basic memory management
+ * Make sure pointer types are correctly dereferenced; special checks for u8, u16, since we dereference u32 normally
+ * design and implement a concept of symbol visibility
+ * automatic number conversion for "trivial" cases
+ * 'address of'-operator and where it should be supported; do we really want to go the path of C, where a local
+   variable always needs to be addressable? Maybe we can just not take an address of every variable, maybe that is
+   just a property of some data types
+ * In some cases the parser seems to get stuck in an endless loop trying to look for some token that never appears
+ * Add an option to main to just dump the sequence of tokens
+ * Add --help option to the compiler
+ * Add intrinsics
+ * Setup CI for automatic testing with every push 
+ * Move TODO/decisions/... into dedicated documents and make the README an actual starting point for people interested
+   in the project with getting started, examples etc.
 
 ### Big refactoring
 
