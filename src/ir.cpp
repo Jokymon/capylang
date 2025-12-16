@@ -66,18 +66,248 @@ std::string size_wasm_type(wasm_type typ)
     }
 }
 
+wasm_branch_label::wasm_branch_label()
+{
+    label_representation = std::format("block_{}", label_index++);
+}
+
+std::string wasm_branch_label::repr() const
+{
+    return label_representation;
+}
+
+int wasm_branch_label::label_index = 0;
+
+wasm_function_ref::wasm_function_ref(const std::string& name)
+: name_(name)
+{
+}
+
+std::string wasm_function_ref::name() const
+{
+    return name_;
+}
+
 wasm_statement::~wasm_statement()
 {
 }
 
-wasm_simple_statement::wasm_simple_statement(const std::string& instr)
-: instr(instr)
-{}
+wasm_instruction::wasm_instruction(wasm_op op)
+    : op(op)
+{
+}
 
-void wasm_simple_statement::dump(std::ostream &output, size_t indent) const
+void wasm_instruction::dump(std::ostream &output, size_t indent) const
 {
     std::string ind(indent, ' ');
-    output << ind << instr << "\n";
+    output << ind;
+    switch (op)
+    {
+        case wasm_op::nop:
+            output << "nop\n";
+            break;
+        case wasm_op::unreachable:
+            output << "unreachable\n";
+            break;
+        case wasm_op::drop:
+            output << "drop\n";
+            break;
+        default:
+            break;
+    }
+}
+
+wasm_op_index::wasm_op_index(wasm_op op, const std::string var_name, uint32_t index)
+    : wasm_instruction(op), name(var_name), index(index)
+{
+}
+
+void wasm_op_index::dump(std::ostream &output, size_t indent) const
+{
+    std::string ind(indent, ' ');
+    output << ind;
+    switch (op)
+    {
+        case wasm_op::local_get:
+            output << "local.get ";
+            break;
+        case wasm_op::local_set:
+            output << "local.set ";
+            break;
+        case wasm_op::local_tee:
+            output << "local.tee ";
+            break;
+        case wasm_op::global_get:
+            output << "global.get ";
+            break;
+        case wasm_op::global_set:
+            output << "global.set ";
+            break;
+        default:
+            break;
+    }
+    output << "$" << name << "\n";
+}
+
+wasm_op_type::wasm_op_type(wasm_op op, wasm_type type)
+    : wasm_instruction(op), value_type(type)
+{
+}
+
+void wasm_op_type::dump(std::ostream &output, size_t indent) const
+{
+    std::string ind(indent, ' ');
+    output << ind;
+
+    output << repr_wasm_type(value_type);
+    switch (op)
+    {
+        case wasm_op::iadd:
+            output << ".add\n";
+            break;
+        case wasm_op::isub:
+            output << ".sub\n";
+            break;
+        case wasm_op::imul:
+            output << ".mul\n";
+            break;
+        case wasm_op::eqz:
+            output << ".eqz\n";
+            break;
+        default:
+            break;
+    }
+}
+
+wasm_op_type_sign::wasm_op_type_sign(wasm_op op, wasm_type type)
+    : wasm_instruction(op), value_type(type)
+{
+}
+
+void wasm_op_type_sign::dump(std::ostream &output, size_t indent) const
+{
+    std::string ind(indent, ' ');
+    output << ind;
+
+    output << repr_wasm_type(value_type);
+    switch (op)
+    {
+        case wasm_op::idiv:
+            output << ".div_";
+            break;
+        case wasm_op::irem:
+            output << ".rem_";
+            break;
+        default:
+            break;
+    }
+    output << sign_wasm_type(value_type) << "\n";
+}
+
+wasm_op_type_value::wasm_op_type_value(wasm_op op, wasm_type type, uint64_t value)
+    : wasm_instruction(op), value_type(type), value(value)
+{
+}
+
+void wasm_op_type_value::dump(std::ostream &output, size_t indent) const
+{
+    std::string ind(indent, ' ');
+    output << ind;
+
+    output << repr_wasm_type(value_type);
+    switch (op)
+    {
+        case wasm_op::typ_const:
+            output << ".const ";
+            break;
+        default:
+            break;
+    }
+    output << value << "\n";
+}
+
+wasm_op_align_offset::wasm_op_align_offset(wasm_op op, wasm_type type, uint32_t alignment, uint64_t offset)
+    : wasm_instruction(op), value_type(type), alignment(alignment), offset(offset)
+{
+}
+
+void wasm_op_align_offset::dump(std::ostream &output, size_t indent) const
+{
+    std::string ind(indent, ' ');
+    output << ind;
+
+    std::string sx = sign_wasm_type(value_type);
+    std::string sz = size_wasm_type(value_type);
+
+    std::string suffix = "";
+    std::string offset_suffix = "";
+    if (!sz.empty())
+    {
+        suffix = std::format("{}_{}", sz, sx);
+    }
+    if (offset>0)
+    {
+        offset_suffix = std::format(" offset={}", offset);
+    }
+
+    output << repr_wasm_type(value_type);
+    switch (op)
+    {
+        case wasm_op::load:
+            output << ".load" << suffix << offset_suffix;
+            break;
+        case wasm_op::store:
+            output << ".store" << sz << offset_suffix;
+            break;
+        default:
+            break;
+    }
+    output << "\n";
+}
+
+wasm_op_label::wasm_op_label(wasm_op op, wasm_branch_label label)
+    : wasm_instruction(op), label(label)
+{
+}
+
+void wasm_op_label::dump(std::ostream &output, size_t indent) const
+{
+    std::string ind(indent, ' ');
+    output << ind;
+
+    switch (op)
+    {
+        case wasm_op::br:
+            output << "br $";
+            break;
+        case wasm_op::br_if:
+            output << "br_if $";
+            break;
+        default:
+            break;
+    }
+    output << label.repr() << "\n";
+}
+
+wasm_op_func::wasm_op_func(wasm_op op, wasm_function_ref function)
+    : wasm_instruction(op), function(function)
+{
+}
+
+void wasm_op_func::dump(std::ostream &output, size_t indent) const
+{
+    std::string ind(indent, ' ');
+    output << ind;
+
+    switch (op)
+    {
+        case wasm_op::call:
+            output << "call $";
+            break;
+        default:
+            break;
+    }
+    output << function.name() << "\n";
 }
 
 wasm_if_block::wasm_if_block(wasm_type return_type)
@@ -112,11 +342,8 @@ void wasm_if_block::dump(std::ostream &output, size_t indent) const
     output << ind << "end\n";
 }
 
-int wasm_block::label_index = 0;
-
 wasm_block::wasm_block()
 {
-    block_label = std::format("block_{}", label_index++);
 }
 
 void wasm_block::dump(std::ostream &output, size_t indent) const
@@ -132,7 +359,7 @@ size_t wasm_block::inst_count() const
     return instructions.size();
 }
 
-std::string wasm_block::label() const
+wasm_branch_label wasm_block::label() const
 {
     return block_label;
 }
@@ -163,134 +390,92 @@ std::pair<wasm_block&, wasm_block&> wasm_block::if_block(wasm_type return_type)
 
 void wasm_block::local_get(const char* variable_name)
 {
-    auto inst = std::format("local.get ${}", variable_name);
-    instructions.push_back(std::make_unique<wasm_simple_statement>(inst));
+    instructions.push_back(std::make_unique<wasm_op_index>(wasm_op_index(wasm_op::local_get, variable_name, 0)));
 }
 
 void wasm_block::local_get(uint32_t index)
 {
-    auto inst = std::format("local.get {}", index);
-    instructions.push_back(std::make_unique<wasm_simple_statement>(inst));
+    instructions.push_back(std::make_unique<wasm_op_index>(wasm_op_index(wasm_op::local_get, "", index)));
 }
 
 void wasm_block::local_set(const char* variable_name)
 {
-    auto inst = std::format("local.set ${}", variable_name);
-    instructions.push_back(std::make_unique<wasm_simple_statement>(inst));
+    instructions.push_back(std::make_unique<wasm_op_index>(wasm_op_index(wasm_op::local_set, variable_name, 0)));
 }
 
 void wasm_block::global_get(const char* variable_name)
 {
-    auto inst = std::format("global.get ${}", variable_name);
-    instructions.push_back(std::make_unique<wasm_simple_statement>(inst));
+    instructions.push_back(std::make_unique<wasm_op_index>(wasm_op_index(wasm_op::global_get, variable_name, 0)));
 }
 
 void wasm_block::global_set(const char* variable_name)
 {
-    auto inst = std::format("global.set ${}", variable_name);
-    instructions.push_back(std::make_unique<wasm_simple_statement>(inst));
+    instructions.push_back(std::make_unique<wasm_op_index>(wasm_op_index(wasm_op::global_set, variable_name, 0)));
 }
 
 void wasm_block::const_val(wasm_type type, uint64_t value)
 {
-    auto inst = std::format("{}.const {}", repr_wasm_type(type), value);
-    instructions.push_back(std::make_unique<wasm_simple_statement>(inst));
+    instructions.push_back(std::make_unique<wasm_op_type_value>(wasm_op_type_value(wasm_op::typ_const, type, value)));
 }
 
 void wasm_block::drop()
 {
-    instructions.push_back(std::make_unique<wasm_simple_statement>(
-        "drop"));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_instruction(wasm_op::drop)));
 }
 
 void wasm_block::add(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_simple_statement>(
-        std::format("{}.add", repr_wasm_type(type))));
+    instructions.push_back(std::make_unique<wasm_op_type>(wasm_op_type(wasm_op::iadd, type)));
 }
 
 void wasm_block::div(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_simple_statement>(
-        std::format("{}.div_{}", repr_wasm_type(type), sign_wasm_type(type))));
+    instructions.push_back(std::make_unique<wasm_op_type_sign>(wasm_op_type_sign(wasm_op::idiv, type)));
 }
 
 void wasm_block::mod(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_simple_statement>(
-        std::format("{}.rem_{}", repr_wasm_type(type), sign_wasm_type(type))));
+    instructions.push_back(std::make_unique<wasm_op_type_sign>(wasm_op_type_sign(wasm_op::irem, type)));
 }
 
 void wasm_block::mul(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_simple_statement>(
-        std::format("{}.mul", repr_wasm_type(type))));
+    instructions.push_back(std::make_unique<wasm_op_type>(wasm_op_type(wasm_op::imul, type)));
 }
 
 void wasm_block::sub(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_simple_statement>(
-        std::format("{}.sub", repr_wasm_type(type))));
+    instructions.push_back(std::make_unique<wasm_op_type>(wasm_op_type(wasm_op::isub, type)));
 }
 
 void wasm_block::load(wasm_type type, size_t offset)
 {
-    std::string sx = sign_wasm_type(type);
-    std::string sz = size_wasm_type(type);
-
-    std::string suffix = "";
-    std::string offset_suffix = "";
-    if (!sz.empty())
-    {
-        suffix = std::format("{}_{}", sz, sx);
-    }
-    if (offset>0)
-    {
-        offset_suffix = std::format(" offset={}", offset);
-    }
-    instructions.push_back(std::make_unique<wasm_simple_statement>(
-        std::format("{}.load{}{}", repr_wasm_type(type), suffix, offset_suffix)));
+    instructions.push_back(std::make_unique<wasm_op_align_offset>(wasm_op_align_offset(wasm_op::load, type, 0, offset)));
 }
 
 void wasm_block::store(wasm_type type, size_t offset)
 {
-    std::string suffix = "";
-    std::string offset_suffix = "";
-    if (type == wasm_type::i8)
-    {
-        suffix = "8";
-    }
-    if (offset>0)
-    {
-        offset_suffix = std::format(" offset={}", offset);
-    }
-    auto inst = std::format("{}.store{}{}", repr_wasm_type(type), suffix, offset_suffix);
-    instructions.push_back(std::make_unique<wasm_simple_statement>(
-        inst));
+    instructions.push_back(std::make_unique<wasm_op_align_offset>(wasm_op_align_offset(wasm_op::store, type, 0, offset)));
 }
 
 void wasm_block::eqz(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_simple_statement>(
-        std::format("{}.eqz", repr_wasm_type(type))));
+    instructions.push_back(std::make_unique<wasm_op_type>(wasm_op_type(wasm_op::eqz, type)));
 }
 
-void wasm_block::br(const char* branch_label)
+void wasm_block::br(wasm_branch_label branch_label)
 {
-    instructions.push_back(std::make_unique<wasm_simple_statement>(
-        std::format("br ${}", branch_label)));
+    instructions.push_back(std::make_unique<wasm_op_label>(wasm_op_label(wasm_op::br, branch_label)));
 }
 
-void wasm_block::br_if(const char* branch_label)
+void wasm_block::br_if(wasm_branch_label branch_label)
 {
-    instructions.push_back(std::make_unique<wasm_simple_statement>(
-        std::format("br_if ${}", branch_label)));
+    instructions.push_back(std::make_unique<wasm_op_label>(wasm_op_label(wasm_op::br_if, branch_label)));
 }
 
 void wasm_block::call(const char* function_name)
 {
-    auto inst = std::format("call ${}", function_name);
-    instructions.push_back(std::make_unique<wasm_simple_statement>(inst));
+    instructions.push_back(std::make_unique<wasm_op_func>(wasm_op_func(wasm_op::call, wasm_function_ref(function_name))));
 }
 
 wasm_internal_block::wasm_internal_block(wasm_type return_type)
@@ -301,7 +486,7 @@ wasm_internal_block::wasm_internal_block(wasm_type return_type)
 void wasm_internal_block::dump(std::ostream &output, size_t indent) const
 {
     std::string ind(indent, ' ');
-    output << ind << "block $" << block_label << "\n";
+    output << ind << "block $" << block_label.repr() << "\n";
 
     wasm_block::dump(output, indent+2);
 
@@ -316,7 +501,7 @@ wasm_loop_block::wasm_loop_block(wasm_type return_type)
 void wasm_loop_block::dump(std::ostream &output, size_t indent) const
 {
     std::string ind(indent, ' ');
-    output << ind << "loop $" << block_label << "\n";
+    output << ind << "loop $" << block_label.repr() << "\n";
 
     wasm_block::dump(output, indent+2);
 

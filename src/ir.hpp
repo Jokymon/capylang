@@ -34,15 +34,133 @@ public:
     virtual void dump(std::ostream &output, size_t indent) const =0;
 };
 
-class wasm_simple_statement : public wasm_statement
+enum class wasm_op
+{
+    nop,
+    unreachable,
+    drop,
+
+    local_get,
+    local_set,
+    local_tee,
+    global_get,
+    global_set,
+
+    load,
+    store,
+
+    iadd,
+    isub,
+    imul,
+    idiv,
+    irem,
+
+    eqz,
+
+    br,
+    br_if,
+    call,
+
+    typ_const
+};
+
+class wasm_branch_label
 {
 public:
-    explicit wasm_simple_statement(const std::string& instr);
-
-    void dump(std::ostream &output, size_t indent) const override;
+    explicit wasm_branch_label();
+    std::string repr() const;
 
 private:
-    std::string instr;
+    static int label_index;
+
+private:
+    std::string label_representation;
+};
+
+class wasm_function_ref
+{
+public:
+    explicit wasm_function_ref(const std::string& name);
+    std::string name() const;
+
+private:
+    std::string name_;
+};
+
+struct wasm_instruction : public wasm_statement
+{
+    explicit wasm_instruction(wasm_op op);
+
+    wasm_op op;
+
+    void dump(std::ostream &output, size_t indent) const override;
+};
+
+struct wasm_op_index : public wasm_instruction
+{
+    explicit wasm_op_index(wasm_op op, const std::string var_name, uint32_t index);
+
+    std::string name;
+    uint32_t index;
+
+    void dump(std::ostream &output, size_t indent) const override;
+};
+
+struct wasm_op_type : public wasm_instruction
+{
+    explicit wasm_op_type(wasm_op op, wasm_type type);
+
+    wasm_type value_type;
+
+    void dump(std::ostream &output, size_t indent) const override;
+};
+
+struct wasm_op_type_sign : public wasm_instruction
+{
+    explicit wasm_op_type_sign(wasm_op op, wasm_type type);
+
+    wasm_type value_type;
+
+    void dump(std::ostream &output, size_t indent) const override;
+};
+
+struct wasm_op_type_value : public wasm_instruction
+{
+    explicit wasm_op_type_value(wasm_op op, wasm_type type, uint64_t value);
+
+    wasm_type value_type;
+    uint64_t value;
+
+    void dump(std::ostream &output, size_t indent) const override;
+};
+
+struct wasm_op_align_offset : public wasm_instruction
+{
+    explicit wasm_op_align_offset(wasm_op op, wasm_type type, uint32_t alignment, uint64_t offset);
+
+    wasm_type value_type;
+    uint32_t alignment;
+    uint64_t offset;
+
+    void dump(std::ostream &output, size_t indent) const override;
+};
+
+struct wasm_op_label : public wasm_instruction
+{
+    explicit wasm_op_label(wasm_op op, wasm_branch_label label);
+
+    wasm_branch_label label;
+
+    void dump(std::ostream &output, size_t indent) const override;
+};
+
+struct wasm_op_func : public wasm_instruction
+{
+    explicit wasm_op_func(wasm_op op, wasm_function_ref function);
+
+    wasm_function_ref function;
+
+    void dump(std::ostream &output, size_t indent) const override;
 };
 
 class wasm_block;
@@ -67,7 +185,7 @@ public:
     void dump(std::ostream &output, size_t indent) const override;
 
     size_t inst_count() const;
-    std::string label() const;
+    wasm_branch_label label() const;
 
     wasm_block& block(wasm_type return_type);
     wasm_block& loop(wasm_type return_type);
@@ -88,18 +206,15 @@ public:
     void load(wasm_type type, size_t offset=0);
     void store(wasm_type type, size_t offset=0);
     void eqz(wasm_type type);
-    void br(const char* branch_label);
-    void br_if(const char* branch_label);
+    void br(wasm_branch_label branch_label);
+    void br_if(wasm_branch_label branch_label);
     void call(const char* function_name);
 
 protected:
-    std::string block_label;
+    wasm_branch_label block_label;
 
 private:
     std::vector<std::unique_ptr<wasm_statement>> instructions;
-
-private:
-    static int label_index;
 };
 
 class wasm_internal_block : public wasm_block

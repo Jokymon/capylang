@@ -264,13 +264,13 @@ void emitter::emit(const node_while_expression& while_expr)
     emit(*while_expr.condition);
 
     cur_block->eqz(wasm_type::i32);
-    cur_block->br_if(while_exit.label().c_str());
+    cur_block->br_if(while_exit.label());
 
     for (const auto& expression : while_expr.while_code)
     {
         emit(*expression);
     }
-    cur_block->br(while_block.label().c_str());
+    cur_block->br(while_block.label());
 
     cur_block = prev_block;
 }
