@@ -5,6 +5,7 @@
 #include <cassert>
 #include <iomanip>
 #include <sstream>
+#include "wat_generator.h"
 
 std::string create_wasm_name(const std::string capy_name)
 {
@@ -121,7 +122,8 @@ void emitter::generate(node_module &module_def)
 
     cur_mod->append_data_section(*cur_data);
 
-    ir_module.dump(output_);
+    wat_generator generator;
+    generator.generate(ir_module, output_);
 
     current_module = nullptr;
     cur_mod = nullptr;

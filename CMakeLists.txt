@@ -11,6 +11,7 @@ add_executable(${PROJECT_NAME}
     src/parser.cpp
     src/semantics.cpp
     src/symbol.cpp
+    src/wat_generator.cpp
 )
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 26)
