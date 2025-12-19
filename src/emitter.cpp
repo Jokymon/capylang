@@ -1,11 +1,11 @@
 #include "emitter.hpp"
 #include "ir.hpp"
 #include "semantics.hpp"
+#include "wat_generator.hpp"
 #include <algorithm>
 #include <cassert>
 #include <iomanip>
 #include <sstream>
-#include "wat_generator.h"
 
 std::string create_wasm_name(const std::string capy_name)
 {
