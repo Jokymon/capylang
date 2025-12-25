@@ -3,8 +3,152 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <variant>
 #include <vector>
+
+enum class primitive_type
+{
+    Void,
+    Char,
+    Boolean,
+    U8,
+    U16,
+    U32,
+    S8,
+    S16,
+    S32,
+    String
+};
+
+// identity of a specific concrete type as an index into an array
+// of type_node entries.
+using type_id = std::uint32_t;
+
+struct pointer_type {
+    type_id to;
+};
+
+struct record_type {
+    std::vector<std::pair<std::string, type_id>> fields;
+};
+
+// description of the shape of a type
+using type_kind2 = std::variant<
+    primitive_type,
+    pointer_type,
+    record_type
+>;
+
+inline void hash_combine(size_t& seed, size_t value)
+{
+    seed ^= value + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2);
+}
+
+struct type_kind_hash {
+    size_t operator()(type_kind2 const& t) const {
+        size_t seed = t.index();
+
+        std::visit(
+            [&](auto const& x) {
+                using typ_x = std::decay_t<decltype(x)>;
+
+                if constexpr (std::is_same_v<typ_x, primitive_type>)
+                {
+                    hash_combine(seed, static_cast<size_t>(x));
+                }
+                else if constexpr (std::is_same_v<typ_x, pointer_type>)
+                {
+                    hash_combine(seed, x.to);
+                }
+                else if constexpr (std::is_same_v<typ_x, record_type>)
+                {
+                    for (auto const& [name, tid] : x.fields)
+                    {
+                        hash_combine(seed, std::hash<std::string>{}(name));
+                        hash_combine(seed, tid);
+                    }
+                }
+            },
+            t
+        );
+
+        return seed;
+    }
+};
+
+struct type_kind_eq {
+    bool operator()(type_kind2 const& a, type_kind2 const& b) const {
+        if (a.index() != b.index())
+            return false;
+
+        return std::visit(
+            [](auto const& x, auto const& y) -> bool {
+                using typ_x = std::decay_t<decltype(x)>;
+                using typ_y = std::decay_t<decltype(y)>;
+
+                if constexpr (std::is_same_v<typ_x, primitive_type> &&
+                    std::is_same_v<typ_y, primitive_type>)
+                {
+                    return x == y;
+                }
+                else if constexpr (std::is_same_v<typ_x, pointer_type> &&
+                    std::is_same_v<typ_y, pointer_type>)
+                {
+                    return x.to == y.to;
+                }
+                else if constexpr (std::is_same_v<typ_x, record_type> &&
+                    std::is_same_v<typ_y, record_type>)
+                {
+                    if (x.fields.size() != y.fields.size())
+                    {
+                        return false;
+                    }
+                    for (size_t i = 0; i < x.fields.size(); ++i)
+                    {
+                        if (x.fields[i].first != y.fields[i].first)
+                            return false;
+                        if (x.fields[i].second != y.fields[i].second)
+                            return false;
+                    }
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            },
+            a, b
+        );
+    }
+};
+
+// type used to represent the shape (or later also potential shape) of
+// types in one parsing pass
+using type_node = type_kind2;
+
+struct context
+{
+    type_id intern_primitive(primitive_type p_type)
+    {
+        type_kind2 kind = p_type;
+        auto it = interned.find(kind);
+        if (it != interned.end())
+        {
+            return it->second;
+        }
+
+        type_id id = static_cast<type_id>(types.size());
+        types.emplace_back(kind);
+        interned.emplace(kind, id);
+
+        return id;
+    }
+
+    // indexing through type_id
+    std::vector<type_node> types;
+    std::unordered_map<type_kind2, type_id, type_kind_hash, type_kind_eq> interned;
+};
 
 namespace t_t
 {

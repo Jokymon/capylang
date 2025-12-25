@@ -2,12 +2,12 @@
 #include "parser.hpp"
 #include <optional>
 
-type_kind assigned_node_type(const ast_node &node);
+type_kind assigned_node_type(const ast_node &node, const context& ctx);
 
 class semantic_analyser
 {
 public:
-    semantic_analyser();
+    explicit semantic_analyser(context& ctx);
     void semantic_analysis(node_module &module);
 
     std::vector<parse_error> errors;
@@ -36,5 +36,6 @@ private:
     void process(source_range location, node_expression &n);
     void process(source_range location, node_module &n);
 
+    context& parse_context;
     assign_context current_context;
 };

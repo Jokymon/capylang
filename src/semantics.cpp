@@ -30,14 +30,38 @@ std::optional<type_kind> record_field_type(const type_kind& record, const std::s
     return std::nullopt;
 }
 
-type_kind assigned_node_type(const ast_node &node)
+type_kind assigned_node_type(const ast_node &node, const context& ctx)
 {
     return std::visit([&](const auto &n) -> type_kind
                       {
         using T = std::decay_t<decltype(n)>;
 
         if constexpr (std::is_same_v<T, node_number>) {
-            return n.assigned_type;
+            return std::visit([&](const auto &ty) -> type_kind
+            {
+                using T = std::decay_t<decltype(ty)>;
+
+                if constexpr (std::is_same_v<T, primitive_type>) {
+                    switch (ty) {
+                        case primitive_type::U8:
+                            return t_t::u8{};
+                        case primitive_type::U16:
+                            return t_t::u16{};
+                        case primitive_type::U32:
+                            return t_t::u32{};
+                        case primitive_type::S8:
+                            return t_t::s8{};
+                        case primitive_type::S16:
+                            return t_t::s16{};
+                        case primitive_type::S32:
+                            return t_t::s32{};
+                        default:
+                            return t_t::unassigned{};
+                    }
+                } else {
+                    return t_t::unassigned{};
+                }
+            }, ctx.types[n.assigned_type]);
         } else if constexpr (std::is_same_v<T, node_char_literal>) {
             return t_t::char_type{};
         } else if constexpr (std::is_same_v<T, node_bool_const>) {
@@ -76,8 +100,9 @@ type_kind assigned_node_type(const ast_node &node)
         } }, node.value);
 }
 
-semantic_analyser::semantic_analyser()
-    : current_context{assign_context::rhs}
+semantic_analyser::semantic_analyser(context& ctx)
+: current_context{assign_context::rhs}
+, parse_context(ctx)
 {
 }
 
@@ -137,7 +162,7 @@ void semantic_analyser::process(source_range location, node_pointer_deref &n)
 
     visit(*n.pointer_expression);
 
-    type_kind expression_type = assigned_node_type(*n.pointer_expression);
+    type_kind expression_type = assigned_node_type(*n.pointer_expression, parse_context);
     if (!std::holds_alternative<t_t::pointer>(expression_type))
     {
         append_error_at(
@@ -242,7 +267,10 @@ void semantic_analyser::process(source_range location, node_function_call &n)
     for (const auto &param : n.parameter)
     {
         visit(*param);
-        actual_signature.parameters.push_back(param_spec{.name = "_", .type_spec = assigned_node_type(*param)});
+        actual_signature.parameters.push_back(param_spec{
+            .name = "_",
+            .type_spec = assigned_node_type(*param, parse_context)
+        });
     }
 
     if (!actual_signature.equals_call_signature(n.symbol_ref.signature))
@@ -263,14 +291,14 @@ void semantic_analyser::process(source_range location, node_if_expression &n)
     for (const auto &expression : n.then_code)
     {
         visit(*expression);
-        then_return_type = assigned_node_type(*expression);
+        then_return_type = assigned_node_type(*expression, parse_context);
     }
 
     type_kind else_return_type = t_t::void_type{};
     for (const auto &expression : n.else_code)
     {
         visit(*expression);
-        else_return_type = assigned_node_type(*expression);
+        else_return_type = assigned_node_type(*expression, parse_context);
     }
 
     if (then_return_type != else_return_type)
@@ -317,13 +345,13 @@ void semantic_analyser::process(source_range location, node_let_expression &n)
 
     visit(*n.init_expression);
 
-    if (n.assigned_type!=assigned_node_type(*n.init_expression))
+    if (n.assigned_type!=assigned_node_type(*n.init_expression, parse_context))
     {
         append_error_at(
             location.start,
             "Type mismatch in let statement. Variable is of type '"
                 + repr_type(n.assigned_type) + "' but expression has type '"
-                + repr_type(assigned_node_type(*n.init_expression))+"'"
+                + repr_type(assigned_node_type(*n.init_expression, parse_context))+"'"
         );
     }
 }
@@ -345,7 +373,7 @@ void semantic_analyser::process(source_range location, node_function_definition 
     for (const auto &expression : n.code)
     {
         visit(*expression);
-        actual_return_type = assigned_node_type(*expression);
+        actual_return_type = assigned_node_type(*expression, parse_context);
         error_location = expression->location;
     }
 
@@ -368,11 +396,11 @@ void semantic_analyser::process(source_range location, node_expression &n)
     }
 
     visit(*n.left);
-    auto lhs_type = assigned_node_type(*n.left);
+    auto lhs_type = assigned_node_type(*n.left, parse_context);
 
     current_context = assign_context::rhs;
     visit(*n.right);
-    auto rhs_type = assigned_node_type(*n.right);
+    auto rhs_type = assigned_node_type(*n.right, parse_context);
 
     // propagate the type upwards based on the operands
     if (n.operation == op_assignment)

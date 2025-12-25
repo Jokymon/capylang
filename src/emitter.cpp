@@ -91,7 +91,9 @@ std::optional<size_t> record_field_offset(const type_kind& record, const std::st
     return std::nullopt;
 }
 
-emitter::emitter(std::ostream &output) : output_(output) //, data_buffer(""), data_offset(100), id_gen(0)
+emitter::emitter(std::ostream &output, context& ctx)
+: output_(output)
+, parse_context(ctx)
 {
     cur_data = new wasm_data_section(100);
     allocate_data(std::string("\x42\x00\x00\x00\x10\x00\x00\x00\x10\x20\x30\x40Test", 16));
@@ -414,7 +416,7 @@ void emitter::emit(const node_expression &root)
     case op_assignment:
         if (std::holds_alternative<node_pointer_deref>(root.left->value))
         {
-            if (t_t::is_of<t_t::u8>(assigned_node_type(*root.left)))
+            if (t_t::is_of<t_t::u8>(assigned_node_type(*root.left, parse_context)))
             {
                 cur_block->store(wasm_type::i8);
                 break;
@@ -439,8 +441,8 @@ void emitter::emit(const node_expression &root)
             break;
         }
     case op_conversion:
-        if ((t_t::is_of<t_t::void_type>(assigned_node_type(*root.right))) &&
-            (!t_t::is_of<t_t::void_type>(assigned_node_type(*root.left))))
+        if ((t_t::is_of<t_t::void_type>(assigned_node_type(*root.right, parse_context))) &&
+            (!t_t::is_of<t_t::void_type>(assigned_node_type(*root.left, parse_context))))
         {
             cur_block->drop();
         }

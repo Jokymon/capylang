@@ -59,7 +59,7 @@ enum class assign_context {
 struct node_number
 {
     long long number;
-    type_kind assigned_type;
+    type_id assigned_type;
 };
 
 struct node_char_literal
@@ -228,13 +228,14 @@ struct parse_error
 class parser
 {
 public:
-    explicit parser(std::shared_ptr<lexer> l);
+    explicit parser(std::shared_ptr<lexer> l, context& ctx);
 
     std::vector<parse_error> errors;
     node_module parse();
 
 private:
     std::shared_ptr<lexer> capy_lexer;
+    context& parse_context;
 
     void append_error(const std::string &error_message);
     void append_error_at(source_position location, const std::string &error_message);

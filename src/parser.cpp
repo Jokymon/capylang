@@ -297,6 +297,48 @@ std::optional<type_kind> type_from_id(const std::string &id)
     return std::nullopt;
 }
 
+std::optional<type_id> type_from_id2(context& ctx, const std::string& id)
+{
+    if (id == "u32")
+    {
+        return ctx.intern_primitive(primitive_type::U32);
+    }
+    else if (id == "u16")
+    {
+        return ctx.intern_primitive(primitive_type::U16);
+    }
+    else if (id == "u8")
+    {
+        return ctx.intern_primitive(primitive_type::U8);
+    }
+    else if ((id == "s32") || (id == ""))
+    {
+        return ctx.intern_primitive(primitive_type::S32);
+    }
+    else if (id == "s16")
+    {
+        return ctx.intern_primitive(primitive_type::S16);
+    }
+    else if (id == "s8")
+    {
+        return ctx.intern_primitive(primitive_type::S8);
+    }
+    else if (id == "char")
+    {
+        return ctx.intern_primitive(primitive_type::Char);
+    }
+    else if (id == "string")
+    {
+        return ctx.intern_primitive(primitive_type::String);
+    }
+    else if (id == "bool")
+    {
+        return ctx.intern_primitive(primitive_type::Boolean);
+    }
+
+    return std::nullopt;
+}
+
 bool node_function_definition::has_attribute(const std::string& attr_name) const
 {
     for (const auto& attr : attributes)
@@ -309,8 +351,10 @@ bool node_function_definition::has_attribute(const std::string& attr_name) const
     return false;
 }
 
-parser::parser(std::shared_ptr<lexer> l)
-    : capy_lexer(l) {}
+parser::parser(std::shared_ptr<lexer> l, context& ctx)
+    : capy_lexer(l)
+    , parse_context(ctx)
+{}
 
 node_module parser::parse()
 {
@@ -1216,7 +1260,7 @@ ast_node parser::parse_primary()
             capy_lexer->current_source_position(),
             capy_lexer->current_source_position(),
             0,
-            t_t::u32{});
+            parse_context.intern_primitive(primitive_type::U32));
     }
 }
 
@@ -1271,7 +1315,7 @@ ast_node parser::parse_number()
     auto lhs = capy_lexer->expect<token_integer>();
     auto lhs_location = lhs.location;
 
-    auto number_type = type_from_id(lhs.type_suffix);
+    auto number_type = type_from_id2(parse_context, lhs.type_suffix);
     if (!number_type.has_value())
     {
         append_error("Number has an illegal suffix");
@@ -1279,7 +1323,7 @@ ast_node parser::parse_number()
             capy_lexer->current_source_position(),
             lhs_location.end,
             0,
-            t_t::u32{});
+            parse_context.intern_primitive(primitive_type::U32));
     }
 
     return make_located<node_number>(

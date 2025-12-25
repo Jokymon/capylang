@@ -8,7 +8,7 @@ class wasm_module;
 class emitter
 {
 public:
-    explicit emitter(std::ostream &output);
+    explicit emitter(std::ostream &output, context& ctx);
     ~emitter();
 
     void generate(node_module &module_def);
@@ -40,6 +40,7 @@ private:
     uint32_t allocate_data(const std::string& data);
 
     std::ostream &output_;
+    context& parse_context;
 
     node_module* current_module;
 

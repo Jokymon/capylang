@@ -28,7 +28,8 @@ int main(int argc, char *argv[])
     }
 
     std::shared_ptr<lexer> capylexer = std::make_shared<lexer>(infile, args.input_path);
-    parser capyparser{capylexer};
+    context parse_context;
+    parser capyparser{capylexer, parse_context};
     auto root_node = capyparser.parse();
 
     if (!capyparser.errors.empty())
@@ -40,7 +41,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    semantic_analyser analyser;
+    semantic_analyser analyser{parse_context};
     analyser.semantic_analysis(root_node);
     if (args.dump_ast) {
         dump_module(root_node);
@@ -57,7 +58,7 @@ int main(int argc, char *argv[])
     }
 
     std::ofstream outfile(args.output_path);
-    emitter capyemitter{outfile};
+    emitter capyemitter{outfile, parse_context};
     capyemitter.generate(root_node);
 
     outfile.close();
