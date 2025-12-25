@@ -201,6 +201,17 @@ void dump_node(const node_function_definition& n, size_t indent)
     }
 }
 
+void dump_node(const node_cast_expression& n, size_t indent)
+{
+    std::string ind = std::string(indent, ' ');
+
+    std::cout << ind << "Casting operation"
+            << "; type: " << repr_type(n.assigned_type) << "\n";
+    
+    dump_ast(*n.expression, indent+4);
+    dump_ast(*n.cast_type, indent+4);
+}
+
 void dump_node(const node_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
@@ -731,13 +742,12 @@ ast_node parser::parse_expression(int min_precedence)
 
                 auto type_spec = parse_type_reference();
 
-                return make_located<node_expression>(
+                return make_located<node_cast_expression>(
                     start.start,
                     end.end,
                     std::make_unique<ast_node>(std::move(expression)),
                     std::make_unique<ast_node>(std::move(type_spec)),
                     op_token.location,
-                    op_conversion,
                     t_t::unassigned{}
                 );
             }
@@ -796,15 +806,29 @@ ast_node parser::parse_expression(int min_precedence)
             }
             source_range end = rhs.location;
 
-            lhs = make_located<node_expression>(
-                start.start,
-                end.end,
-                std::make_unique<ast_node>(std::move(lhs)),
-                std::make_unique<ast_node>(std::move(rhs)),
-                op_token.location,
-                op,
-                t_t::unassigned{}
-            );
+            if (op == op_conversion)
+            {
+                lhs = make_located<node_cast_expression>(
+                    start.start,
+                    end.end,
+                    std::make_unique<ast_node>(std::move(lhs)),
+                    std::make_unique<ast_node>(std::move(rhs)),
+                    op_token.location,
+                    t_t::unassigned{}
+                );
+            }
+            else
+            {
+                lhs = make_located<node_expression>(
+                    start.start,
+                    end.end,
+                    std::make_unique<ast_node>(std::move(lhs)),
+                    std::make_unique<ast_node>(std::move(rhs)),
+                    op_token.location,
+                    op,
+                    t_t::unassigned{}
+                );
+            }
         }
 
         return lhs;
@@ -1352,7 +1376,7 @@ void parser::parse_body(std::vector<std::unique_ptr<ast_node>>& body)
             auto previous_expression = std::move(body.back());
             body.pop_back();
         
-            auto drop_wrapper = make_located<node_expression>(
+            auto drop_wrapper = make_located<node_cast_expression>(
                 previous_expression->location.start,
                 previous_expression->location.end,
                 std::move(previous_expression),
@@ -1362,7 +1386,6 @@ void parser::parse_body(std::vector<std::unique_ptr<ast_node>>& body)
                     t_t::void_type{}
                 )),
                 previous_expression->location,
-                op_conversion,
                 t_t::void_type{}
             );
             body.emplace_back(std::make_unique<ast_node>(std::move(drop_wrapper)));

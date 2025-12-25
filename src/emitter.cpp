@@ -386,6 +386,16 @@ void emitter::emit(const node_field_deref& field_deref)
     }
 }
 
+void emitter::emit(const node_cast_expression &root)
+{
+    emit(*root.expression);
+    if ((t_t::is_of<t_t::void_type>(assigned_node_type(*root.cast_type, parse_context))) &&
+        (!t_t::is_of<t_t::void_type>(assigned_node_type(*root.expression, parse_context))))
+    {
+        cur_block->drop();
+    }
+}
+
 void emitter::emit(const node_expression &root)
 {
     emit(*root.left);
@@ -441,11 +451,7 @@ void emitter::emit(const node_expression &root)
             break;
         }
     case op_conversion:
-        if ((t_t::is_of<t_t::void_type>(assigned_node_type(*root.right, parse_context))) &&
-            (!t_t::is_of<t_t::void_type>(assigned_node_type(*root.left, parse_context))))
-        {
-            cur_block->drop();
-        }
+        assert(false && "Conversions should not appear as simple expressions");
         break;
     }
 }

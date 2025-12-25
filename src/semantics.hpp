@@ -33,6 +33,7 @@ private:
     void process(source_range location, node_import_definition &n);
     void process(source_range location, node_global &n);
     void process(source_range location, node_function_definition &n);
+    void process(source_range location, node_cast_expression &n);
     void process(source_range location, node_expression &n);
     void process(source_range location, node_module &n);
 

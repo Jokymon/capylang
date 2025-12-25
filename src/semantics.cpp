@@ -93,6 +93,8 @@ type_kind assigned_node_type(const ast_node &node, const context& ctx)
                 return field_type.value();
             }
             return t_t::unassigned{};
+        } else if constexpr (std::is_same_v<T, node_cast_expression>) {
+             return n.assigned_type;
         } else if constexpr (std::is_same_v<T, node_expression>) {
              return n.assigned_type;
         } else {
@@ -386,6 +388,14 @@ void semantic_analyser::process(source_range location, node_function_definition 
     }
 }
 
+void semantic_analyser::process(source_range location, node_cast_expression &n)
+{
+    visit(*n.expression);
+    visit(*n.cast_type);
+
+    n.assigned_type = std::get<node_type_spec>(n.cast_type->value).type_spec;
+}
+
 void semantic_analyser::process(source_range location, node_expression &n)
 {
     if (n.operation == op_assignment) {
@@ -435,17 +445,6 @@ void semantic_analyser::process(source_range location, node_expression &n)
     else if ((lhs_type == rhs_type) && (!t_t::is_of<t_t::unassigned>(lhs_type)))
     {
         n.assigned_type = lhs_type;
-    }
-    else if (n.operation == op_conversion)
-    {
-        if (!std::holds_alternative<node_type_spec>(n.right->value))
-        {
-            append_error_at(
-                location.start,
-                "Illegal parse tree");
-        }
-
-        n.assigned_type = std::get<node_type_spec>(n.right->value).type_spec;
     }
     else
     {
