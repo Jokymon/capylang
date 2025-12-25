@@ -198,9 +198,9 @@ struct node_function_definition
 
 struct node_cast_expression
 {
-    std::unique_ptr<ast_node> expression, cast_type;
+    std::unique_ptr<ast_node> expression;
+    type_kind cast_type;
     source_range op_range;
-    type_kind assigned_type;
 };
 
 struct node_expression
@@ -266,7 +266,7 @@ private:
     ast_node parse_record_initialisation(source_range name_range, const std::string& record_name);
     ast_node parse_field_deref(type_kind base_type, ast_node object);
     ast_node parse_primary();
-    ast_node parse_type_reference();
+    type_kind parse_type_reference();
     ast_node parse_number();
 
     void parse_body(std::vector<std::unique_ptr<ast_node>>& body);

@@ -206,10 +206,9 @@ void dump_node(const node_cast_expression& n, size_t indent)
     std::string ind = std::string(indent, ' ');
 
     std::cout << ind << "Casting operation"
-            << "; type: " << repr_type(n.assigned_type) << "\n";
+            << "; target type: " << repr_type(n.cast_type) << "\n";
     
     dump_ast(*n.expression, indent+4);
-    dump_ast(*n.cast_type, indent+4);
 }
 
 void dump_node(const node_expression& n, size_t indent)
@@ -507,8 +506,7 @@ void parser::parse_function_signature(function_signature &signature)
     {
         capy_lexer->next_token();
 
-        auto type_spec_node = parse_type_reference();
-        return_type = std::get<node_type_spec>(type_spec_node.value).type_spec;
+        return_type = parse_type_reference();
     }
 
     signature.return_type = return_type.value();
@@ -524,8 +522,7 @@ void parser::parse_parameters(std::vector<param_spec> &parameters)
             append_error("Expecting a colon ':' between parameter name and parameter type");
         }
 
-        auto type_spec_node = parse_type_reference();
-        auto type_spec = std::get<node_type_spec>(type_spec_node.value).type_spec;
+        auto type_spec = parse_type_reference();
 
         parameters.emplace_back(param_name.name, type_spec);
 
@@ -607,8 +604,7 @@ ast_node parser::parse_global()
         append_error("Expecting a ':' after variable name in 'global' expression");
     }
 
-    auto type_spec_node = parse_type_reference();
-    auto type_spec = std::get<node_type_spec>(type_spec_node.value).type_spec;
+    auto type_spec = parse_type_reference();
 
     auto new_symbol = symbol{
         .name = variable_name.name,
@@ -746,9 +742,8 @@ ast_node parser::parse_expression(int min_precedence)
                     start.start,
                     end.end,
                     std::make_unique<ast_node>(std::move(expression)),
-                    std::make_unique<ast_node>(std::move(type_spec)),
-                    op_token.location,
-                    t_t::unassigned{}
+                    type_spec,
+                    op_token.location
                 );
             }
             else
@@ -796,9 +791,10 @@ ast_node parser::parse_expression(int min_precedence)
             auto op_token = capy_lexer->expect<token_symbol>();
 
             ast_node rhs;
+            type_kind type_spec;
             if (op == op_conversion)
             {
-                rhs = parse_type_reference();
+                type_spec = parse_type_reference();
             }
             else
             {
@@ -812,9 +808,8 @@ ast_node parser::parse_expression(int min_precedence)
                     start.start,
                     end.end,
                     std::make_unique<ast_node>(std::move(lhs)),
-                    std::make_unique<ast_node>(std::move(rhs)),
-                    op_token.location,
-                    t_t::unassigned{}
+                    type_spec,
+                    op_token.location
                 );
             }
             else
@@ -972,8 +967,7 @@ ast_node parser::parse_let_expression()
         append_error("Expecting a ':' after variable name in 'let' expression");
     }
 
-    auto type_spec_node = parse_type_reference();
-    auto type_spec = std::get<node_type_spec>(type_spec_node.value).type_spec;
+    auto type_spec = parse_type_reference();
 
     auto new_symbol = symbol{
         .name = variable_name.name,
@@ -1001,9 +995,10 @@ ast_node parser::parse_let_expression()
             std::make_unique<ast_node>(std::move(initializer)));
     }
 
+    auto end_position = capy_lexer->current_source_position();
     return make_located<node_let_expression>(
         start_location.start,
-        type_spec_node.location.end,
+        end_position,
         variable_name.name,
         type_spec,
         new_symbol,
@@ -1037,8 +1032,7 @@ ast_node parser::parse_record_definition()
             append_error("Expecting a colon ':' after field name and before type specification");
         }
 
-        auto type_spec_node = parse_type_reference();
-        auto type_spec = std::get<node_type_spec>(type_spec_node.value).type_spec;
+        auto type_spec = parse_type_reference();
 
         new_record_fields.emplace_back(t_t::record::field_spec{field_id.name, std::make_unique<type_kind>(type_spec)});
 
@@ -1288,7 +1282,7 @@ ast_node parser::parse_primary()
     }
 }
 
-ast_node parser::parse_type_reference()
+type_kind parser::parse_type_reference()
 {
     bool is_pointer = false;
     if (capy_lexer->ahead_is_sym(token_symbol::sym_star))
@@ -1305,7 +1299,6 @@ ast_node parser::parse_type_reference()
     if (capy_lexer->ahead_is<token_identifier>())
     {
         type_name = capy_lexer->expect<token_identifier>();
-        token_location = type_name.location;
     }
     else
     {
@@ -1328,10 +1321,7 @@ ast_node parser::parse_type_reference()
         type_spec = t_t::pointer{type_spec.value()};
     }
 
-    return make_located<node_type_spec>(
-        token_location.start,
-        token_location.end,
-        type_spec.value());
+    return type_spec.value();
 }
 
 ast_node parser::parse_number()
@@ -1380,12 +1370,6 @@ void parser::parse_body(std::vector<std::unique_ptr<ast_node>>& body)
                 previous_expression->location.start,
                 previous_expression->location.end,
                 std::move(previous_expression),
-                std::make_unique<ast_node>(make_located<node_type_spec>(
-                    previous_expression->location.start,
-                    previous_expression->location.end,
-                    t_t::void_type{}
-                )),
-                previous_expression->location,
                 t_t::void_type{}
             );
             body.emplace_back(std::make_unique<ast_node>(std::move(drop_wrapper)));
