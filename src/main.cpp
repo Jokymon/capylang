@@ -2,6 +2,7 @@
 #include "emitter.hpp"
 #include "parser.hpp"
 #include "semantics.hpp"
+#include "wat_generator.hpp"
 #include <iostream>
 #include <fstream>
 
@@ -57,9 +58,12 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    emitter capyemitter{parse_context};
+    wasm_module mod = capyemitter.generate(root_node);
+
     std::ofstream outfile(args.output_path);
-    emitter capyemitter{outfile, parse_context};
-    capyemitter.generate(root_node);
+    wat_generator generator;
+    generator.generate(mod, outfile);
 
     outfile.close();
 

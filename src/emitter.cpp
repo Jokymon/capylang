@@ -1,7 +1,6 @@
 #include "emitter.hpp"
 #include "ir.hpp"
 #include "semantics.hpp"
-#include "wat_generator.hpp"
 #include <algorithm>
 #include <cassert>
 #include <iomanip>
@@ -91,9 +90,8 @@ std::optional<size_t> record_field_offset(const type_kind& record, const std::st
     return std::nullopt;
 }
 
-emitter::emitter(std::ostream &output, context& ctx)
-: output_(output)
-, parse_context(ctx)
+emitter::emitter(context& ctx)
+: parse_context(ctx)
 {
     cur_data = new wasm_data_section(100);
     allocate_data(std::string("\x42\x00\x00\x00\x10\x00\x00\x00\x10\x20\x30\x40Test", 16));
@@ -104,7 +102,7 @@ emitter::~emitter()
     delete cur_data;
 }
 
-void emitter::generate(node_module &module_def)
+wasm_module emitter::generate(node_module &module_def)
 {
     wasm_module ir_module;
     cur_mod = &ir_module;
@@ -136,11 +134,10 @@ void emitter::generate(node_module &module_def)
 
     cur_mod->append_data_section(*cur_data);
 
-    wat_generator generator;
-    generator.generate(ir_module, output_);
-
     current_module = nullptr;
     cur_mod = nullptr;
+
+    return ir_module;
 }
 
 void emitter::emit(ast_node &node)
