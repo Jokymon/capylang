@@ -2,6 +2,7 @@
 #include "emitter.hpp"
 #include "parser.hpp"
 #include "semantics.hpp"
+#include "wasm_generator.hpp"
 #include "wat_generator.hpp"
 #include <iostream>
 #include <fstream>
@@ -64,8 +65,12 @@ int main(int argc, char *argv[])
     std::ofstream outfile(args.output_path);
     wat_generator generator;
     generator.generate(mod, outfile);
-
     outfile.close();
+
+    std::ofstream wasm_out("test.wasm", std::ios::out | std::ios::binary);
+    wasm_generator generator2;
+    generator2.generate(mod, wasm_out);
+    wasm_out.close();
 
     return 0;
 }
