@@ -77,6 +77,7 @@ void wasm_generator::generate(const wasm_module& module, std::ostream &output)
 
     generate_types(module, output);
     generate_imports(module, output);
+    generate_functions(module, output);
 }
 
 void wasm_generator::generate_types(const wasm_module& module, std::ostream &output)
@@ -136,6 +137,31 @@ void wasm_generator::generate_imports(const wasm_module& module, std::ostream &o
         content << func.second.name;
 
         content.put(EXTERNAL_TYPE_FUNC);
+        size_t index = intern_func_type(func.second);
+        content.put((char)index);
+    }
+
+    output.put((char)content.str().size());
+    output.write(content.str().c_str(), content.str().size());
+}
+
+void wasm_generator::generate_functions(const wasm_module& module, std::ostream &output)
+{
+    output.put(SECTION_FUNCTION);
+
+    size_t internal_count = std::count_if(module.functions.begin(), module.functions.end(),
+        [](const auto& func_pair) {
+            return !func_pair.second.is_imported();
+        });
+
+    std::stringstream content;
+    content.put((char)internal_count);
+
+    for (const auto& func : module.functions)
+    {
+        if (func.second.is_imported())
+            continue;
+
         size_t index = intern_func_type(func.second);
         content.put((char)index);
     }
