@@ -1,4 +1,5 @@
 #include "wasm_generator.hpp"
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -23,6 +24,12 @@ const char SECTION_DATA_COUNT = '\x0C';
 const char SECTION_TAG = '\x0D';
 
 const char COMP_TYPE_FUNC = '\x60';
+
+const char EXTERNAL_TYPE_FUNC = '\x00';
+const char EXTERNAL_TYPE_TABLE = '\x01';
+const char EXTERNAL_TYPE_MEM = '\x02';
+const char EXTERNAL_TYPE_GLOBAL = '\x03';
+const char EXTERNAL_TYPE_TAG = '\x04';
 
 char encode_wasm_type(wasm_type type)
 {
@@ -69,13 +76,13 @@ void wasm_generator::generate(const wasm_module& module, std::ostream &output)
     output.write(VERSION, 4);
 
     generate_types(module, output);
+    generate_imports(module, output);
 }
 
 void wasm_generator::generate_types(const wasm_module& module, std::ostream &output)
 {
     output.put(SECTION_TYPE);
 
-    std::vector<std::string> type_entries;
     for (const auto& func : module.functions)
     {
         // First generate for the imported function types
@@ -85,26 +92,14 @@ void wasm_generator::generate_types(const wasm_module& module, std::ostream &out
         if (!func.second.is_imported())
             continue;
 
-        std::stringstream func_type_entry;
-        encode_func_type(func_type_entry, func.second);
-
-        if (std::find(type_entries.begin(), type_entries.end(), func_type_entry.str()) == type_entries.end())
-        {
-            type_entries.push_back(func_type_entry.str());
-        }
+        intern_func_type(func.second);
     }
     for (const auto& func : module.functions)
     {
         if (func.second.is_imported())
             continue;
 
-        std::stringstream func_type_entry;
-        encode_func_type(func_type_entry, func.second);
-
-        if (std::find(type_entries.begin(), type_entries.end(), func_type_entry.str()) == type_entries.end())
-        {
-            type_entries.push_back(func_type_entry.str());
-        }
+        intern_func_type(func.second);
     }
 
     std::stringstream content;
@@ -116,4 +111,52 @@ void wasm_generator::generate_types(const wasm_module& module, std::ostream &out
 
     output.put((char)content.str().size());
     output.write(content.str().c_str(), content.str().size());
+}
+
+void wasm_generator::generate_imports(const wasm_module& module, std::ostream &output)
+{
+    output.put(SECTION_IMPORT);
+
+    size_t import_count = std::count_if(module.functions.begin(), module.functions.end(),
+        [](const auto& func_pair) {
+            return func_pair.second.is_imported();
+        });
+
+    std::stringstream content;
+    content.put((char)import_count);
+
+    for (const auto& func : module.functions)
+    {
+        if (!func.second.is_imported())
+            continue;
+
+        content.put((char)func.second.ns.size());
+        content << func.second.ns;
+        content.put((char)func.second.name.size());
+        content << func.second.name;
+
+        content.put(EXTERNAL_TYPE_FUNC);
+        size_t index = intern_func_type(func.second);
+        content.put((char)index);
+    }
+
+    output.put((char)content.str().size());
+    output.write(content.str().c_str(), content.str().size());
+}
+
+size_t wasm_generator::intern_func_type(const wasm_function& function)
+{
+    std::stringstream func_type_entry;
+    encode_func_type(func_type_entry, function);
+
+    auto existing_entry = std::find(type_entries.begin(), type_entries.end(), func_type_entry.str());
+    if (existing_entry == type_entries.end())
+    {
+        type_entries.push_back(func_type_entry.str());
+        return type_entries.size() - 1;
+    }
+    else
+    {
+        return std::distance(type_entries.begin(), existing_entry);
+    }
 }

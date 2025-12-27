@@ -1,6 +1,8 @@
 #pragma once
 #include "ir.hpp"
 #include <ostream>
+#include <string>
+#include <vector>
 
 class wasm_generator
 {
@@ -9,6 +11,7 @@ public:
 
 private:
     void generate_types(const wasm_module& module, std::ostream &output);
+    void generate_imports(const wasm_module& module, std::ostream &output);
 
 private:
     void generate(const wasm_function& function, std::ostream &output, size_t indent);
@@ -29,4 +32,9 @@ private:
     void generate(const wasm_op_func&, std::ostream &output, size_t indent);
 
     void generate_export(const exportable& exp, std::ostream &output, size_t indent);
+
+    size_t intern_func_type(const wasm_function& function);
+
+private:
+    std::vector<std::string> type_entries;
 };
