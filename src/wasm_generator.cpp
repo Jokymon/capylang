@@ -31,6 +31,11 @@ const char EXTERNAL_TYPE_MEM = '\x02';
 const char EXTERNAL_TYPE_GLOBAL = '\x03';
 const char EXTERNAL_TYPE_TAG = '\x04';
 
+const char LIMITS_I32_N = '\x00';
+const char LIMITS_I32_NM = '\x01';
+const char LIMITS_I64_N = '\x04';
+const char LIMITS_I64_NM = '\x05';
+
 char encode_wasm_type(wasm_type type)
 {
     switch (type) {
@@ -78,6 +83,7 @@ void wasm_generator::generate(const wasm_module& module, std::ostream &output)
     generate_types(module, output);
     generate_imports(module, output);
     generate_functions(module, output);
+    generate_memories(module, output);
 }
 
 void wasm_generator::generate_types(const wasm_module& module, std::ostream &output)
@@ -164,6 +170,22 @@ void wasm_generator::generate_functions(const wasm_module& module, std::ostream 
 
         size_t index = intern_func_type(func.second);
         content.put((char)index);
+    }
+
+    output.put((char)content.str().size());
+    output.write(content.str().c_str(), content.str().size());
+}
+
+void wasm_generator::generate_memories(const wasm_module& module, std::ostream &output)
+{
+    output.put(SECTION_MEMORY);
+
+    std::stringstream content;
+    content.put((char)module.memories.size());
+    for (const auto& mem : module.memories)
+    {
+        content.put(LIMITS_I32_N);
+        content.put((char)mem.initial_block_count);
     }
 
     output.put((char)content.str().size());

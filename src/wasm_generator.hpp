@@ -13,6 +13,7 @@ private:
     void generate_types(const wasm_module& module, std::ostream &output);
     void generate_imports(const wasm_module& module, std::ostream &output);
     void generate_functions(const wasm_module& module, std::ostream &output);
+    void generate_memories(const wasm_module& module, std::ostream &output);
 
 private:
     void generate_export(const exportable& exp, std::ostream &output, size_t indent);
