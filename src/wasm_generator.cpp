@@ -73,7 +73,7 @@ char encode_wasm_type(wasm_type type)
 void encode_func_type(std::ostream& output, const wasm_function& function)
 {
     output.put(COMP_TYPE_FUNC);
-    output.put((char)function.arguments.size());
+    encode_leb128(output, function.arguments.size());
     for (const auto& arg : function.arguments)
     {
         output.put(encode_wasm_type(arg.second));
@@ -126,13 +126,13 @@ void wasm_generator::generate_types(const wasm_module& module, std::ostream &out
     }
 
     std::ostringstream content(std::ios::binary);
-    content.put((char)type_entries.size());
+    encode_leb128(content, type_entries.size());
     for (const auto& entry : type_entries)
     {
         content.write(entry.c_str(), entry.size());
     }
 
-    output.put((char)content.str().size());
+    encode_leb128(output, content.str().size());
     output.write(content.str().c_str(), content.str().size());
 }
 
@@ -146,24 +146,24 @@ void wasm_generator::generate_imports(const wasm_module& module, std::ostream &o
         });
 
     std::ostringstream content(std::ios::binary);
-    content.put((char)import_count);
+    encode_leb128(content, import_count);
 
     for (const auto& func : module.functions)
     {
         if (!func.second.is_imported())
             continue;
 
-        content.put((char)func.second.ns.size());
+        encode_leb128(content, func.second.ns.size());
         content << func.second.ns;
-        content.put((char)func.second.name.size());
+        encode_leb128(content, func.second.name.size());
         content << func.second.name;
 
         content.put(EXTERNAL_TYPE_FUNC);
         size_t index = intern_func_type(func.second);
-        content.put((char)index);
+        encode_leb128(content, index);
     }
 
-    output.put((char)content.str().size());
+    encode_leb128(output, content.str().size());
     output.write(content.str().c_str(), content.str().size());
 }
 
@@ -177,7 +177,7 @@ void wasm_generator::generate_functions(const wasm_module& module, std::ostream 
         });
 
     std::ostringstream content(std::ios::binary);
-    content.put((char)internal_count);
+    encode_leb128(content, internal_count);
 
     for (const auto& func : module.functions)
     {
@@ -185,10 +185,10 @@ void wasm_generator::generate_functions(const wasm_module& module, std::ostream 
             continue;
 
         size_t index = intern_func_type(func.second);
-        content.put((char)index);
+        encode_leb128(content, index);
     }
 
-    output.put((char)content.str().size());
+    encode_leb128(output, content.str().size());
     output.write(content.str().c_str(), content.str().size());
 }
 
@@ -197,14 +197,14 @@ void wasm_generator::generate_memories(const wasm_module& module, std::ostream &
     output.put(SECTION_MEMORY);
 
     std::ostringstream content(std::ios::binary);
-    content.put((char)module.memories.size());
+    encode_leb128(content, module.memories.size());
     for (const auto& mem : module.memories)
     {
         content.put(LIMITS_I32_N);
-        content.put((char)mem.initial_block_count);
+        encode_leb128(content, mem.initial_block_count);
     }
 
-    output.put((char)content.str().size());
+    encode_leb128(output, content.str().size());
     output.write(content.str().c_str(), content.str().size());
 }
 
@@ -213,7 +213,7 @@ void wasm_generator::generate_globals(const wasm_module& module, std::ostream &o
     output.put(SECTION_GLOBAL);
 
     std::ostringstream content(std::ios::binary);
-    content.put((char)module.globals.size());
+    encode_leb128(content, module.globals.size());
     for (const auto& g : module.globals)
     {
         content.put(encode_wasm_type(g.typ));
@@ -227,7 +227,7 @@ void wasm_generator::generate_globals(const wasm_module& module, std::ostream &o
         content.put(INST_TERMINATOR);
     }
 
-    output.put((char)content.str().size());
+    encode_leb128(output, content.str().size());
     output.write(content.str().c_str(), content.str().size());
 }
 
