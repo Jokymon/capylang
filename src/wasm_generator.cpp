@@ -1,4 +1,5 @@
 #include "wasm_generator.hpp"
+#include "wasm_mnemonics.hpp"
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
@@ -35,6 +36,20 @@ const char LIMITS_I32_N = '\x00';
 const char LIMITS_I32_NM = '\x01';
 const char LIMITS_I64_N = '\x04';
 const char LIMITS_I64_NM = '\x05';
+
+const char MUTABILITY_IMMUT = '\x00';
+const char MUTABILITY_MUT = '\x01';
+
+void encode_leb128(std::ostream& out, uint64_t value)
+{
+    do
+    {
+        uint8_t b = value & 0x7f;
+        value >>= 7;
+        if (value) b |= 0x80;
+        out.put(b);
+    } while (value!=0);
+}
 
 char encode_wasm_type(wasm_type type)
 {
@@ -84,6 +99,7 @@ void wasm_generator::generate(const wasm_module& module, std::ostream &output)
     generate_imports(module, output);
     generate_functions(module, output);
     generate_memories(module, output);
+    generate_globals(module, output);
 }
 
 void wasm_generator::generate_types(const wasm_module& module, std::ostream &output)
@@ -109,7 +125,7 @@ void wasm_generator::generate_types(const wasm_module& module, std::ostream &out
         intern_func_type(func.second);
     }
 
-    std::stringstream content;
+    std::ostringstream content(std::ios::binary);
     content.put((char)type_entries.size());
     for (const auto& entry : type_entries)
     {
@@ -129,7 +145,7 @@ void wasm_generator::generate_imports(const wasm_module& module, std::ostream &o
             return func_pair.second.is_imported();
         });
 
-    std::stringstream content;
+    std::ostringstream content(std::ios::binary);
     content.put((char)import_count);
 
     for (const auto& func : module.functions)
@@ -160,7 +176,7 @@ void wasm_generator::generate_functions(const wasm_module& module, std::ostream 
             return !func_pair.second.is_imported();
         });
 
-    std::stringstream content;
+    std::ostringstream content(std::ios::binary);
     content.put((char)internal_count);
 
     for (const auto& func : module.functions)
@@ -180,7 +196,7 @@ void wasm_generator::generate_memories(const wasm_module& module, std::ostream &
 {
     output.put(SECTION_MEMORY);
 
-    std::stringstream content;
+    std::ostringstream content(std::ios::binary);
     content.put((char)module.memories.size());
     for (const auto& mem : module.memories)
     {
@@ -192,9 +208,32 @@ void wasm_generator::generate_memories(const wasm_module& module, std::ostream &
     output.write(content.str().c_str(), content.str().size());
 }
 
+void wasm_generator::generate_globals(const wasm_module& module, std::ostream &output)
+{
+    output.put(SECTION_GLOBAL);
+
+    std::ostringstream content(std::ios::binary);
+    content.put((char)module.globals.size());
+    for (const auto& g : module.globals)
+    {
+        content.put(encode_wasm_type(g.typ));
+        if (g.access==wasm_module::access_type::mut)
+            content.put(MUTABILITY_MUT);
+        else
+            content.put(MUTABILITY_IMMUT);
+
+        content.put(INST_I32_CONST);
+        encode_leb128(content, g.initvalue);
+        content.put(INST_TERMINATOR);
+    }
+
+    output.put((char)content.str().size());
+    output.write(content.str().c_str(), content.str().size());
+}
+
 size_t wasm_generator::intern_func_type(const wasm_function& function)
 {
-    std::stringstream func_type_entry;
+    std::ostringstream func_type_entry(std::ios::binary);
     encode_func_type(func_type_entry, function);
 
     auto existing_entry = std::find(type_entries.begin(), type_entries.end(), func_type_entry.str());
