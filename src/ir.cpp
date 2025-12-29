@@ -219,12 +219,7 @@ wasm_loop_block::wasm_loop_block(wasm_type return_type)
 {
 }
 
-exportable::exportable(const char* name, const char* export_type)
-    : name(name), index(0), export_type(export_type)
-{
-}
-
-exportable::exportable(index_type index, const char* export_type)
+exportable::exportable(index_type index, wasm_extern_index export_type)
     : name(), index(index), export_type(export_type)
 {
 }
@@ -234,9 +229,10 @@ void exportable::export_as(const char* export_name)
     this->export_name = export_name;
 }
 
-wasm_function::wasm_function(const char* name, wasm_type return_type, arguments_type arguments)
-    : exportable(name, "func"), return_type(return_type), arguments(arguments)
+wasm_function::wasm_function(index_type index, const std::string& name, wasm_type return_type, arguments_type arguments)
+    : exportable(index, wasm_extern_index::funcidx), return_type(return_type), arguments(arguments)
 {
+    this->name = name;
 }
 
 void wasm_function::allocate_local(const char* name, wasm_type var_type)
@@ -261,7 +257,7 @@ void wasm_function::import_from(const char* ns, const char* import_name)
 }
 
 wasm_memory::wasm_memory(index_type index, size_t initial_block_count)
-    : exportable(index, "memory"), initial_block_count(initial_block_count)
+    : exportable(index, wasm_extern_index::memidx), initial_block_count(initial_block_count)
 {
 }
 
@@ -302,8 +298,8 @@ void wasm_module::create_global(const char* name, wasm_type g_type, wasm_module:
 wasm_function& wasm_module::create_function(const char* name, wasm_type return_type, arguments_type arguments)
 {
     std::string sname(name);
-    functions.emplace(sname, wasm_function{name, return_type, arguments});
-    return functions.find(sname)->second;
+    functions.emplace_back(wasm_function{functions.size(), name, return_type, arguments});
+    return functions.back();
 }
 
 void wasm_module::append_data_section(wasm_data_section& data)

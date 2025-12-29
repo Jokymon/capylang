@@ -232,8 +232,7 @@ struct wasm_loop_block : public wasm_block
 struct exportable
 {
 public:
-    explicit exportable(const char* name, const char* export_type);
-    explicit exportable(index_type index, const char* export_type);
+    explicit exportable(index_type index, wasm_extern_index export_type);
 
     // TODO: this creates a false impression that we can just call
     // export_as on the exportable. But we still need to add the
@@ -246,7 +245,7 @@ public:
     index_type index;
 
     std::string export_name;
-    std::string export_type;
+    wasm_extern_index export_type;
 };
 
 struct wasm_function : public exportable
@@ -259,7 +258,7 @@ public:
     void import_from(const char* ns, const char* import_name);
 
     // prefer to use the create..() function of the module
-    explicit wasm_function(const char* name, wasm_type return_type, arguments_type arguments);
+    explicit wasm_function(index_type index, const std::string& name, wasm_type return_type, arguments_type arguments);
 
     wasm_type return_type;
     arguments_type arguments;
@@ -311,9 +310,11 @@ struct wasm_module
         uint64_t initvalue;
     };
     
+    // vectors with WASM items where the index in the vector represents the
+    // index in corresponding WASM section
     std::vector<wasm_memory> memories;
     std::vector<wasm_data_section> data_sections;
     std::vector<global_sym> globals;
     std::vector<std::reference_wrapper<exportable>> exports;
-    std::map<std::string, wasm_function> functions;
+    std::vector<wasm_function> functions;
 };

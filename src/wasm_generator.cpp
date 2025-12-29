@@ -112,17 +112,17 @@ void wasm_generator::generate_types(const wasm_module& module, std::ostream &out
         // TODO: This is just at the moment to keep the WAT and
         // WASM generated parts identical for easier comparison,
         // maybe later we could also drop this
-        if (!func.second.is_imported())
+        if (!func.is_imported())
             continue;
 
-        intern_func_type(func.second);
+        intern_func_type(func);
     }
     for (const auto& func : module.functions)
     {
-        if (func.second.is_imported())
+        if (func.is_imported())
             continue;
 
-        intern_func_type(func.second);
+        intern_func_type(func);
     }
 
     std::ostringstream content(std::ios::binary);
@@ -141,8 +141,8 @@ void wasm_generator::generate_imports(const wasm_module& module, std::ostream &o
     output.put(SECTION_IMPORT);
 
     size_t import_count = std::count_if(module.functions.begin(), module.functions.end(),
-        [](const auto& func_pair) {
-            return func_pair.second.is_imported();
+        [](const auto& func) {
+            return func.is_imported();
         });
 
     std::ostringstream content(std::ios::binary);
@@ -150,16 +150,16 @@ void wasm_generator::generate_imports(const wasm_module& module, std::ostream &o
 
     for (const auto& func : module.functions)
     {
-        if (!func.second.is_imported())
+        if (!func.is_imported())
             continue;
 
-        encode_leb128(content, func.second.ns.size());
-        content << func.second.ns;
-        encode_leb128(content, func.second.name.size());
-        content << func.second.name;
+        encode_leb128(content, func.ns.size());
+        content << func.ns;
+        encode_leb128(content, func.name.size());
+        content << func.name;
 
         content.put(EXTERNAL_TYPE_FUNC);
-        size_t index = intern_func_type(func.second);
+        size_t index = intern_func_type(func);
         encode_leb128(content, index);
     }
 
@@ -173,7 +173,7 @@ void wasm_generator::generate_functions(const wasm_module& module, std::ostream 
 
     size_t internal_count = std::count_if(module.functions.begin(), module.functions.end(),
         [](const auto& func_pair) {
-            return !func_pair.second.is_imported();
+            return !func_pair.is_imported();
         });
 
     std::ostringstream content(std::ios::binary);
@@ -181,10 +181,10 @@ void wasm_generator::generate_functions(const wasm_module& module, std::ostream 
 
     for (const auto& func : module.functions)
     {
-        if (func.second.is_imported())
+        if (func.is_imported())
             continue;
 
-        size_t index = intern_func_type(func.second);
+        size_t index = intern_func_type(func);
         encode_leb128(content, index);
     }
 

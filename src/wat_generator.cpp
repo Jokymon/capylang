@@ -72,14 +72,14 @@ void wat_generator::generate(const wasm_module& module, std::ostream &output)
     output << "(module\n";
     for (const auto& func : module.functions)
     {
-        if (!func.second.is_imported())
+        if (!func.is_imported())
         {
             continue;
         }
         output << ind << "(import ";
-        output << "\"" << func.second.ns << "\" ";
-        output << "\"" << func.second.import_name << "\" ";
-        generate(func.second, output, 0);
+        output << "\"" << func.ns << "\" ";
+        output << "\"" << func.import_name << "\" ";
+        generate(func, output, 0);
         output << ")\n";
     }
     for (const auto& data_section : module.data_sections)
@@ -113,11 +113,11 @@ void wat_generator::generate(const wasm_module& module, std::ostream &output)
     }
     for (const auto& func : module.functions)
     {
-        if (func.second.is_imported())
+        if (func.is_imported())
         {
             continue;
         }
-        generate(func.second, output, 2);
+        generate(func, output, 2);
     }
     output << ")\n";
 }
