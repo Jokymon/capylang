@@ -51,6 +51,12 @@ void encode_leb128(std::ostream& out, uint64_t value)
     } while (value!=0);
 }
 
+void encode_string(std::ostream& out, const std::string s)
+{
+    encode_leb128(out, s.size());
+    out << s;
+}
+
 char encode_wasm_type(wasm_type type)
 {
     switch (type) {
@@ -67,6 +73,23 @@ char encode_wasm_type(wasm_type type)
         default:
             // TODO shouldn't happen
             return '\x42';
+    }
+}
+
+char encode_extern_index(wasm_extern_index index)
+{
+    switch (index)
+    {
+        case wasm_extern_index::funcidx:
+            return EXTERNAL_TYPE_FUNC;
+        case wasm_extern_index::tableidx:
+            return EXTERNAL_TYPE_TABLE;
+        case wasm_extern_index::memidx:
+            return EXTERNAL_TYPE_MEM;
+        case wasm_extern_index::globalidx:
+            return EXTERNAL_TYPE_GLOBAL;
+        case wasm_extern_index::tagidx:
+            return EXTERNAL_TYPE_TAG;
     }
 }
 
@@ -100,6 +123,7 @@ void wasm_generator::generate(const wasm_module& module, std::ostream &output)
     generate_functions(module, output);
     generate_memories(module, output);
     generate_globals(module, output);
+    generate_exports(module, output);
 }
 
 void wasm_generator::generate_types(const wasm_module& module, std::ostream &output)
@@ -153,10 +177,8 @@ void wasm_generator::generate_imports(const wasm_module& module, std::ostream &o
         if (!func.is_imported())
             continue;
 
-        encode_leb128(content, func.ns.size());
-        content << func.ns;
-        encode_leb128(content, func.name.size());
-        content << func.name;
+        encode_string(content, func.ns);
+        encode_string(content, func.name);
 
         content.put(EXTERNAL_TYPE_FUNC);
         size_t index = intern_func_type(func);
@@ -225,6 +247,23 @@ void wasm_generator::generate_globals(const wasm_module& module, std::ostream &o
         content.put(INST_I32_CONST);
         encode_leb128(content, g.initvalue);
         content.put(INST_TERMINATOR);
+    }
+
+    encode_leb128(output, content.str().size());
+    output.write(content.str().c_str(), content.str().size());
+}
+
+void wasm_generator::generate_exports(const wasm_module& module, std::ostream &output)
+{
+    output.put(SECTION_EXPORT);
+
+    std::ostringstream content(std::ios::binary);
+    encode_leb128(content, module.exports.size());
+    for (const auto& exp : module.exports)
+    {
+        encode_string(content, exp.get().export_name);
+        content.put(encode_extern_index(exp.get().export_type));
+        encode_leb128(content, exp.get().index);
     }
 
     encode_leb128(output, content.str().size());

@@ -23,6 +23,15 @@ enum class wasm_type
     f64,
 };
 
+enum class wasm_extern_index
+{
+    funcidx,
+    tableidx,
+    memidx,
+    globalidx,
+    tagidx
+};
+
 using index_type = uint32_t;
 
 using arguments_type = std::vector<std::pair<std::string, wasm_type>>;

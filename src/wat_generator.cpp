@@ -25,6 +25,22 @@ std::string repr_wasm_type(wasm_type typ)
     }
 }
 
+std::string repr_wasm_extern_type(wasm_extern_index index)
+{
+    switch (index) {
+        case wasm_extern_index::funcidx:
+            return "func";
+        case wasm_extern_index::tableidx:
+            return "table";
+        case wasm_extern_index::memidx:
+            return "memory";
+        case wasm_extern_index::globalidx:
+            return "global";
+        case wasm_extern_index::tagidx:
+            return "tag";
+    }
+}
+
 std::string sign_wasm_type(wasm_type typ)
 {
     switch (typ) {
@@ -445,7 +461,7 @@ void wat_generator::generate_export(const exportable& exp, std::ostream &output,
 {
     std::string ind(indent, ' ');
     output << ind << "(export \"" << exp.export_name << "\" (";
-    output << exp.export_type << " ";
+    output << repr_wasm_extern_type(exp.export_type) << " ";
     if (!exp.name.empty())
     {
         output << "$" << exp.name;
