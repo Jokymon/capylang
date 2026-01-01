@@ -124,6 +124,7 @@ void wasm_generator::generate(const wasm_module& module, std::ostream &output)
     generate_memories(module, output);
     generate_globals(module, output);
     generate_exports(module, output);
+    generate_code(module, output);
 }
 
 void wasm_generator::generate_types(const wasm_module& module, std::ostream &output)
@@ -268,6 +269,124 @@ void wasm_generator::generate_exports(const wasm_module& module, std::ostream &o
 
     encode_leb128(output, content.str().size());
     output.write(content.str().c_str(), content.str().size());
+}
+
+void wasm_generator::generate_code(const wasm_module& module, std::ostream &output)
+{
+    output.put(SECTION_CODE);
+
+    size_t internal_count = std::count_if(module.functions.begin(), module.functions.end(),
+        [](const auto& func_pair) {
+            return !func_pair.is_imported();
+        });
+
+    std::ostringstream content(std::ios::binary);
+    encode_leb128(content, internal_count);
+
+    for (const auto& func : module.functions)
+    {
+        if (func.is_imported())
+            continue;
+
+        std::ostringstream function_code(std::ios::binary);
+
+        // Let's start with a simple assumption of only
+        // having one 'locals' entry of only i32
+        encode_leb128(function_code, 1);
+        encode_leb128(function_code, func.locals.size());
+        function_code.put(encode_wasm_type(wasm_type::i32));
+
+        generate_block(module, func, func.body_const(), function_code);
+        function_code.put(INST_TERMINATOR);
+
+        encode_leb128(content, function_code.str().size());
+        content.write(function_code.str().c_str(), function_code.str().size());
+    }
+
+    encode_leb128(output, content.str().size());
+    output.write(content.str().c_str(), content.str().size());
+}
+
+void wasm_generator::generate_block(const wasm_module& module, const wasm_function& function, const wasm_block& block, std::ostream& output)
+{
+    for (const auto& inst : block.instructions)
+    {
+        std::visit([&](const auto &t){
+            using T = std::decay_t<decltype(t)>;
+
+            if constexpr (std::is_same_v<T, wasm_instruction>) {
+                switch (t.op) {
+                    case wasm_op::drop:
+                        output.put(INST_DROP);
+                        break;
+                    default:
+                        break;
+                }
+            }
+            else if constexpr (std::is_same_v<T, wasm_op_type>) {
+                switch (t.op) {
+                    // TODO: differentiate based on type
+                    case wasm_op::iadd:
+                        output.put(INST_I32_ADD);
+                        break;
+                    case wasm_op::isub:
+                        output.put(INST_I32_SUB);
+                        break;
+                    case wasm_op::imul:
+                        output.put(INST_I32_MUL);
+                        break;
+                    default:
+                        break;
+                }
+            }
+            else if constexpr (std::is_same_v<T, wasm_op_index>) {
+                size_t index = 0;
+                switch (t.op) {
+                    case wasm_op::local_get:
+                        output.put(INST_LOCAL_GET);
+                        break;
+                    case wasm_op::local_set:
+                        output.put(INST_LOCAL_SET);
+                        break;
+                    case wasm_op::local_tee:
+                        output.put(INST_LOCAL_TEE);
+                        break;
+                    case wasm_op::global_get:
+                        output.put(INST_GLOBAL_GET);
+                        break;
+                    case wasm_op::global_set:
+                        output.put(INST_GLOBAL_SET);
+                        break;
+                    default:
+                        break;
+                }
+                switch (t.op) {
+                    case wasm_op::local_get:
+                    case wasm_op::local_set:
+                    case wasm_op::local_tee:
+                        index = function.locals_map.at(t.name);
+                        break;
+                    case wasm_op::global_get:
+                    case wasm_op::global_set:
+                        index = module.globals_map.at(t.name);
+                        break;
+                    default:
+                        break;
+                }
+                encode_leb128(output, index);
+            }
+            else if constexpr (std::is_same_v<T, wasm_op_type_value>) {
+                // TODO: differentiate by type of the operation
+                output.put(INST_I32_CONST);
+                encode_leb128(output, t.value);
+            }
+            else if constexpr (std::is_same_v<T, wasm_op_func>) {
+                output.put(INST_CALL);
+                size_t function_index = module.functions_map.at(t.function.name());
+                encode_leb128(output, function_index);
+            }
+        }, *inst);
+    }
 }
 
 size_t wasm_generator::intern_func_type(const wasm_function& function)

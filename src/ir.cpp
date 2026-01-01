@@ -29,8 +29,8 @@ wasm_instruction::wasm_instruction(wasm_op op)
 {
 }
 
-wasm_op_index::wasm_op_index(wasm_op op, const std::string var_name, uint32_t index)
-    : wasm_instruction(op), name(var_name), index(index)
+wasm_op_index::wasm_op_index(wasm_op op, const std::string var_name)
+    : wasm_instruction(op), name(var_name)
 {
 }
 
@@ -111,27 +111,22 @@ std::pair<wasm_block&, wasm_block&> wasm_block::if_block(wasm_type return_type)
 
 void wasm_block::local_get(const char* variable_name)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_index(wasm_op::local_get, variable_name, 0)));
-}
-
-void wasm_block::local_get(uint32_t index)
-{
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_index(wasm_op::local_get, "", index)));
+    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_index(wasm_op::local_get, variable_name)));
 }
 
 void wasm_block::local_set(const char* variable_name)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_index(wasm_op::local_set, variable_name, 0)));
+    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_index(wasm_op::local_set, variable_name)));
 }
 
 void wasm_block::global_get(const char* variable_name)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_index(wasm_op::global_get, variable_name, 0)));
+    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_index(wasm_op::global_get, variable_name)));
 }
 
 void wasm_block::global_set(const char* variable_name)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_index(wasm_op::global_set, variable_name, 0)));
+    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_index(wasm_op::global_set, variable_name)));
 }
 
 void wasm_block::const_val(wasm_type type, uint64_t value)
@@ -233,14 +228,27 @@ wasm_function::wasm_function(index_type index, const std::string& name, wasm_typ
     : exportable(index, wasm_extern_index::funcidx), return_type(return_type), arguments(arguments)
 {
     this->name = name;
+
+    size_t arg_index = 0;
+    for (const auto& arg : arguments)
+    {
+        locals_map[arg.name] = arg_index++;
+    }
 }
 
 void wasm_function::allocate_local(const char* name, wasm_type var_type)
 {
-    locals.push_back({name, locals.size(), var_type});
+    size_t index = arguments.size() + locals.size();
+    locals.push_back({name, var_type});
+    locals_map[name] = index;
 }
 
 wasm_block& wasm_function::body()
+{
+    return function_body;
+}
+
+const wasm_block& wasm_function::body_const() const
 {
     return function_body;
 }
@@ -292,13 +300,17 @@ wasm_data_section& wasm_module::create_data_section(size_t init_offset)
 
 void wasm_module::create_global(const char* name, wasm_type g_type, wasm_module::access_type access, uint64_t initvalue)
 {
+    size_t index = globals.size();
     globals.push_back({name, access, g_type, initvalue});
+    globals_map[name] = index;
 }
 
 wasm_function& wasm_module::create_function(const char* name, wasm_type return_type, arguments_type arguments)
 {
+    size_t function_index = functions.size();
     std::string sname(name);
-    functions.emplace_back(wasm_function{functions.size(), name, return_type, arguments});
+    functions.emplace_back(wasm_function{function_index, name, return_type, arguments});
+    functions_map[std::string(name)] = function_index;
     return functions.back();
 }
 

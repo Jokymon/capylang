@@ -36,7 +36,6 @@ using index_type = uint32_t;
 
 struct argument_type {
     std::string name;
-    index_type index;
     wasm_type type;
 };
 using arguments_type = std::vector<argument_type>;
@@ -132,10 +131,9 @@ struct wasm_instruction
 
 struct wasm_op_index : public wasm_instruction
 {
-    explicit wasm_op_index(wasm_op op, const std::string var_name, uint32_t index);
+    explicit wasm_op_index(wasm_op op, const std::string var_name);
 
     std::string name;
-    uint32_t index;
 };
 
 struct wasm_op_type : public wasm_instruction
@@ -204,7 +202,6 @@ public:
     std::pair<wasm_block&, wasm_block&> if_block(wasm_type return_type);
 
     void local_get(const char* variable_name);
-    void local_get(uint32_t index);
     void local_set(const char* variable_name);
     void global_get(const char* variable_name);
     void global_set(const char* variable_name);
@@ -269,14 +266,19 @@ public:
 
     void allocate_local(const char* name, wasm_type var_type);
     wasm_block& body();
+    const wasm_block& body_const() const;
     void import_from(const char* ns, const char* import_name);
 
     // prefer to use the create..() function of the module
     explicit wasm_function(index_type index, const std::string& name, wasm_type return_type, arguments_type arguments);
 
     wasm_type return_type;
+    // arguments only hold the definitions of the functions arguments in index order
     arguments_type arguments;
+    // locals only holds the definitions of the functions local variables in index order
     arguments_type locals;
+    // the locals_map maps both, argument names and local variable names to indices
+    std::map<std::string, size_t> locals_map;
     wasm_block function_body;
     std::string ns;
     std::string import_name;
@@ -329,6 +331,8 @@ struct wasm_module
     std::vector<wasm_memory> memories;
     std::vector<wasm_data_section> data_sections;
     std::vector<global_sym> globals;
+    std::map<std::string, size_t> globals_map;
     std::vector<std::reference_wrapper<exportable>> exports;
     std::vector<wasm_function> functions;
+    std::map<std::string, size_t> functions_map;
 };

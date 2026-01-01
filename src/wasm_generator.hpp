@@ -16,10 +16,11 @@ private:
     void generate_memories(const wasm_module& module, std::ostream &output);
     void generate_globals(const wasm_module& module, std::ostream &output);
     void generate_exports(const wasm_module& module, std::ostream &output);
+    void generate_code(const wasm_module& module, std::ostream &output);
+
+    void generate_block(const wasm_module& module, const wasm_function& function, const wasm_block& block, std::ostream& output);
 
 private:
-    void generate_export(const exportable& exp, std::ostream &output, size_t indent);
-
     size_t intern_func_type(const wasm_function& function);
 
 private:
