@@ -99,7 +99,7 @@ void encode_func_type(std::ostream& output, const wasm_function& function)
     encode_leb128(output, function.arguments.size());
     for (const auto& arg : function.arguments)
     {
-        output.put(encode_wasm_type(arg.second));
+        output.put(encode_wasm_type(arg.type));
     }
 
     if (function.return_type != wasm_type::none)

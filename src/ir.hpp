@@ -34,7 +34,12 @@ enum class wasm_extern_index
 
 using index_type = uint32_t;
 
-using arguments_type = std::vector<std::pair<std::string, wasm_type>>;
+struct argument_type {
+    std::string name;
+    index_type index;
+    wasm_type type;
+};
+using arguments_type = std::vector<argument_type>;
 
 enum class wasm_op
 {

@@ -144,7 +144,7 @@ void wat_generator::generate(const wasm_function& function, std::ostream &output
     output << ind << "(func $" << function.name;
     for (const auto& arg : function.arguments)
     {
-        output << " (param $" << arg.first << " " << repr_wasm_type(arg.second) << ")";
+        output << " (param $" << arg.name << " " << repr_wasm_type(arg.type) << ")";
     }
     if (function.return_type != wasm_type::none)
     {
@@ -159,8 +159,8 @@ void wat_generator::generate(const wasm_function& function, std::ostream &output
 
         for (auto& local_var : function.locals)
         {
-            output << ind << ind << "(local $" << local_var.first << " " << 
-            repr_wasm_type(local_var.second) << ")\n";
+            output << ind << ind << "(local $" << local_var.name << " " << 
+            repr_wasm_type(local_var.type) << ")\n";
         }
 
         generate(function.function_body, output, indent + 2);

@@ -237,7 +237,7 @@ wasm_function::wasm_function(index_type index, const std::string& name, wasm_typ
 
 void wasm_function::allocate_local(const char* name, wasm_type var_type)
 {
-    locals.push_back({name, var_type});
+    locals.push_back({name, locals.size(), var_type});
 }
 
 wasm_block& wasm_function::body()

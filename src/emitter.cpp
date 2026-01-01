@@ -154,7 +154,7 @@ void emitter::emit(const node_import_definition &import_def)
     auto function_name = import_def.function_head->name;
     for (const auto &param : import_def.function_head->signature.parameters)
     {
-        args.push_back({param.name, from_type_kind(param.type_spec)});
+        args.push_back({param.name, 0, from_type_kind(param.type_spec)});
     }
     // TODO: we should actually use the alias name here if it is defined
     auto& import_func = cur_mod->create_function(import_def.function_head->name.c_str(),
@@ -206,7 +206,7 @@ void emitter::emit(const node_function_definition &func_def)
     auto function_name = func_def.function_head->name;
     for (const auto &param : func_def.function_head->signature.parameters)
     {
-        args.push_back({param.name, from_type_kind(param.type_spec)});
+        args.push_back({param.name, 0, from_type_kind(param.type_spec)});
     }
     auto &func = cur_mod->create_function(function_name.c_str(), from_type_kind(func_def.function_head->signature.return_type), args);
     if (func_def.has_attribute("export"))
