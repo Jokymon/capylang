@@ -125,6 +125,7 @@ void wasm_generator::generate(const wasm_module& module, std::ostream &output)
     generate_globals(module, output);
     generate_exports(module, output);
     generate_code(module, output);
+    generate_data(module, output);
 }
 
 void wasm_generator::generate_types(const wasm_module& module, std::ostream &output)
@@ -301,6 +302,28 @@ void wasm_generator::generate_code(const wasm_module& module, std::ostream &outp
 
         encode_leb128(content, function_code.str().size());
         content.write(function_code.str().c_str(), function_code.str().size());
+    }
+
+    encode_leb128(output, content.str().size());
+    output.write(content.str().c_str(), content.str().size());
+}
+
+void wasm_generator::generate_data(const wasm_module& module, std::ostream &output)
+{
+    output.put(SECTION_DATA);
+
+    std::ostringstream content(std::ios::binary);
+    encode_leb128(content, module.data_sections.size());
+    for (const auto& data: module.data_sections)
+    {
+        encode_leb128(content, 0);  // active data section in memory 0
+
+        content.put(INST_I32_CONST);
+        encode_leb128(content, data.init_offset);
+        content.put(INST_TERMINATOR);
+
+        encode_leb128(content, data.data_buffer.size());
+        content << data.data_buffer;
     }
 
     encode_leb128(output, content.str().size());
