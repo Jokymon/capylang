@@ -11,8 +11,7 @@ static symbol ERROR_PLACEHOLDER_SYM = symbol{
     function_signature{},
     symbol_kind::global_var,
     false,
-    false,
-    0};
+    false};
 
 template <typename T, typename... Args>
 ast_node make_located(source_position start, source_position end, Args &&...args)
@@ -605,7 +604,6 @@ ast_node parser::parse_global()
         .kind = symbol_kind::global_var,
         .mutab = is_mutable,
         .is_assigned = false,
-        .index_addr = current_scope->symbol_table.size(),
     };
     current_scope->symbol_table[variable_name.name] = new_symbol;
 
@@ -658,12 +656,12 @@ ast_node parser::parse_function_definition()
     for (const auto& param_spec : function_head.signature.parameters)
     {
         current_scope->symbol_table[param_spec.name] = symbol{
-        .name = param_spec.name,
-        .symbol_type = param_spec.type_spec,
-        .kind = symbol_kind::argument,
-        .mutab = false,
-        .is_assigned = true,    // function parameters are 'assigned' from the function call
-        .index_addr = argument_index++};
+            .name = param_spec.name,
+            .symbol_type = param_spec.type_spec,
+            .kind = symbol_kind::argument,
+            .mutab = false,
+            .is_assigned = true,    // function parameters are 'assigned' from the function call
+        };
     }
 
     std::vector<std::unique_ptr<ast_node>> function_body;
@@ -700,7 +698,6 @@ node_function_head parser::parse_function_head()
         .signature = signature,
         .kind = symbol_kind::function,
         .mutab = false,
-        .index_addr = 0
     };
 
     return node_function_head{
@@ -968,7 +965,6 @@ ast_node parser::parse_let_expression()
         .kind = symbol_kind::local_var,
         .mutab = is_mutable,
         .is_assigned = false,
-        .index_addr = current_scope->symbol_table.size(),
     };
     current_scope->symbol_table[variable_name.name] = new_symbol;
 

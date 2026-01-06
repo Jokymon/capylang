@@ -288,7 +288,6 @@ struct symbol {
     symbol_kind kind;
     bool mutab;
     bool is_assigned;
-    uint32_t index_addr;
 };
 
 struct scope {
