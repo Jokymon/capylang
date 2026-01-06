@@ -84,8 +84,6 @@ type_kind assigned_node_type(const ast_node &node, const context& ctx)
             return n.assigned_type;
         } else if constexpr (std::is_same_v<T, node_while_expression>) {
             return t_t::void_type{};
-        } else if constexpr (std::is_same_v<T, node_type_spec>) {
-            return n.type_spec;
         } else if constexpr (std::is_same_v<T, node_field_deref>) {
             auto field_type = record_field_type(n.object_type, n.fieldname);
             if (field_type.has_value())
@@ -173,10 +171,6 @@ void semantic_analyser::process(source_range location, node_pointer_deref &n)
         );
     }
     n.assigned_type = *std::get<t_t::pointer>(expression_type).base_type;
-}
-
-void semantic_analyser::process(source_range location, node_type_spec &n)
-{
 }
 
 void semantic_analyser::process(source_range location, node_record_definition &n)

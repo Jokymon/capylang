@@ -465,10 +465,6 @@ void emitter::emit(const node_char_literal& literal)
     cur_block->const_val(wasm_type::i32, literal.ch);
 }
 
-void emitter::emit(const node_type_spec& spec)
-{
-}
-
 void emitter::emit(const node_bool_const& bool_const)
 {
     cur_block->const_val(wasm_type::i32, bool_const.value ? 1 : 0);

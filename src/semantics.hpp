@@ -22,7 +22,6 @@ private:
     void process(source_range location, node_string_literal &n);
     void process(source_range location, node_var_reference &n);
     void process(source_range location, node_pointer_deref &n);
-    void process(source_range location, node_type_spec &n);
     void process(source_range location, node_record_definition &n);
     void process(source_range location, node_record_initialisation &n);
     void process(source_range location, node_field_deref &n);

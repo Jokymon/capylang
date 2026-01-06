@@ -112,13 +112,6 @@ void dump_node(const node_while_expression& n, size_t indent)
     }
 }
 
-void dump_node(const node_type_spec& n, size_t indent)
-{
-    std::string ind = std::string(indent, ' ');
-
-    std::cout << ind << "Type: " << repr_type(n.type_spec) << "\n";
-}
-
 void dump_node(const node_record_definition& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
