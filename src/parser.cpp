@@ -1340,6 +1340,68 @@ ast_node parser::parse_number()
             parse_context.intern_primitive(primitive_type::U32));
     }
 
+    
+    if (parse_context.is_primitive_type(number_type.value(), primitive_type::U8))
+    {
+        if ((lhs.number<0) || (lhs.number>std::numeric_limits<uint8_t>::max()))
+        {
+            append_error_at(
+                lhs_location.start,
+                std::format("Numeric literal '{}' exceeds valid range for u8 (0..{})",
+                    lhs.number, std::numeric_limits<uint8_t>::max()));
+        }
+    }
+    else if (parse_context.is_primitive_type(number_type.value(), primitive_type::U16))
+    {
+        if ((lhs.number<0) || (lhs.number>std::numeric_limits<uint16_t>::max()))
+        {
+            append_error_at(
+                lhs_location.start,
+                std::format("Numeric literal '{}' exceeds valid range for u16 (0..{})",
+                    lhs.number, std::numeric_limits<uint16_t>::max()));
+        }
+    }
+    else if (parse_context.is_primitive_type(number_type.value(), primitive_type::U32))
+    {
+        if ((lhs.number<0) || (lhs.number>std::numeric_limits<uint32_t>::max()))
+        {
+            append_error_at(
+                lhs_location.start,
+                std::format("Numeric literal '{}' exceeds valid range for u32 (0..{})",
+                    lhs.number, std::numeric_limits<uint32_t>::max()));
+        }
+    }
+    else if (parse_context.is_primitive_type(number_type.value(), primitive_type::S8))
+    {
+        if ((lhs.number<std::numeric_limits<int8_t>::min()) || (lhs.number>std::numeric_limits<int8_t>::max()))
+        {
+            append_error_at(
+                lhs_location.start,
+                std::format("Numeric literal '{}' exceeds valid range for s8 ({}..{})",
+                    lhs.number, std::numeric_limits<int8_t>::min(), std::numeric_limits<int8_t>::max()));
+        }
+    }
+    else if (parse_context.is_primitive_type(number_type.value(), primitive_type::S16))
+    {
+        if ((lhs.number<std::numeric_limits<int16_t>::min()) || (lhs.number>std::numeric_limits<int16_t>::max()))
+        {
+            append_error_at(
+                lhs_location.start,
+                std::format("Numeric literal '{}' exceeds valid range for s16 ({}..{})",
+                    lhs.number, std::numeric_limits<int16_t>::min(), std::numeric_limits<int16_t>::max()));
+        }
+    }
+    else if (parse_context.is_primitive_type(number_type.value(), primitive_type::S32))
+    {
+        if ((lhs.number<std::numeric_limits<int32_t>::min()) || (lhs.number>std::numeric_limits<int32_t>::max()))
+        {
+            append_error_at(
+                lhs_location.start,
+                std::format("Numeric literal '{}' exceeds valid range for s32 ({}..{})",
+                    lhs.number, std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::max()));
+        }
+    }
+
     return make_located<node_number>(
         lhs_location.start,
         lhs_location.end,

@@ -531,7 +531,7 @@ token lexer::parse_number()
         suffix += get_char();
     }
 
-    return token_integer{start_position, look_ahead_position, std::stoi(num), suffix};
+    return token_integer{start_position, look_ahead_position, std::stoll(num), suffix};
 }
 
 token lexer::parse_identifier_or_keyword()

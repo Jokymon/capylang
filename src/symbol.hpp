@@ -145,6 +145,15 @@ struct context
         return id;
     }
 
+    bool is_primitive_type(type_id type_idx, primitive_type p_type)
+    {
+        auto t = types[type_idx];
+        if (!std::holds_alternative<primitive_type>(t))
+            return false;
+
+        return std::get<primitive_type>(t) == p_type;
+    }
+
     // indexing through type_id
     std::vector<type_node> types;
     std::unordered_map<type_kind2, type_id, type_kind_hash, type_kind_eq> interned;

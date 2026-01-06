@@ -24,7 +24,7 @@ struct located_token
 
 struct token_integer : public located_token
 {
-    long number;
+    long long number;
     std::string type_suffix;
 };
 
