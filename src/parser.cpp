@@ -1043,10 +1043,7 @@ ast_node parser::parse_record_definition()
     auto end_range = capy_lexer->expect<token_symbol>().location;
 
     auto* global_scope = current_scope->get_global_scope();
-    global_scope->symbol_table[record_id.name] = symbol{
-        .symbol_type = t_t::record(new_record_fields),
-        .kind = symbol_kind::type_spec
-    };
+    global_scope->type_table[record_id.name] = t_t::record(new_record_fields);
 
     return make_located<node_record_definition>(
         start_range.start,

@@ -179,9 +179,9 @@ std::optional<std::reference_wrapper<symbol>> scope::lookup(const std::string &n
 
 std::optional<type_kind> scope::lookup_type(const std::string& name)
 {
-    if ((symbol_table.find(name) != symbol_table.end()) && (symbol_table[name].kind == symbol_kind::type_spec))
+    if (type_table.find(name) != type_table.end())
     {
-        return symbol_table[name].symbol_type;
+        return type_table[name];
     }
     else if (parent != nullptr)
     {

@@ -262,8 +262,7 @@ enum class symbol_kind {
     global_var,
     local_var,
     argument,
-    function,
-    type_spec
+    function
 };
 
 struct param_spec
@@ -293,6 +292,7 @@ struct symbol {
 struct scope {
     scope* parent;
     std::map<std::string, symbol> symbol_table;
+    std::map<std::string, type_kind> type_table;
 
     scope* get_global_scope() const;
 
