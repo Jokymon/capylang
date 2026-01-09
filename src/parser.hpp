@@ -193,7 +193,7 @@ struct node_function_definition
 struct node_cast_expression
 {
     std::unique_ptr<ast_node> expression;
-    type_kind cast_type;
+    type_id cast_type;
     source_range op_range;
 };
 

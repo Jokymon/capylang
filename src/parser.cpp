@@ -198,7 +198,7 @@ void dump_node(const context& ctx, const node_cast_expression& n, size_t indent)
     std::string ind = std::string(indent, ' ');
 
     std::cout << ind << "Casting operation"
-            << "; target type: " << repr_type(n.cast_type) << "\n";
+            << "; target type: " << ctx.repr(n.cast_type) << "\n";
     
     dump_ast(ctx, *n.expression, indent+4);
 }
@@ -726,7 +726,7 @@ ast_node parser::parse_expression(int min_precedence)
                 // next token is a conversion operator, skip it
                 auto op_token = capy_lexer->expect<token_symbol>();
 
-                auto type_spec = parse_type_reference();
+                auto type_spec = parse_type_reference2();
 
                 return make_located<node_cast_expression>(
                     start.start,
@@ -781,10 +781,10 @@ ast_node parser::parse_expression(int min_precedence)
             auto op_token = capy_lexer->expect<token_symbol>();
 
             ast_node rhs;
-            type_kind type_spec;
+            type_id type_spec;
             if (op == op_conversion)
             {
-                type_spec = parse_type_reference();
+                type_spec = parse_type_reference2();
             }
             else
             {
@@ -1461,7 +1461,7 @@ void parser::parse_body(std::vector<std::unique_ptr<ast_node>>& body)
                 previous_expression->location.start,
                 previous_expression->location.end,
                 std::move(previous_expression),
-                t_t::void_type{}
+                parse_context.intern_primitive(primitive_type::Void)
             );
             body.emplace_back(std::make_unique<ast_node>(std::move(drop_wrapper)));
         }

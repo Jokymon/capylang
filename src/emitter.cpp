@@ -386,7 +386,7 @@ void emitter::emit(const node_field_deref& field_deref)
 void emitter::emit(const node_cast_expression &root)
 {
     emit(*root.expression);
-    if ((t_t::is_of<t_t::void_type>(root.cast_type)) &&
+    if ((parse_context.is_primitive_type(root.cast_type, primitive_type::Void)) &&
         (!t_t::is_of<t_t::void_type>(assigned_node_type(*root.expression, parse_context))))
     {
         cur_block->drop();

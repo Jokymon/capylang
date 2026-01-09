@@ -92,7 +92,7 @@ type_kind assigned_node_type(const ast_node &node, const context& ctx)
             }
             return t_t::unassigned{};
         } else if constexpr (std::is_same_v<T, node_cast_expression>) {
-             return n.cast_type;
+             return t_t::from_new_style(ctx, n.cast_type);
         } else if constexpr (std::is_same_v<T, node_expression>) {
              return n.assigned_type;
         } else {
