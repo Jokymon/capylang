@@ -23,95 +23,95 @@ ast_node make_located(source_position start, source_position end, Args &&...args
             .end = end}};
 }
 
-void dump_ast(const ast_node& root, size_t indent=0);
+void dump_ast(const context& ctx, const ast_node& root, size_t indent=0);
 
-void dump_node(const node_number& n, size_t indent)
+void dump_node(const context& ctx, const node_number& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
     std::cout << ind << "Num:" << n.number << "\n";
 }
 
-void dump_node(const node_char_literal& n, size_t indent)
+void dump_node(const context& ctx, const node_char_literal& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
     std::cout << ind << "Char literal: \"" << n.ch << "\"\n";
 }
 
-void dump_node(const node_string_literal& n, size_t indent)
+void dump_node(const context& ctx, const node_string_literal& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
     std::cout << ind << "String literal: \"" << n.table_index << "\"\n";
 }
 
-void dump_node(const node_bool_const& n, size_t indent)
+void dump_node(const context& ctx, const node_bool_const& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
     std::cout << ind << "Bool:" << n.value << "\n";
 }
 
-void dump_node(const node_var_reference& n, size_t indent)
+void dump_node(const context& ctx, const node_var_reference& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
     std::cout << ind << "Var(" << repr_type(n.symbol_ref.get().symbol_type) << "):" << n.name << "\n";
 }
 
-void dump_node(const node_pointer_deref& n, size_t indent)
+void dump_node(const context& ctx, const node_pointer_deref& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
     std::cout << ind << "Pointer Deref:\n";
-    dump_ast(*n.pointer_expression, indent+4);
+    dump_ast(ctx, *n.pointer_expression, indent+4);
 }
 
-void dump_node(const node_let_expression& n, size_t indent)
+void dump_node(const context& ctx, const node_let_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
     std::cout << ind << "Let:\n";
     std::cout << ind << "  " << n.name << "=\n";
-    dump_ast(*n.init_expression, indent+4);
+    dump_ast(ctx, *n.init_expression, indent+4);
 }
 
-void dump_node(const node_if_expression& n, size_t indent)
+void dump_node(const context& ctx, const node_if_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
     std::cout << ind << "If: " << repr_type(n.assigned_type) << "\n";
     std::cout << ind << "  Condition:\n";
-    dump_ast(*n.condition, indent+4);
+    dump_ast(ctx, *n.condition, indent+4);
     std::cout << ind << "  Then-Body:\n";
     for (const auto& expression : n.then_code)
     {
-        dump_ast(*expression, indent+4);
+        dump_ast(ctx, *expression, indent+4);
     }
     if (n.else_code.size()>0)
     {
         std::cout << ind << "  Else-Body:\n";
         for (const auto& expression : n.else_code)
         {
-            dump_ast(*expression, indent+4);
+            dump_ast(ctx, *expression, indent+4);
         }
     }
 }
 
-void dump_node(const node_while_expression& n, size_t indent)
+void dump_node(const context& ctx, const node_while_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
     std::cout << ind << "While\n";
     std::cout << ind << "  Condition:\n";
-    dump_ast(*n.condition, indent+4);
+    dump_ast(ctx, *n.condition, indent+4);
     std::cout << ind << "  While-Body:\n";
     for (const auto& expression : n.while_code)
     {
-        dump_ast(*expression, indent+4);
+        dump_ast(ctx, *expression, indent+4);
     }
 }
 
-void dump_node(const node_record_definition& n, size_t indent)
+void dump_node(const context& ctx, const node_record_definition& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
@@ -122,7 +122,7 @@ void dump_node(const node_record_definition& n, size_t indent)
     }
 }
 
-void dump_node(const node_record_initialisation& n, size_t indent)
+void dump_node(const context& ctx, const node_record_initialisation& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
@@ -130,21 +130,21 @@ void dump_node(const node_record_initialisation& n, size_t indent)
     for (const auto& field_init : n.initialisations)
     {
         std::cout << ind << "  " << field_init.field_name << "=\n";
-        dump_ast(*field_init.init_expression, indent+6);
+        dump_ast(ctx, *field_init.init_expression, indent+6);
     }
 }
 
-void dump_node(const node_field_deref& n, size_t indent)
+void dump_node(const context& ctx, const node_field_deref& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
     std::cout << ind << "Deref:\n";
     std::cout << ind << "  object:\n";
-    dump_ast(*n.object, indent+4);
+    dump_ast(ctx, *n.object, indent+4);
     std::cout << ind << "  field: " << n.fieldname << "\n";
 }
 
-void dump_node(const node_function_head& n, size_t indent)
+void dump_node(const context& ctx, const node_function_head& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
@@ -152,14 +152,14 @@ void dump_node(const node_function_head& n, size_t indent)
     std::cout << ind << "  Name: " << n.name << "\n";
 }
 
-void dump_node(const node_import_definition& n, size_t indent)
+void dump_node(const context& ctx, const node_import_definition& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
     std::cout << ind << "Import definition: TODO\n";
 }
 
-void dump_node(const node_global& n, size_t indent)
+void dump_node(const context& ctx, const node_global& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
@@ -168,7 +168,7 @@ void dump_node(const node_global& n, size_t indent)
     //dump_ast(*n.init_expression, indent+4);
 }
 
-void dump_node(const node_function_call& n, size_t indent)
+void dump_node(const context& ctx, const node_function_call& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
@@ -176,68 +176,68 @@ void dump_node(const node_function_call& n, size_t indent)
     for (const auto& param : n.parameter)
     {
         std::cout << ind << "  Parameter:\n";
-        dump_ast(*param, indent+4);
+        dump_ast(ctx, *param, indent+4);
     }
 }
 
-void dump_node(const node_function_definition& n, size_t indent)
+void dump_node(const context& ctx, const node_function_definition& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
     std::cout << ind << "Function definition:\n";
-    dump_node(*n.function_head, indent);
+    dump_node(ctx, *n.function_head, indent);
     std::cout << ind << "  Body:\n";
     for (const auto& expression : n.code)
     {
-        dump_ast(*expression, indent+4);
+        dump_ast(ctx, *expression, indent+4);
     }
 }
 
-void dump_node(const node_cast_expression& n, size_t indent)
+void dump_node(const context& ctx, const node_cast_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
     std::cout << ind << "Casting operation"
             << "; target type: " << repr_type(n.cast_type) << "\n";
     
-    dump_ast(*n.expression, indent+4);
+    dump_ast(ctx, *n.expression, indent+4);
 }
 
-void dump_node(const node_expression& n, size_t indent)
+void dump_node(const context& ctx, const node_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
     std::cout << ind << "Expression; op: " << repr_op(n.operation) 
             << "; type: " << repr_type(n.assigned_type) << "\n";
     
-    dump_ast(*n.left, indent+4);
-    dump_ast(*n.right, indent+4);
+    dump_ast(ctx, *n.left, indent+4);
+    dump_ast(ctx, *n.right, indent+4);
 }
 
-void dump_module(const node_module& n, size_t indent)
+void dump_module(const context& ctx, const node_module& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
     std::cout << ind << "Module:\n";
     for (const auto& import : n.imports)
     {
-        dump_ast(*import, indent+4);
+        dump_ast(ctx, *import, indent+4);
     }
     for (const auto& type_def : n.typedefs)
     {
-        dump_ast(*type_def, indent+4);
+        dump_ast(ctx, *type_def, indent+4);
     }
     for (const auto& function : n.functions)
     {
-        dump_ast(*function, indent+4);
+        dump_ast(ctx, *function, indent+4);
     }
 }
 
-void dump_ast(const ast_node& root, size_t indent)
+void dump_ast(const context& ctx, const ast_node& root, size_t indent)
 {
     std::visit([=](const auto &n)
         {
-            dump_node(n, indent);
+            dump_node(ctx, n, indent);
         }, root.value);
 }
 

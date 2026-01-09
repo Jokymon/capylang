@@ -49,7 +49,7 @@ struct node_module;
 using ast_node_raw = std::variant<node_number, node_char_literal, node_bool_const, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_if_expression, node_while_expression, node_record_definition, node_record_initialisation, node_field_deref, node_import_definition, node_global, node_function_call, node_function_definition, node_cast_expression, node_expression>;
 using ast_node = located<ast_node_raw>;
 
-void dump_module(const node_module& module, size_t indent=0);
+void dump_module(const context& ctx, const node_module& module, size_t indent=0);
 
 enum class assign_context {
     lhs,

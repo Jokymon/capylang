@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     semantic_analyser analyser{parse_context};
     analyser.semantic_analysis(root_node);
     if (args.dump_ast) {
-        dump_module(root_node);
+        dump_module(parse_context, root_node);
         return 0;
     }
 
