@@ -209,6 +209,58 @@ std::optional<type_kind> t_t::record::field_type(const std::string& name)
     return std::nullopt;
 }
 
+type_kind t_t::from_new_style(const context& ctx, type_id idx)
+{
+    auto typ = ctx.types.at(idx);
+    return std::visit([&](const auto& t) -> type_kind {
+        using T = std::decay_t<decltype(t)>;
+
+        if constexpr (std::is_same_v<T, primitive_type>)
+        {
+            switch (t) {
+                case primitive_type::Void:
+                    return t_t::void_type{};
+                case primitive_type::Char:
+                    return t_t::char_type{};
+                case primitive_type::Boolean:
+                    return t_t::boolean{};
+                case primitive_type::U8:
+                    return t_t::u8{};
+                case primitive_type::U16:
+                    return t_t::u16{};
+                case primitive_type::U32:
+                    return t_t::u32{};
+                case primitive_type::S8:
+                    return t_t::s8{};
+                case primitive_type::S16:
+                    return t_t::s16{};
+                case primitive_type::S32:
+                    return t_t::s32{};
+                case primitive_type::String:
+                    return t_t::string{};
+            }
+        }
+        else if constexpr (std::is_same_v<T, pointer_type>)
+        {
+            auto base_type = t_t::from_new_style(ctx, t.to);
+            return t_t::pointer{base_type};
+        }
+        else if constexpr (std::is_same_v<T, record_type>)
+        {
+            std::vector<record::field_spec> fields;
+            for (const auto& f : t.fields)
+            {
+                fields.emplace_back(record::field_spec{
+                    f.first,
+                    std::make_unique<type_kind>(t_t::from_new_style(ctx, f.second))
+                });
+            }
+            return t_t::record(fields);
+        }
+    },
+    typ);
+}
+
 std::string repr_type(const type_kind& type_spec)
 {
     return std::visit([&](const auto &t) -> std::string {

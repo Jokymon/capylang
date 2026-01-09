@@ -232,6 +232,8 @@ namespace t_t
         std::vector<field_spec> fields;
     };
 
+    type_kind from_new_style(const context& ctx, type_id idx);
+
     template<typename T, typename V>
     static bool is_of(V&& value) {
         return std::holds_alternative<T>(value);

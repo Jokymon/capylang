@@ -167,7 +167,7 @@ struct node_import_definition
 struct node_global
 {
     std::string name;
-    type_kind assigned_type;
+    type_id assigned_type;
     std::reference_wrapper<symbol> symbol_ref;
     int32_t init_value;
     //std::unique_ptr<ast_node> init_expression;

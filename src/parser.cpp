@@ -596,11 +596,11 @@ ast_node parser::parse_global()
         append_error("Expecting a ':' after variable name in 'global' expression");
     }
 
-    auto type_spec = parse_type_reference();
+    auto type_spec = parse_type_reference2();
 
     auto new_symbol = symbol{
         .name = variable_name.name,
-        .symbol_type = type_spec,
+        .symbol_type = t_t::from_new_style(parse_context, type_spec),
         .kind = symbol_kind::global_var,
         .mutab = is_mutable,
         .is_assigned = false,
