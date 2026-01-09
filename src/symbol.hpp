@@ -280,10 +280,12 @@ struct scope {
     scope* parent;
     std::map<std::string, symbol> symbol_table;
     std::map<std::string, type_kind> type_table;
+    std::map<std::string, type_id> type_table2;
 
     scope* get_global_scope() const;
 
     std::optional<std::reference_wrapper<symbol>> lookup(const std::string& name);
     std::optional<type_kind> lookup_type(const std::string& name);
+    std::optional<type_id> lookup_type2(const std::string& name);
     std::optional<symbol> lookup_function(const std::string& name);
 };

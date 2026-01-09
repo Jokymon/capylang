@@ -261,6 +261,7 @@ private:
     ast_node parse_field_deref(type_kind base_type, ast_node object);
     ast_node parse_primary();
     type_kind parse_type_reference();
+    type_id parse_type_reference2();
     ast_node parse_number();
 
     void parse_body(std::vector<std::unique_ptr<ast_node>>& body);

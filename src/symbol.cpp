@@ -328,6 +328,22 @@ std::optional<type_kind> scope::lookup_type(const std::string& name)
     }
 }
 
+std::optional<type_id> scope::lookup_type2(const std::string& name)
+{
+    if (type_table.find(name) != type_table.end())
+    {
+        return type_table2[name];
+    }
+    else if (parent != nullptr)
+    {
+        return parent->lookup_type2(name);
+    }
+    else
+    {
+        return std::nullopt;
+    }
+}
+
 std::optional<symbol> scope::lookup_function(const std::string &name)
 {
     if ((symbol_table.find(name) != symbol_table.end()) && (symbol_table[name].kind == symbol_kind::function))

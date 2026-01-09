@@ -1310,6 +1310,49 @@ type_kind parser::parse_type_reference()
     return type_spec.value();
 }
 
+type_id parser::parse_type_reference2()
+{
+    bool is_pointer = false;
+    if (capy_lexer->ahead_is_sym(token_symbol::sym_star))
+    {
+        is_pointer = true;
+        capy_lexer->next_token();
+    }
+
+    source_range token_location;
+    token_location.start = capy_lexer->current_source_position();
+    token_location.end = capy_lexer->current_source_position();
+    token_identifier type_name = {token_location, ""};
+
+    if (capy_lexer->ahead_is<token_identifier>())
+    {
+        type_name = capy_lexer->expect<token_identifier>();
+    }
+    else
+    {
+        append_error("Expecting an identifier for the type specification");
+    }
+
+    auto type_spec = type_from_id2(parse_context, type_name.name);
+    if (!type_spec.has_value())
+    {
+        type_spec = current_scope->lookup_type2(type_name.name);
+        if (!type_spec.has_value())
+        {
+            append_error("Unknown type specification: " + type_name.name);
+            type_spec = parse_context.intern_primitive(primitive_type::Void);
+        }
+    }
+
+    if (is_pointer)
+    {
+        auto new_type = pointer_type{type_spec.value()};
+        type_spec = parse_context.intern(new_type);
+    }
+
+    return type_spec.value();
+}
+
 ast_node parser::parse_number()
 {
     auto lhs = capy_lexer->expect<token_integer>();
