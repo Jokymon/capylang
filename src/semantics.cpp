@@ -37,31 +37,7 @@ type_kind assigned_node_type(const ast_node &node, const context& ctx)
         using T = std::decay_t<decltype(n)>;
 
         if constexpr (std::is_same_v<T, node_number>) {
-            return std::visit([&](const auto &ty) -> type_kind
-            {
-                using T = std::decay_t<decltype(ty)>;
-
-                if constexpr (std::is_same_v<T, primitive_type>) {
-                    switch (ty) {
-                        case primitive_type::U8:
-                            return t_t::u8{};
-                        case primitive_type::U16:
-                            return t_t::u16{};
-                        case primitive_type::U32:
-                            return t_t::u32{};
-                        case primitive_type::S8:
-                            return t_t::s8{};
-                        case primitive_type::S16:
-                            return t_t::s16{};
-                        case primitive_type::S32:
-                            return t_t::s32{};
-                        default:
-                            return t_t::unassigned{};
-                    }
-                } else {
-                    return t_t::unassigned{};
-                }
-            }, ctx.types[n.assigned_type]);
+            return t_t::from_new_style(ctx, n.assigned_type);
         } else if constexpr (std::is_same_v<T, node_char_literal>) {
             return t_t::char_type{};
         } else if constexpr (std::is_same_v<T, node_bool_const>) {
