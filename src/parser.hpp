@@ -100,7 +100,6 @@ struct node_pointer_deref
 struct node_let_expression
 {
     std::string name;
-    type_kind assigned_type;
     std::reference_wrapper<symbol> symbol_ref;
     std::unique_ptr<ast_node> init_expression;
 };

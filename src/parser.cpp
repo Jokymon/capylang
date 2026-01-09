@@ -957,11 +957,11 @@ ast_node parser::parse_let_expression()
         append_error("Expecting a ':' after variable name in 'let' expression");
     }
 
-    auto type_spec = parse_type_reference();
+    auto type_spec = parse_type_reference2();
 
     auto new_symbol = symbol{
         .name = variable_name.name,
-        .symbol_type = type_spec,
+        .symbol_type = t_t::from_new_style(parse_context, type_spec),
         .kind = symbol_kind::local_var,
         .mutab = is_mutable,
         .is_assigned = false,
@@ -979,7 +979,6 @@ ast_node parser::parse_let_expression()
             start_location.start,
             initializer.location.end,
             variable_name.name,
-            type_spec,
             current_scope->symbol_table[variable_name.name],
             std::make_unique<ast_node>(std::move(initializer)));
     }
@@ -989,7 +988,6 @@ ast_node parser::parse_let_expression()
         start_location.start,
         end_position,
         variable_name.name,
-        type_spec,
         new_symbol,
         nullptr
     );
@@ -1013,6 +1011,8 @@ ast_node parser::parse_record_definition()
     }
     
     std::vector<t_t::record::field_spec> new_record_fields;
+    std::vector<record_type::field_type> new_record_fields2;
+
     while (capy_lexer->ahead_is<token_identifier>())
     {
         auto field_id = capy_lexer->expect<token_identifier>();
@@ -1021,9 +1021,13 @@ ast_node parser::parse_record_definition()
             append_error("Expecting a colon ':' after field name and before type specification");
         }
 
-        auto type_spec = parse_type_reference();
+        auto type_spec = parse_type_reference2();
 
-        new_record_fields.emplace_back(t_t::record::field_spec{field_id.name, std::make_unique<type_kind>(type_spec)});
+        new_record_fields.emplace_back(t_t::record::field_spec{
+            field_id.name,
+            std::make_unique<type_kind>(t_t::from_new_style(parse_context, type_spec))
+        });
+        new_record_fields2.emplace_back(record_type::field_type{field_id.name, type_spec});
 
         if (!capy_lexer->expect_symbol(token_symbol::sym_comma))
         {
@@ -1044,6 +1048,7 @@ ast_node parser::parse_record_definition()
 
     auto* global_scope = current_scope->get_global_scope();
     global_scope->type_table[record_id.name] = t_t::record(new_record_fields);
+    global_scope->type_table2[record_id.name] = parse_context.intern(record_type{new_record_fields2});
 
     return make_located<node_record_definition>(
         start_range.start,

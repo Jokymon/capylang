@@ -341,12 +341,13 @@ void semantic_analyser::process(source_range location, node_let_expression &n)
 
     visit(*n.init_expression);
 
-    if (n.assigned_type!=assigned_node_type(*n.init_expression, parse_context))
+    if (n.symbol_ref.get().symbol_type !=
+        assigned_node_type(*n.init_expression, parse_context))
     {
         append_error_at(
             location.start,
             "Type mismatch in let statement. Variable is of type '"
-                + repr_type(n.assigned_type) + "' but expression has type '"
+                + repr_type(n.symbol_ref.get().symbol_type) + "' but expression has type '"
                 + repr_type(assigned_node_type(*n.init_expression, parse_context))+"'"
         );
     }
