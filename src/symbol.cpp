@@ -1,6 +1,141 @@
 #include "symbol.hpp"
 #include <cassert>
 
+type_id context::intern_primitive(primitive_type p_type)
+{
+    type_kind2 kind = p_type;
+    auto it = interned.find(kind);
+    if (it != interned.end())
+    {
+        return it->second;
+    }
+
+    type_id id = static_cast<type_id>(types.size());
+    types.emplace_back(kind);
+    interned.emplace(kind, id);
+
+    return id;
+}
+
+type_id context::intern(const type_kind2& type)
+{
+    auto it = interned.find(type);
+    if (it != interned.end())
+    {
+        return it->second;
+    }
+
+    type_id id = static_cast<type_id>(types.size());
+    types.emplace_back(type);
+    interned.emplace(type, id);
+
+    return id;
+}
+
+bool context::is_primitive_type(type_id type_idx, primitive_type p_type)
+{
+    auto t = types[type_idx];
+    if (!std::holds_alternative<primitive_type>(t))
+        return false;
+
+    return std::get<primitive_type>(t) == p_type;
+}
+
+bool context::is_record_type(type_id type_idx)
+{
+    auto t = types[type_idx];
+    return std::holds_alternative<record_type>(t) || 
+        (std::holds_alternative<primitive_type>(t) &&
+            std::get<primitive_type>(t) == primitive_type::String);
+}
+
+bool context::is_pointer_type(type_id type_idx)
+{
+    auto t = types[type_idx];
+    return std::holds_alternative<pointer_type>(t);
+}
+
+std::optional<type_id> context::record_field_type(type_id record_type_idx, const std::string& field_name)
+{
+    auto t = types[record_type_idx];
+    if (std::holds_alternative<record_type>(t))
+    {
+        const record_type& r = std::get<record_type>(t);
+        for (const auto& field : r.fields)
+        {
+            if (field.first == field_name)
+            {
+                return field.second;
+            }
+        }
+    }
+    else if (std::holds_alternative<primitive_type>(t))
+    {
+        if (std::get<primitive_type>(t) == primitive_type::String)
+        {
+            if (field_name == "size")
+            {
+                return intern_primitive(primitive_type::U32);
+            }
+            else if (field_name == "ptr")
+            {
+                return intern(pointer_type{intern_primitive(primitive_type::U8)});
+            }
+        }
+    }
+
+    return std::nullopt;
+}
+
+std::string context::repr(type_id type_idx) const
+{
+    auto typ = types[type_idx];
+    return std::visit([&](const auto &t) -> std::string {
+        using T = std::decay_t<decltype(t)>;
+
+        if constexpr (std::is_same_v<T, primitive_type>)
+        {
+            switch (t) {
+                case primitive_type::Void:
+                    return "void";
+                case primitive_type::Boolean:
+                    return "bool";
+                case primitive_type::Char:
+                    return "char";
+                case primitive_type::U8:
+                    return "u8";
+                case primitive_type::U16:
+                    return "u16";
+                case primitive_type::U32:
+                    return "u32";
+                case primitive_type::S8:
+                    return "s8";
+                case primitive_type::S16:
+                    return "s16";
+                case primitive_type::S32:
+                    return "s32";
+                case primitive_type::String:
+                    return "string";
+            }
+        }
+        else if constexpr (std::is_same_v<T, pointer_type>)
+        {
+            return repr(t.to) + "*";
+        }
+        else if constexpr (std::is_same_v<T, record_type>)
+        {
+            std::string r = "record(";
+            for (const auto& field : t.fields)
+            {
+                r += field.first + ":";
+                r += repr(field.second) + ",";
+            }
+            r += ")";
+            return r;
+        }
+    }, typ);
+}
+
 t_t::pointer::pointer(const type_kind& base_type)
 : base_type(make_unique<type_kind>(base_type))
 {

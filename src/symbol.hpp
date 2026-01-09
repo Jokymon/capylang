@@ -30,7 +30,8 @@ struct pointer_type {
 };
 
 struct record_type {
-    std::vector<std::pair<std::string, type_id>> fields;
+    using field_type = std::pair<std::string, type_id>;
+    std::vector<field_type> fields;
 };
 
 // description of the shape of a type
@@ -129,30 +130,16 @@ using type_node = type_kind2;
 
 struct context
 {
-    type_id intern_primitive(primitive_type p_type)
-    {
-        type_kind2 kind = p_type;
-        auto it = interned.find(kind);
-        if (it != interned.end())
-        {
-            return it->second;
-        }
+    type_id intern_primitive(primitive_type p_type);
+    type_id intern(const type_kind2& type);
 
-        type_id id = static_cast<type_id>(types.size());
-        types.emplace_back(kind);
-        interned.emplace(kind, id);
+    bool is_primitive_type(type_id type_idx, primitive_type p_type);
+    bool is_record_type(type_id type_idx);
+    bool is_pointer_type(type_id type_idx);
 
-        return id;
-    }
+    std::optional<type_id> record_field_type(type_id record_type_idx, const std::string& field_name);
 
-    bool is_primitive_type(type_id type_idx, primitive_type p_type)
-    {
-        auto t = types[type_idx];
-        if (!std::holds_alternative<primitive_type>(t))
-            return false;
-
-        return std::get<primitive_type>(t) == p_type;
-    }
+    std::string repr(type_id type_idx) const;
 
     // indexing through type_id
     std::vector<type_node> types;
