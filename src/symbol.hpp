@@ -124,18 +124,24 @@ struct type_kind_eq {
     }
 };
 
+struct type_var {
+    std::optional<type_id> parent;
+};
+
 // type used to represent the shape (or later also potential shape) of
 // types in one parsing pass
-using type_node = type_kind2;
+using type_node = std::variant<type_kind2, type_var>;
 
 struct context
 {
     type_id intern_primitive(primitive_type p_type);
     type_id intern(const type_kind2& type);
+    type_id create_type_var();
 
     bool is_primitive_type(type_id type_idx, primitive_type p_type);
     bool is_record_type(type_id type_idx);
     bool is_pointer_type(type_id type_idx);
+    bool is_type_var(type_id type_idx);
 
     std::optional<type_id> record_field_type(type_id record_type_idx, const std::string& field_name);
 

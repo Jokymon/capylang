@@ -32,35 +32,64 @@ type_id context::intern(const type_kind2& type)
     return id;
 }
 
+type_id context::create_type_var()
+{
+    type_id id = static_cast<type_id>(types.size());
+    types.emplace_back(type_var{std::nullopt});
+    return id;
+}
+
 bool context::is_primitive_type(type_id type_idx, primitive_type p_type)
 {
     auto t = types[type_idx];
-    if (!std::holds_alternative<primitive_type>(t))
+    if (!std::holds_alternative<type_kind2>(t))
+        return false;
+    
+    auto kind = std::get<type_kind2>(t);
+    if (!std::holds_alternative<primitive_type>(kind))
         return false;
 
-    return std::get<primitive_type>(t) == p_type;
+    return std::get<primitive_type>(kind) == p_type;
 }
 
 bool context::is_record_type(type_id type_idx)
 {
     auto t = types[type_idx];
-    return std::holds_alternative<record_type>(t) || 
-        (std::holds_alternative<primitive_type>(t) &&
-            std::get<primitive_type>(t) == primitive_type::String);
+    if (!std::holds_alternative<type_kind2>(t))
+        return false;
+
+    auto kind = std::get<type_kind2>(t);
+    return std::holds_alternative<record_type>(kind) || 
+        (std::holds_alternative<primitive_type>(kind) &&
+            std::get<primitive_type>(kind) == primitive_type::String);
 }
 
 bool context::is_pointer_type(type_id type_idx)
 {
     auto t = types[type_idx];
-    return std::holds_alternative<pointer_type>(t);
+    if (!std::holds_alternative<type_kind2>(t))
+        return false;
+
+    auto kind = std::get<type_kind2>(t);
+    return std::holds_alternative<pointer_type>(kind);
+}
+
+bool context::is_type_var(type_id type_idx)
+{
+    auto t = types[type_idx];
+    return std::holds_alternative<type_var>(t);
 }
 
 std::optional<type_id> context::record_field_type(type_id record_type_idx, const std::string& field_name)
 {
     auto t = types[record_type_idx];
-    if (std::holds_alternative<record_type>(t))
+    if (!std::holds_alternative<type_kind2>(t))
+        return std::nullopt;
+
+    auto kind = std::get<type_kind2>(t);
+    if (std::holds_alternative<record_type>(kind))
     {
-        const record_type& r = std::get<record_type>(t);
+        const record_type& r = std::get<record_type>(kind);
         for (const auto& field : r.fields)
         {
             if (field.first == field_name)
@@ -69,9 +98,9 @@ std::optional<type_id> context::record_field_type(type_id record_type_idx, const
             }
         }
     }
-    else if (std::holds_alternative<primitive_type>(t))
+    else if (std::holds_alternative<primitive_type>(kind))
     {
-        if (std::get<primitive_type>(t) == primitive_type::String)
+        if (std::get<primitive_type>(kind) == primitive_type::String)
         {
             if (field_name == "size")
             {
@@ -93,45 +122,57 @@ std::string context::repr(type_id type_idx) const
     return std::visit([&](const auto &t) -> std::string {
         using T = std::decay_t<decltype(t)>;
 
-        if constexpr (std::is_same_v<T, primitive_type>)
+        if constexpr (std::is_same_v<T, type_kind2>)
         {
-            switch (t) {
-                case primitive_type::Void:
-                    return "void";
-                case primitive_type::Boolean:
-                    return "bool";
-                case primitive_type::Char:
-                    return "char";
-                case primitive_type::U8:
-                    return "u8";
-                case primitive_type::U16:
-                    return "u16";
-                case primitive_type::U32:
-                    return "u32";
-                case primitive_type::S8:
-                    return "s8";
-                case primitive_type::S16:
-                    return "s16";
-                case primitive_type::S32:
-                    return "s32";
-                case primitive_type::String:
-                    return "string";
-            }
+            //auto kind = std::get<type_kind2>(t);
+            return std::visit([&](const auto &k) -> std::string {
+                using K = std::decay_t<decltype(k)>;
+
+                if constexpr (std::is_same_v<K, primitive_type>)
+                {
+                    switch (k) {
+                        case primitive_type::Void:
+                            return "void";
+                        case primitive_type::Boolean:
+                            return "bool";
+                        case primitive_type::Char:
+                            return "char";
+                        case primitive_type::U8:
+                            return "u8";
+                        case primitive_type::U16:
+                            return "u16";
+                        case primitive_type::U32:
+                            return "u32";
+                        case primitive_type::S8:
+                            return "s8";
+                        case primitive_type::S16:
+                            return "s16";
+                        case primitive_type::S32:
+                            return "s32";
+                        case primitive_type::String:
+                            return "string";
+                    }
+                }
+                else if constexpr (std::is_same_v<K, pointer_type>)
+                {
+                    return repr(k.to) + "*";
+                }
+                else if constexpr (std::is_same_v<K, record_type>)
+                {
+                    std::string r = "record(";
+                    for (const auto& field : k.fields)
+                    {
+                        r += field.first + ":";
+                        r += repr(field.second) + ",";
+                    }
+                    r += ")";
+                    return r;
+                }
+            }, t);
         }
-        else if constexpr (std::is_same_v<T, pointer_type>)
+        else if constexpr (std::is_same_v<T, type_var>)
         {
-            return repr(t.to) + "*";
-        }
-        else if constexpr (std::is_same_v<T, record_type>)
-        {
-            std::string r = "record(";
-            for (const auto& field : t.fields)
-            {
-                r += field.first + ":";
-                r += repr(field.second) + ",";
-            }
-            r += ")";
-            return r;
+            return "type_var";
         }
     }, typ);
 }
@@ -215,50 +256,61 @@ type_kind t_t::from_new_style(const context& ctx, type_id idx)
     return std::visit([&](const auto& t) -> type_kind {
         using T = std::decay_t<decltype(t)>;
 
-        if constexpr (std::is_same_v<T, primitive_type>)
+        if constexpr (std::is_same_v<T, type_kind2>)
         {
-            switch (t) {
-                case primitive_type::Void:
-                    return t_t::void_type{};
-                case primitive_type::Char:
-                    return t_t::char_type{};
-                case primitive_type::Boolean:
-                    return t_t::boolean{};
-                case primitive_type::U8:
-                    return t_t::u8{};
-                case primitive_type::U16:
-                    return t_t::u16{};
-                case primitive_type::U32:
-                    return t_t::u32{};
-                case primitive_type::S8:
-                    return t_t::s8{};
-                case primitive_type::S16:
-                    return t_t::s16{};
-                case primitive_type::S32:
-                    return t_t::s32{};
-                case primitive_type::String:
-                    return t_t::string{};
-            }
+            return std::visit([&](const auto& k) -> type_kind {
+                using K = std::decay_t<decltype(k)>;
+
+                if constexpr (std::is_same_v<K, primitive_type>)
+                {
+                    switch (k) {
+                        case primitive_type::Void:
+                            return t_t::void_type{};
+                        case primitive_type::Char:
+                            return t_t::char_type{};
+                        case primitive_type::Boolean:
+                            return t_t::boolean{};
+                        case primitive_type::U8:
+                            return t_t::u8{};
+                        case primitive_type::U16:
+                            return t_t::u16{};
+                        case primitive_type::U32:
+                            return t_t::u32{};
+                        case primitive_type::S8:
+                            return t_t::s8{};
+                        case primitive_type::S16:
+                            return t_t::s16{};
+                        case primitive_type::S32:
+                            return t_t::s32{};
+                        case primitive_type::String:
+                            return t_t::string{};
+                    }
+                }
+                else if constexpr (std::is_same_v<K, pointer_type>)
+                {
+                    auto base_type = t_t::from_new_style(ctx, k.to);
+                    return t_t::pointer{base_type};
+                }
+                else if constexpr (std::is_same_v<K, record_type>)
+                {
+                    std::vector<record::field_spec> fields;
+                    for (const auto& f : k.fields)
+                    {
+                        fields.emplace_back(record::field_spec{
+                            f.first,
+                            std::make_unique<type_kind>(t_t::from_new_style(ctx, f.second))
+                        });
+                    }
+                    return t_t::record(fields);
+                }
+            },
+            t);
         }
-        else if constexpr (std::is_same_v<T, pointer_type>)
+        else if constexpr (std::is_same_v<T, type_var>)
         {
-            auto base_type = t_t::from_new_style(ctx, t.to);
-            return t_t::pointer{base_type};
+            return t_t::unassigned{};
         }
-        else if constexpr (std::is_same_v<T, record_type>)
-        {
-            std::vector<record::field_spec> fields;
-            for (const auto& f : t.fields)
-            {
-                fields.emplace_back(record::field_spec{
-                    f.first,
-                    std::make_unique<type_kind>(t_t::from_new_style(ctx, f.second))
-                });
-            }
-            return t_t::record(fields);
-        }
-    },
-    typ);
+    }, typ);
 }
 
 std::string repr_type(const type_kind& type_spec)
