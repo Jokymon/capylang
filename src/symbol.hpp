@@ -34,11 +34,22 @@ struct record_type {
     std::vector<field_type> fields;
 };
 
+class context;
+struct function_type {
+    type_id return_type;
+    std::vector<type_id> parameter_types;
+
+    bool is_call_signature_eq(const function_type& other);
+
+    std::string repr_call_sig(const context& ctx) const;
+};
+
 // description of the shape of a type
 using type_kind2 = std::variant<
     primitive_type,
     pointer_type,
-    record_type
+    record_type,
+    function_type
 >;
 
 inline void hash_combine(size_t& seed, size_t value)
@@ -68,6 +79,14 @@ struct type_kind_hash {
                     {
                         hash_combine(seed, std::hash<std::string>{}(name));
                         hash_combine(seed, tid);
+                    }
+                }
+                else if constexpr (std::is_same_v<typ_x, function_type>)
+                {
+                    hash_combine(seed, x.return_type);
+                    for (auto const& param_tid : x.parameter_types)
+                    {
+                        hash_combine(seed, param_tid);
                     }
                 }
             },
@@ -114,6 +133,24 @@ struct type_kind_eq {
                     }
                     return true;
                 }
+                else if constexpr (std::is_same_v<typ_x, function_type> &&
+                    std::is_same_v<typ_y, function_type>)
+                {
+                    if (x.return_type != y.return_type)
+                    {
+                        return false;
+                    }
+                    if (x.parameter_types.size() != y.parameter_types.size())
+                    {
+                        return false;
+                    }
+                    for (size_t i = 0; i < x.parameter_types.size(); ++i)
+                    {
+                        if (x.parameter_types[i] != y.parameter_types[i])
+                            return false;
+                    }
+                    return true;
+                }
                 else
                 {
                     return false;
@@ -144,6 +181,7 @@ struct context
     bool is_type_var(type_id type_idx);
 
     std::optional<type_id> record_field_type(type_id record_type_idx, const std::string& field_name);
+    std::optional<type_id> function_return_type(type_id function_type_idx);
 
     std::string repr(type_id type_idx) const;
 

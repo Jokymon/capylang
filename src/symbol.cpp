@@ -1,5 +1,42 @@
 #include "symbol.hpp"
 #include <cassert>
+#include <ranges>
+
+bool function_type::is_call_signature_eq(const function_type& other)
+{
+    if (parameter_types.size() != other.parameter_types.size())
+    {
+        return false;
+    }
+    for (auto [this_id, other_id]: std::views::zip(parameter_types, other.parameter_types))
+    {
+        if (this_id != other_id)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::string function_type::repr_call_sig(const context& ctx) const
+{
+    std::string r = "(";
+    if (parameter_types.size()>0)
+    {
+        r += ctx.repr(parameter_types[0]);
+
+        size_t index = 1;
+        while (index<parameter_types.size())
+        {
+            r += ", " + ctx.repr(parameter_types[index]);
+            index++;
+        }
+    }
+
+    r += ")";
+    return r;
+}
+
 
 type_id context::intern_primitive(primitive_type p_type)
 {
@@ -116,6 +153,22 @@ std::optional<type_id> context::record_field_type(type_id record_type_idx, const
     return std::nullopt;
 }
 
+std::optional<type_id> context::function_return_type(type_id function_type_idx)
+{
+    auto t = types[function_type_idx];
+    if (!std::holds_alternative<type_kind2>(t))
+        return std::nullopt;
+
+    auto kind = std::get<type_kind2>(t);
+    if (std::holds_alternative<function_type>(kind))
+    {
+        const function_type& f = std::get<function_type>(kind);
+        return f.return_type;
+    }
+
+    return std::nullopt;
+}
+
 std::string context::repr(type_id type_idx) const
 {
     auto typ = types[type_idx];
@@ -166,6 +219,13 @@ std::string context::repr(type_id type_idx) const
                         r += repr(field.second) + ",";
                     }
                     r += ")";
+                    return r;
+                }
+                else if constexpr (std::is_same_v<K, function_type>)
+                {
+                    std::string r = "func";
+                    r += k.repr_call_sig(*this);
+                    r += " -> " + repr(k.return_type);
                     return r;
                 }
             }, t);
@@ -302,6 +362,13 @@ type_kind t_t::from_new_style(const context& ctx, type_id idx)
                         });
                     }
                     return t_t::record(fields);
+                }
+                else if constexpr (std::is_same_v<K, function_type>)
+                {
+                    // Function types are not directly representable as type_kind
+                    // in this design; handle as needed.
+                    assert(false && "Function types cannot be converted to type_kind directly");
+                    return t_t::unassigned{};
                 }
             },
             t);
