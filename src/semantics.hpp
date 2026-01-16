@@ -2,7 +2,7 @@
 #include "parser.hpp"
 #include <optional>
 
-type_kind assigned_node_type(const ast_node &node, const context& ctx);
+type_id assigned_node_type(const ast_node &node, context& ctx);
 
 class semantic_analyser
 {

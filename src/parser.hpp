@@ -93,7 +93,7 @@ struct node_var_reference
 struct node_pointer_deref
 {
     std::unique_ptr<ast_node> pointer_expression;
-    type_kind assigned_type;
+    type_id assigned_type;
     assign_context context;
 };
 
@@ -109,7 +109,7 @@ struct node_if_expression
     std::unique_ptr<ast_node> condition;
     std::vector<std::unique_ptr<ast_node>> then_code;
     std::vector<std::unique_ptr<ast_node>> else_code;
-    type_kind assigned_type;
+    type_id assigned_type;
     // TODO: should be introduce a new scope for the if?
 };
 
@@ -122,14 +122,14 @@ struct node_while_expression
 struct node_record_definition
 {
     std::string name;
-    std::vector<t_t::record::field_spec> fields;
+    std::vector<record_type::field_type> fields;
 };
 
 struct node_field_deref
 {
     std::unique_ptr<ast_node> object;
     std::string fieldname;
-    type_kind object_type;
+    type_id object_type;
 
     // give a textual representation of the object for this dereferencing AST node
     // without including the field name
@@ -145,7 +145,7 @@ struct field_initialisation
 
 struct node_record_initialisation
 {
-    type_kind type_spec;
+    type_id type_spec;
     std::vector<field_initialisation> initialisations;
 };
 
@@ -175,7 +175,7 @@ struct node_global
 struct node_function_call
 {
     std::string function_name;
-    symbol symbol_ref;
+    std::reference_wrapper<symbol> symbol_ref;
     std::vector<std::unique_ptr<ast_node>> parameter;
 };
 
@@ -201,7 +201,7 @@ struct node_expression
     std::unique_ptr<ast_node> left, right;
     source_range op_range;
     operator_type operation;
-    type_kind assigned_type;
+    type_id assigned_type;
 };
 
 struct node_module : public located_node
@@ -244,7 +244,7 @@ private:
     node_module parse_module();
     void parse_module_body();
     void parse_attribute();
-    void parse_parameters(std::vector<param_spec>& parameters);
+    void parse_parameters(function_signature& signature, function_type& func_type);
     void parse_function_signature(function_signature& signature);
     ast_node parse_import_definition();
     ast_node parse_global();
@@ -257,9 +257,8 @@ private:
     ast_node parse_let_expression();
     ast_node parse_record_definition();
     ast_node parse_record_initialisation(source_range name_range, const std::string& record_name);
-    ast_node parse_field_deref(type_kind base_type, ast_node object);
+    ast_node parse_field_deref(type_id base_type, ast_node object);
     ast_node parse_primary();
-    type_kind parse_type_reference();
     type_id parse_type_reference2();
     ast_node parse_number();
 

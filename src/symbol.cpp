@@ -37,6 +37,11 @@ std::string function_type::repr_call_sig(const context& ctx) const
     return r;
 }
 
+context::context()
+{
+    // reserve entry for ILLEGAL_TYPE
+    types.emplace_back(type_var{});
+}
 
 type_id context::intern_primitive(primitive_type p_type)
 {
@@ -171,13 +176,17 @@ std::optional<type_id> context::function_return_type(type_id function_type_idx)
 
 std::string context::repr(type_id type_idx) const
 {
-    auto typ = types[type_idx];
+    if ((type_idx == ILLEGAL_TYPE) || (static_cast<size_t>(type_idx) >= types.size()))
+    {
+        return "!unassigned";
+    }
+
+    const auto &typ = types[type_idx];
     return std::visit([&](const auto &t) -> std::string {
         using T = std::decay_t<decltype(t)>;
 
         if constexpr (std::is_same_v<T, type_kind2>)
         {
-            //auto kind = std::get<type_kind2>(t);
             return std::visit([&](const auto &k) -> std::string {
                 using K = std::decay_t<decltype(k)>;
 
@@ -310,153 +319,6 @@ std::optional<type_kind> t_t::record::field_type(const std::string& name)
     return std::nullopt;
 }
 
-type_kind t_t::from_new_style(const context& ctx, type_id idx)
-{
-    auto typ = ctx.types.at(idx);
-    return std::visit([&](const auto& t) -> type_kind {
-        using T = std::decay_t<decltype(t)>;
-
-        if constexpr (std::is_same_v<T, type_kind2>)
-        {
-            return std::visit([&](const auto& k) -> type_kind {
-                using K = std::decay_t<decltype(k)>;
-
-                if constexpr (std::is_same_v<K, primitive_type>)
-                {
-                    switch (k) {
-                        case primitive_type::Void:
-                            return t_t::void_type{};
-                        case primitive_type::Char:
-                            return t_t::char_type{};
-                        case primitive_type::Boolean:
-                            return t_t::boolean{};
-                        case primitive_type::U8:
-                            return t_t::u8{};
-                        case primitive_type::U16:
-                            return t_t::u16{};
-                        case primitive_type::U32:
-                            return t_t::u32{};
-                        case primitive_type::S8:
-                            return t_t::s8{};
-                        case primitive_type::S16:
-                            return t_t::s16{};
-                        case primitive_type::S32:
-                            return t_t::s32{};
-                        case primitive_type::String:
-                            return t_t::string{};
-                    }
-                }
-                else if constexpr (std::is_same_v<K, pointer_type>)
-                {
-                    auto base_type = t_t::from_new_style(ctx, k.to);
-                    return t_t::pointer{base_type};
-                }
-                else if constexpr (std::is_same_v<K, record_type>)
-                {
-                    std::vector<record::field_spec> fields;
-                    for (const auto& f : k.fields)
-                    {
-                        fields.emplace_back(record::field_spec{
-                            f.first,
-                            std::make_unique<type_kind>(t_t::from_new_style(ctx, f.second))
-                        });
-                    }
-                    return t_t::record(fields);
-                }
-                else if constexpr (std::is_same_v<K, function_type>)
-                {
-                    // Function types are not directly representable as type_kind
-                    // in this design; handle as needed.
-                    assert(false && "Function types cannot be converted to type_kind directly");
-                    return t_t::unassigned{};
-                }
-            },
-            t);
-        }
-        else if constexpr (std::is_same_v<T, type_var>)
-        {
-            return t_t::unassigned{};
-        }
-    }, typ);
-}
-
-std::string repr_type(const type_kind& type_spec)
-{
-    return std::visit([&](const auto &t) -> std::string {
-        using T = std::decay_t<decltype(t)>;
-
-        if constexpr (std::is_same_v<T, t_t::unassigned>)
-            return "!unassigned";
-        else if constexpr (std::is_same_v<T, t_t::void_type>)
-            return "void";
-        else if constexpr (std::is_same_v<T, t_t::boolean>)
-            return "bool";
-        else if constexpr (std::is_same_v<T, t_t::s32>)
-            return "s32";
-        else if constexpr (std::is_same_v<T, t_t::u8>)
-            return "u8";
-        else if constexpr (std::is_same_v<T, t_t::u32>)
-            return "u32";
-        else if constexpr (std::is_same_v<T, t_t::string>)
-            return "string";
-        else if constexpr (std::is_same_v<T, t_t::pointer>) {
-            if (!t.base_type) {
-                assert(false && "The base type of a pointer has an unexpected nullptr reference");
-                return "*null*";
-            }
-            return repr_type(*t.base_type) + "*";
-        }
-        else if constexpr (std::is_same_v<T, t_t::record>) {
-            std::string repr = "record(";
-            for (const auto& field: t.fields) {
-                repr += field.name + ":";
-                repr += repr_type(*field.type_spec) + ",";
-            }
-            repr += ")";
-            return repr;
-        }
-        else {
-            return "UNEXPECTED BRANCH";
-        }
-    }, type_spec);
-}
-
-bool function_signature::equals_call_signature(function_signature &other)
-{
-    if (parameters.size() != other.parameters.size())
-    {
-        return false;
-    }
-
-    for (size_t param_index = 0; param_index < parameters.size(); param_index++)
-    {
-        if (parameters[param_index].type_spec != other.parameters[param_index].type_spec)
-        {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-std::string function_signature::repr()
-{
-    std::string r = "(";
-    if (parameters.size()>0)
-    {
-        r += repr_type(parameters[0].type_spec);
-
-        size_t index = 1;
-        while (index<parameters.size())
-        {
-            r += ", " + repr_type(parameters[index].type_spec);
-            index++;
-        }
-    }
-    r += ")";
-    return r;
-}
-
 scope* scope::get_global_scope() const
 {
     scope* scope_iter = const_cast<scope*>(this);
@@ -483,25 +345,9 @@ std::optional<std::reference_wrapper<symbol>> scope::lookup(const std::string &n
     }
 }
 
-std::optional<type_kind> scope::lookup_type(const std::string& name)
-{
-    if (type_table.find(name) != type_table.end())
-    {
-        return type_table[name];
-    }
-    else if (parent != nullptr)
-    {
-        return parent->lookup_type(name);
-    }
-    else
-    {
-        return std::nullopt;
-    }
-}
-
 std::optional<type_id> scope::lookup_type2(const std::string& name)
 {
-    if (type_table.find(name) != type_table.end())
+    if (type_table2.find(name) != type_table2.end())
     {
         return type_table2[name];
     }
@@ -515,7 +361,7 @@ std::optional<type_id> scope::lookup_type2(const std::string& name)
     }
 }
 
-std::optional<symbol> scope::lookup_function(const std::string &name)
+std::optional<std::reference_wrapper<symbol>> scope::lookup_function(const std::string &name)
 {
     if ((symbol_table.find(name) != symbol_table.end()) && (symbol_table[name].kind == symbol_kind::function))
     {

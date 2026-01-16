@@ -2,12 +2,13 @@
 #include <assert.h>
 #include <iostream>
 #include <memory>
+#include <ranges>
 #include <sstream>
 #include <string>
 
 static symbol ERROR_PLACEHOLDER_SYM = symbol{
     "_",
-    t_t::u32{},
+    static_cast<type_id>(ILLEGAL_TYPE),
     function_signature{},
     symbol_kind::global_var,
     false,
@@ -57,7 +58,7 @@ void dump_node(const context& ctx, const node_var_reference& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Var(" << repr_type(n.symbol_ref.get().symbol_type) << "):" << n.name << "\n";
+    std::cout << ind << "Var(" << ctx.repr(n.symbol_ref.get().symbol_type) << "):" << n.name << "\n";
 }
 
 void dump_node(const context& ctx, const node_pointer_deref& n, size_t indent)
@@ -80,7 +81,7 @@ void dump_node(const context& ctx, const node_let_expression& n, size_t indent)
 void dump_node(const context& ctx, const node_if_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
-    std::cout << ind << "If: " << repr_type(n.assigned_type) << "\n";
+    std::cout << ind << "If: " << ctx.repr(n.assigned_type) << "\n";
     std::cout << ind << "  Condition:\n";
     dump_ast(ctx, *n.condition, indent+4);
     std::cout << ind << "  Then-Body:\n";
@@ -118,7 +119,7 @@ void dump_node(const context& ctx, const node_record_definition& n, size_t inden
     std::cout << ind << "Record definition " << n.name << ":\n";
     for (const auto& field : n.fields)
     {
-        std::cout << ind << "  " << field.name << ": " << repr_type(*field.type_spec) << "\n";
+        std::cout << ind << "  " << field.first << ": " << ctx.repr(field.second) << "\n";
     }
 }
 
@@ -165,7 +166,7 @@ void dump_node(const context& ctx, const node_global& n, size_t indent)
 
     std::cout << ind << "Global:\n";
     std::cout << ind << "  " << n.name << "=\n";
-    //dump_ast(*n.init_expression, indent+4);
+    //dump_ast(ctx, *n.init_expression, indent+4);
 }
 
 void dump_node(const context& ctx, const node_function_call& n, size_t indent)
@@ -208,7 +209,7 @@ void dump_node(const context& ctx, const node_expression& n, size_t indent)
     std::string ind = std::string(indent, ' ');
 
     std::cout << ind << "Expression; op: " << repr_op(n.operation) 
-            << "; type: " << repr_type(n.assigned_type) << "\n";
+            << "; type: " << ctx.repr(n.assigned_type) << "\n";
     
     dump_ast(ctx, *n.left, indent+4);
     dump_ast(ctx, *n.right, indent+4);
@@ -235,7 +236,7 @@ void dump_module(const context& ctx, const node_module& n, size_t indent)
 
 void dump_ast(const context& ctx, const ast_node& root, size_t indent)
 {
-    std::visit([=](const auto &n)
+    std::visit([=, &ctx](const auto &n)
         {
             dump_node(ctx, n, indent);
         }, root.value);
@@ -255,48 +256,6 @@ std::string node_field_deref::repr_obj() const
             return "";
         }
     }, object->value);
-}
-
-std::optional<type_kind> type_from_id(const std::string &id)
-{
-    if (id == "u32")
-    {
-        return t_t::u32{};
-    }
-    else if (id == "u16")
-    {
-        return t_t::u16{};
-    }
-    else if (id == "u8")
-    {
-        return t_t::u8{};
-    }
-    else if ((id == "s32") || (id == ""))
-    {
-        return t_t::s32{};
-    }
-    else if (id == "s16")
-    {
-        return t_t::s16{};
-    }
-    else if (id == "s8")
-    {
-        return t_t::s8{};
-    }
-    else if (id == "char")
-    {
-        return t_t::char_type{};
-    }
-    else if (id == "string")
-    {
-        return t_t::string{};
-    }
-    else if (id == "bool")
-    {
-        return t_t::boolean{};
-    }
-
-    return std::nullopt;
 }
 
 std::optional<type_id> type_from_id2(context& ctx, const std::string& id)
@@ -485,38 +444,45 @@ void parser::parse_function_signature(function_signature &signature)
         append_error("Expecting an opening bracket '(' for function parameters");
     }
 
-    parse_parameters(signature.parameters);
+    function_type new_func_type;
+    parse_parameters(signature, new_func_type);
 
     if (!capy_lexer->expect_symbol(token_symbol::sym_paren_close))
     {
         append_error("Expecting an closing bracket ')' for function parameters");
     }
 
-    std::optional<type_kind> return_type = t_t::void_type{};
+    type_id return_type = parse_context.intern_primitive(primitive_type::Void);
 
     if (capy_lexer->ahead_is_sym(token_symbol::sym_arrow))
     {
         capy_lexer->next_token();
-
-        return_type = parse_type_reference();
+        return_type = parse_type_reference2();
     }
 
-    signature.return_type = return_type.value();
+    new_func_type.return_type = return_type;
+    // TODO: this whole area is very error prone; we need to create a new
+    // function_type but we also must make sure that this type is interned to
+    // get a new type_id and then we also have to assign this to the signature;
+    // also we have to make sure, that we have also determined and assigned the
+    // return type before interning the function type
+    signature.function_type = parse_context.intern(new_func_type);
 }
 
-void parser::parse_parameters(std::vector<param_spec> &parameters)
+void parser::parse_parameters(function_signature& signature, function_type& func_type)
 {
     while (capy_lexer->ahead_is<token_identifier>())
     {
         auto param_name = capy_lexer->expect<token_identifier>();
+        signature.parameters.emplace_back(param_name.name);
+
         if (!capy_lexer->expect_symbol(token_symbol::sym_colon))
         {
             append_error("Expecting a colon ':' between parameter name and parameter type");
         }
 
-        auto type_spec = parse_type_reference();
-
-        parameters.emplace_back(param_name.name, type_spec);
+        auto type_spec = parse_type_reference2();
+        func_type.parameter_types.emplace_back(type_spec);
 
         // eat the comma between the parameters
         if (capy_lexer->ahead_is_sym(token_symbol::sym_comma))
@@ -600,7 +566,7 @@ ast_node parser::parse_global()
 
     auto new_symbol = symbol{
         .name = variable_name.name,
-        .symbol_type = t_t::from_new_style(parse_context, type_spec),
+        .symbol_type = type_spec,
         .kind = symbol_kind::global_var,
         .mutab = is_mutable,
         .is_assigned = false,
@@ -652,12 +618,16 @@ ast_node parser::parse_function_definition()
     func_scope->parent = current_scope;
     current_scope = func_scope.get();
 
-    uint32_t argument_index = 0;
-    for (const auto& param_spec : function_head.signature.parameters)
+    auto function_type_entry = parse_context.types[function_head.signature.function_type];
+    auto func_type = std::get<function_type>(std::get<type_kind2>(function_type_entry));
+
+    const auto& parameter_names = function_head.signature.parameters;
+    for (auto [param_name, param_typ] : std::views::zip(parameter_names,
+                                                    func_type.parameter_types))
     {
-        current_scope->symbol_table[param_spec.name] = symbol{
-            .name = param_spec.name,
-            .symbol_type = param_spec.type_spec,
+        current_scope->symbol_table[param_name] = symbol{
+            .name = param_name,
+            .symbol_type = param_typ,
             .kind = symbol_kind::argument,
             .mutab = false,
             .is_assigned = true,    // function parameters are 'assigned' from the function call
@@ -694,7 +664,7 @@ node_function_head parser::parse_function_head()
 
     current_scope->symbol_table[function_name.name] = symbol{
         .name = function_name.name,
-        .symbol_type = t_t::unassigned{},
+        .symbol_type = signature.function_type,
         .signature = signature,
         .kind = symbol_kind::function,
         .mutab = false,
@@ -752,7 +722,7 @@ ast_node parser::parse_expression(int min_precedence)
             std::unique_ptr<ast_node>(nullptr),
             source_range{start.start, start.end},
             op_multiply,
-            t_t::unassigned{}
+            parse_context.intern_primitive(primitive_type::U32)
         );
     }
     else if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_if))
@@ -811,7 +781,7 @@ ast_node parser::parse_expression(int min_precedence)
                     std::make_unique<ast_node>(std::move(rhs)),
                     op_token.location,
                     op,
-                    t_t::unassigned{}
+                    parse_context.create_type_var()
                 );
             }
         }
@@ -846,12 +816,11 @@ ast_node parser::parse_function_call(source_range name_range, const std::string 
     {
         append_error("Function '" + function_name + "' is not defined");
 
-        symbol dummy_function_symbol;
         return make_located<node_function_call>(
             name_range.start,
             end_location.end,
             function_name,
-            dummy_function_symbol,
+            ERROR_PLACEHOLDER_SYM,
             std::move(function_parameters));
     }
 
@@ -903,7 +872,8 @@ ast_node parser::parse_if_expression()
         std::make_unique<ast_node>(std::move(condition)),
         std::move(then_body),
         std::move(else_body),
-        t_t::unassigned{}
+        parse_context.create_type_var()
+        //parse_context.intern_primitive(primitive_type::Void)
     );
 }
 
@@ -961,7 +931,7 @@ ast_node parser::parse_let_expression()
 
     auto new_symbol = symbol{
         .name = variable_name.name,
-        .symbol_type = t_t::from_new_style(parse_context, type_spec),
+        .symbol_type = type_spec,
         .kind = symbol_kind::local_var,
         .mutab = is_mutable,
         .is_assigned = false,
@@ -1010,7 +980,6 @@ ast_node parser::parse_record_definition()
         append_error("Expecting an opening brace '{' starting the record definition");
     }
     
-    std::vector<t_t::record::field_spec> new_record_fields;
     std::vector<record_type::field_type> new_record_fields2;
 
     while (capy_lexer->ahead_is<token_identifier>())
@@ -1023,10 +992,6 @@ ast_node parser::parse_record_definition()
 
         auto type_spec = parse_type_reference2();
 
-        new_record_fields.emplace_back(t_t::record::field_spec{
-            field_id.name,
-            std::make_unique<type_kind>(t_t::from_new_style(parse_context, type_spec))
-        });
         new_record_fields2.emplace_back(record_type::field_type{field_id.name, type_spec});
 
         if (!capy_lexer->expect_symbol(token_symbol::sym_comma))
@@ -1047,24 +1012,23 @@ ast_node parser::parse_record_definition()
     auto end_range = capy_lexer->expect<token_symbol>().location;
 
     auto* global_scope = current_scope->get_global_scope();
-    global_scope->type_table[record_id.name] = t_t::record(new_record_fields);
     global_scope->type_table2[record_id.name] = parse_context.intern(record_type{new_record_fields2});
 
     return make_located<node_record_definition>(
         start_range.start,
         end_range.end,
         record_id.name,
-        new_record_fields
+        new_record_fields2
     );
 }
 
 ast_node parser::parse_record_initialisation(source_range name_range, const std::string& record_name)
 {
-    auto record_type = current_scope->lookup_type(record_name);
+    auto record_type = current_scope->lookup_type2(record_name);
     if (!record_type.has_value())
     {
         append_error("Trying to initialise record of unknown type '"+record_name+"'");
-        record_type = t_t::void_type{};
+        record_type = parse_context.intern_primitive(primitive_type::Void);
     }
 
     // skipping the opening '{'
@@ -1108,7 +1072,7 @@ ast_node parser::parse_record_initialisation(source_range name_range, const std:
     );
 }
 
-ast_node parser::parse_field_deref(type_kind base_type, ast_node object)
+ast_node parser::parse_field_deref(type_id base_type, ast_node object)
 {
     // eat the dot '.'
     capy_lexer->expect<token_symbol>();
@@ -1137,7 +1101,7 @@ ast_node parser::parse_field_deref(type_kind base_type, ast_node object)
 
     if (capy_lexer->ahead_is_sym(token_symbol::sym_period))
     {
-        if (!std::holds_alternative<t_t::record>(base_type))
+        if (!parse_context.is_record_type(base_type))
         {
             // TODO: when are these errors even triggered? In the current tests
             // such errors are only reported from semantic checks
@@ -1145,8 +1109,7 @@ ast_node parser::parse_field_deref(type_kind base_type, ast_node object)
             // After the error, just return what we have so far
             return node;
         }
-        t_t::record base_record_type = std::get<t_t::record>(base_type);
-        auto field_type = base_record_type.field_type(field_name.name);
+        auto field_type = parse_context.record_field_type(base_type, field_name.name);
         if (!field_type.has_value())
         {
             // TODO: when are these errors even triggered? In the current tests
@@ -1175,7 +1138,7 @@ ast_node parser::parse_primary()
         // record initialisation and 'if' expressions can look very similar but we
         // can clearly distinguish them on a semantic level. When the identifier
         // before the opening '{' is a type, then this must be a record initialisation
-        else if (current_scope->lookup_type(id.name).has_value() &&
+        else if (current_scope->lookup_type2(id.name).has_value() &&
                  capy_lexer->ahead_is_sym(token_symbol::sym_curly_open))
         {
             return parse_record_initialisation(id_range, id.name);
@@ -1233,7 +1196,8 @@ ast_node parser::parse_primary()
             op_token.location.start,
             pointer_expr.location.end,
             std::make_unique<ast_node>(std::move(pointer_expr)),
-            t_t::unassigned{},
+            parse_context.create_type_var(),
+            //parse_context.intern_primitive(primitive_type::Void),
             assign_context::rhs
         );
     }
@@ -1271,48 +1235,6 @@ ast_node parser::parse_primary()
             0,
             parse_context.intern_primitive(primitive_type::U32));
     }
-}
-
-type_kind parser::parse_type_reference()
-{
-    bool is_pointer = false;
-    if (capy_lexer->ahead_is_sym(token_symbol::sym_star))
-    {
-        is_pointer = true;
-        capy_lexer->next_token();
-    }
-
-    source_range token_location;
-    token_location.start = capy_lexer->current_source_position();
-    token_location.end = capy_lexer->current_source_position();
-    token_identifier type_name = {token_location, ""};
-
-    if (capy_lexer->ahead_is<token_identifier>())
-    {
-        type_name = capy_lexer->expect<token_identifier>();
-    }
-    else
-    {
-        append_error("Expecting an identifier for the type specification");
-    }
-
-    auto type_spec = type_from_id(type_name.name);
-    if (!type_spec.has_value())
-    {
-        type_spec = current_scope->lookup_type(type_name.name);
-        if (!type_spec.has_value())
-        {
-            append_error("Unknown type specification: " + type_name.name);
-            type_spec = t_t::unassigned{};
-        }
-    }
-
-    if (is_pointer)
-    {
-        type_spec = t_t::pointer{type_spec.value()};
-    }
-
-    return type_spec.value();
 }
 
 type_id parser::parse_type_reference2()

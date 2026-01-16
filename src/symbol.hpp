@@ -24,6 +24,7 @@ enum class primitive_type
 // identity of a specific concrete type as an index into an array
 // of type_node entries.
 using type_id = std::uint32_t;
+static constexpr type_id ILLEGAL_TYPE = 0;
 
 struct pointer_type {
     type_id to;
@@ -171,6 +172,8 @@ using type_node = std::variant<type_kind2, type_var>;
 
 struct context
 {
+    context();
+
     type_id intern_primitive(primitive_type p_type);
     type_id intern(const type_kind2& type);
     type_id create_type_var();
@@ -276,8 +279,6 @@ namespace t_t
         std::vector<field_spec> fields;
     };
 
-    type_kind from_new_style(const context& ctx, type_id idx);
-
     template<typename T, typename V>
     static bool is_of(V&& value) {
         return std::holds_alternative<T>(value);
@@ -298,24 +299,15 @@ enum class symbol_kind {
     function
 };
 
-struct param_spec
-{
-    std::string name;
-    type_kind type_spec;
-};
-
 struct function_signature
 {
-    std::vector<param_spec> parameters;
-    type_kind return_type;
-
-    bool equals_call_signature(function_signature& other);
-    std::string repr();
+    std::vector<std::string> parameters;
+    type_id function_type;
 };
 
 struct symbol {
     std::string name;
-    type_kind symbol_type;
+    type_id symbol_type;
     function_signature signature;
     symbol_kind kind;
     bool mutab;
@@ -325,13 +317,11 @@ struct symbol {
 struct scope {
     scope* parent;
     std::map<std::string, symbol> symbol_table;
-    std::map<std::string, type_kind> type_table;
     std::map<std::string, type_id> type_table2;
 
     scope* get_global_scope() const;
 
     std::optional<std::reference_wrapper<symbol>> lookup(const std::string& name);
-    std::optional<type_kind> lookup_type(const std::string& name);
     std::optional<type_id> lookup_type2(const std::string& name);
-    std::optional<symbol> lookup_function(const std::string& name);
+    std::optional<std::reference_wrapper<symbol>> lookup_function(const std::string& name);
 };
