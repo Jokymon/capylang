@@ -258,7 +258,7 @@ std::string node_field_deref::repr_obj() const
     }, object->value);
 }
 
-std::optional<type_id> type_from_id2(context& ctx, const std::string& id)
+std::optional<type_id> type_from_id(context& ctx, const std::string& id)
 {
     if (id == "u32")
     {
@@ -457,7 +457,7 @@ void parser::parse_function_signature(function_signature &signature)
     if (capy_lexer->ahead_is_sym(token_symbol::sym_arrow))
     {
         capy_lexer->next_token();
-        return_type = parse_type_reference2();
+        return_type = parse_type_reference();
     }
 
     new_func_type.return_type = return_type;
@@ -481,7 +481,7 @@ void parser::parse_parameters(function_signature& signature, function_type& func
             append_error("Expecting a colon ':' between parameter name and parameter type");
         }
 
-        auto type_spec = parse_type_reference2();
+        auto type_spec = parse_type_reference();
         func_type.parameter_types.emplace_back(type_spec);
 
         // eat the comma between the parameters
@@ -562,7 +562,7 @@ ast_node parser::parse_global()
         append_error("Expecting a ':' after variable name in 'global' expression");
     }
 
-    auto type_spec = parse_type_reference2();
+    auto type_spec = parse_type_reference();
 
     auto new_symbol = symbol{
         .name = variable_name.name,
@@ -619,7 +619,7 @@ ast_node parser::parse_function_definition()
     current_scope = func_scope.get();
 
     auto function_type_entry = parse_context.types[function_head.signature.function_type];
-    auto func_type = std::get<function_type>(std::get<type_kind2>(function_type_entry));
+    auto func_type = std::get<function_type>(std::get<type_kind>(function_type_entry));
 
     const auto& parameter_names = function_head.signature.parameters;
     for (auto [param_name, param_typ] : std::views::zip(parameter_names,
@@ -696,7 +696,7 @@ ast_node parser::parse_expression(int min_precedence)
                 // next token is a conversion operator, skip it
                 auto op_token = capy_lexer->expect<token_symbol>();
 
-                auto type_spec = parse_type_reference2();
+                auto type_spec = parse_type_reference();
 
                 return make_located<node_cast_expression>(
                     start.start,
@@ -754,7 +754,7 @@ ast_node parser::parse_expression(int min_precedence)
             type_id type_spec;
             if (op == op_conversion)
             {
-                type_spec = parse_type_reference2();
+                type_spec = parse_type_reference();
             }
             else
             {
@@ -927,7 +927,7 @@ ast_node parser::parse_let_expression()
         append_error("Expecting a ':' after variable name in 'let' expression");
     }
 
-    auto type_spec = parse_type_reference2();
+    auto type_spec = parse_type_reference();
 
     auto new_symbol = symbol{
         .name = variable_name.name,
@@ -980,7 +980,7 @@ ast_node parser::parse_record_definition()
         append_error("Expecting an opening brace '{' starting the record definition");
     }
     
-    std::vector<record_type::field_type> new_record_fields2;
+    std::vector<record_type::field_type> new_record_fields;
 
     while (capy_lexer->ahead_is<token_identifier>())
     {
@@ -990,9 +990,9 @@ ast_node parser::parse_record_definition()
             append_error("Expecting a colon ':' after field name and before type specification");
         }
 
-        auto type_spec = parse_type_reference2();
+        auto type_spec = parse_type_reference();
 
-        new_record_fields2.emplace_back(record_type::field_type{field_id.name, type_spec});
+        new_record_fields.emplace_back(record_type::field_type{field_id.name, type_spec});
 
         if (!capy_lexer->expect_symbol(token_symbol::sym_comma))
         {
@@ -1012,19 +1012,19 @@ ast_node parser::parse_record_definition()
     auto end_range = capy_lexer->expect<token_symbol>().location;
 
     auto* global_scope = current_scope->get_global_scope();
-    global_scope->type_table2[record_id.name] = parse_context.intern(record_type{new_record_fields2});
+    global_scope->type_table[record_id.name] = parse_context.intern(record_type{new_record_fields});
 
     return make_located<node_record_definition>(
         start_range.start,
         end_range.end,
         record_id.name,
-        new_record_fields2
+        new_record_fields
     );
 }
 
 ast_node parser::parse_record_initialisation(source_range name_range, const std::string& record_name)
 {
-    auto record_type = current_scope->lookup_type2(record_name);
+    auto record_type = current_scope->lookup_type(record_name);
     if (!record_type.has_value())
     {
         append_error("Trying to initialise record of unknown type '"+record_name+"'");
@@ -1138,7 +1138,7 @@ ast_node parser::parse_primary()
         // record initialisation and 'if' expressions can look very similar but we
         // can clearly distinguish them on a semantic level. When the identifier
         // before the opening '{' is a type, then this must be a record initialisation
-        else if (current_scope->lookup_type2(id.name).has_value() &&
+        else if (current_scope->lookup_type(id.name).has_value() &&
                  capy_lexer->ahead_is_sym(token_symbol::sym_curly_open))
         {
             return parse_record_initialisation(id_range, id.name);
@@ -1237,7 +1237,7 @@ ast_node parser::parse_primary()
     }
 }
 
-type_id parser::parse_type_reference2()
+type_id parser::parse_type_reference()
 {
     bool is_pointer = false;
     if (capy_lexer->ahead_is_sym(token_symbol::sym_star))
@@ -1260,10 +1260,10 @@ type_id parser::parse_type_reference2()
         append_error("Expecting an identifier for the type specification");
     }
 
-    auto type_spec = type_from_id2(parse_context, type_name.name);
+    auto type_spec = type_from_id(parse_context, type_name.name);
     if (!type_spec.has_value())
     {
-        type_spec = current_scope->lookup_type2(type_name.name);
+        type_spec = current_scope->lookup_type(type_name.name);
         if (!type_spec.has_value())
         {
             append_error("Unknown type specification: " + type_name.name);
@@ -1285,7 +1285,7 @@ ast_node parser::parse_number()
     auto lhs = capy_lexer->expect<token_integer>();
     auto lhs_location = lhs.location;
 
-    auto number_type = type_from_id2(parse_context, lhs.type_suffix);
+    auto number_type = type_from_id(parse_context, lhs.type_suffix);
     if (!number_type.has_value())
     {
         append_error("Number has an illegal suffix");

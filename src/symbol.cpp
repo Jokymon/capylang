@@ -45,7 +45,7 @@ context::context()
 
 type_id context::intern_primitive(primitive_type p_type)
 {
-    type_kind2 kind = p_type;
+    type_kind kind = p_type;
     auto it = interned.find(kind);
     if (it != interned.end())
     {
@@ -59,7 +59,7 @@ type_id context::intern_primitive(primitive_type p_type)
     return id;
 }
 
-type_id context::intern(const type_kind2& type)
+type_id context::intern(const type_kind& type)
 {
     auto it = interned.find(type);
     if (it != interned.end())
@@ -84,10 +84,10 @@ type_id context::create_type_var()
 bool context::is_primitive_type(type_id type_idx, primitive_type p_type)
 {
     auto t = types[type_idx];
-    if (!std::holds_alternative<type_kind2>(t))
+    if (!std::holds_alternative<type_kind>(t))
         return false;
     
-    auto kind = std::get<type_kind2>(t);
+    auto kind = std::get<type_kind>(t);
     if (!std::holds_alternative<primitive_type>(kind))
         return false;
 
@@ -97,10 +97,10 @@ bool context::is_primitive_type(type_id type_idx, primitive_type p_type)
 bool context::is_record_type(type_id type_idx)
 {
     auto t = types[type_idx];
-    if (!std::holds_alternative<type_kind2>(t))
+    if (!std::holds_alternative<type_kind>(t))
         return false;
 
-    auto kind = std::get<type_kind2>(t);
+    auto kind = std::get<type_kind>(t);
     return std::holds_alternative<record_type>(kind) || 
         (std::holds_alternative<primitive_type>(kind) &&
             std::get<primitive_type>(kind) == primitive_type::String);
@@ -109,10 +109,10 @@ bool context::is_record_type(type_id type_idx)
 bool context::is_pointer_type(type_id type_idx)
 {
     auto t = types[type_idx];
-    if (!std::holds_alternative<type_kind2>(t))
+    if (!std::holds_alternative<type_kind>(t))
         return false;
 
-    auto kind = std::get<type_kind2>(t);
+    auto kind = std::get<type_kind>(t);
     return std::holds_alternative<pointer_type>(kind);
 }
 
@@ -125,10 +125,10 @@ bool context::is_type_var(type_id type_idx)
 std::optional<type_id> context::record_field_type(type_id record_type_idx, const std::string& field_name)
 {
     auto t = types[record_type_idx];
-    if (!std::holds_alternative<type_kind2>(t))
+    if (!std::holds_alternative<type_kind>(t))
         return std::nullopt;
 
-    auto kind = std::get<type_kind2>(t);
+    auto kind = std::get<type_kind>(t);
     if (std::holds_alternative<record_type>(kind))
     {
         const record_type& r = std::get<record_type>(kind);
@@ -161,10 +161,10 @@ std::optional<type_id> context::record_field_type(type_id record_type_idx, const
 std::optional<type_id> context::function_return_type(type_id function_type_idx)
 {
     auto t = types[function_type_idx];
-    if (!std::holds_alternative<type_kind2>(t))
+    if (!std::holds_alternative<type_kind>(t))
         return std::nullopt;
 
-    auto kind = std::get<type_kind2>(t);
+    auto kind = std::get<type_kind>(t);
     if (std::holds_alternative<function_type>(kind))
     {
         const function_type& f = std::get<function_type>(kind);
@@ -185,7 +185,7 @@ std::string context::repr(type_id type_idx) const
     return std::visit([&](const auto &t) -> std::string {
         using T = std::decay_t<decltype(t)>;
 
-        if constexpr (std::is_same_v<T, type_kind2>)
+        if constexpr (std::is_same_v<T, type_kind>)
         {
             return std::visit([&](const auto &k) -> std::string {
                 using K = std::decay_t<decltype(k)>;
@@ -246,79 +246,6 @@ std::string context::repr(type_id type_idx) const
     }, typ);
 }
 
-t_t::pointer::pointer(const type_kind& base_type)
-: base_type(make_unique<type_kind>(base_type))
-{
-}
-
-t_t::pointer::pointer(const t_t::pointer& other)
-: base_type(make_unique<type_kind>(*other.base_type))
-{
-}
-
-t_t::pointer& t_t::pointer::operator=(const t_t::pointer& other)
-{
-    base_type = make_unique<type_kind>(*other.base_type);
-    return *this;
-}
-
-bool t_t::pointer::operator==(const pointer& other) const
-{
-    return *base_type == *other.base_type;
-}
-
-t_t::record::field_spec::field_spec(const std::string& name, std::unique_ptr<type_kind> type_spec)
-: name(name)
-, type_spec(std::make_unique<type_kind>(*type_spec))
-{
-}
-
-t_t::record::field_spec::field_spec(const t_t::record::field_spec& other)
-: name(other.name)
-, type_spec(std::make_unique<type_kind>(*other.type_spec))
-{
-}
-
-t_t::record::field_spec& t_t::record::field_spec::operator=(const t_t::record::field_spec& other)
-{
-    name = other.name;
-    type_spec = make_unique<type_kind>(*other.type_spec);
-    return *this;
-}
-
-t_t::record::record(const std::vector<t_t::record::field_spec>& fields)
-: fields(fields)
-{
-}
-
-t_t::record::record(const t_t::record& other)
-: fields(other.fields)
-{
-}
-
-t_t::record& t_t::record::operator=(const record& other)
-{
-    fields = other.fields;
-    return *this;
-}
-
-bool t_t::record::operator==(const record& other) const
-{
-    return true;
-}
-
-std::optional<type_kind> t_t::record::field_type(const std::string& name)
-{
-    for (const auto& field : fields)
-    {
-        if (field.name == name)
-        {
-            return *field.type_spec;
-        }
-    }
-    return std::nullopt;
-}
-
 scope* scope::get_global_scope() const
 {
     scope* scope_iter = const_cast<scope*>(this);
@@ -345,15 +272,15 @@ std::optional<std::reference_wrapper<symbol>> scope::lookup(const std::string &n
     }
 }
 
-std::optional<type_id> scope::lookup_type2(const std::string& name)
+std::optional<type_id> scope::lookup_type(const std::string& name)
 {
-    if (type_table2.find(name) != type_table2.end())
+    if (type_table.find(name) != type_table.end())
     {
-        return type_table2[name];
+        return type_table[name];
     }
     else if (parent != nullptr)
     {
-        return parent->lookup_type2(name);
+        return parent->lookup_type(name);
     }
     else
     {

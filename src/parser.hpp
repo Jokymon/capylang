@@ -259,7 +259,7 @@ private:
     ast_node parse_record_initialisation(source_range name_range, const std::string& record_name);
     ast_node parse_field_deref(type_id base_type, ast_node object);
     ast_node parse_primary();
-    type_id parse_type_reference2();
+    type_id parse_type_reference();
     ast_node parse_number();
 
     void parse_body(std::vector<std::unique_ptr<ast_node>>& body);

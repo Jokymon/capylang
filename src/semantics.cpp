@@ -119,7 +119,7 @@ void semantic_analyser::process(source_range location, node_pointer_deref &n)
     }
     else
     {
-        auto t = std::get<type_kind2>(parse_context.types[expression_type]);
+        auto t = std::get<type_kind>(parse_context.types[expression_type]);
         auto ptr_type = std::get<pointer_type>(t);
         n.assigned_type = ptr_type.to;
     }
@@ -131,7 +131,7 @@ void semantic_analyser::process(source_range location, node_record_definition &n
 
 void semantic_analyser::process(source_range location, node_record_initialisation &n)
 {
-    auto t = std::get<type_kind2>(parse_context.types[n.type_spec]);
+    auto t = std::get<type_kind>(parse_context.types[n.type_spec]);
     const record_type& r = std::get<record_type>(t);
     for (const auto& field : r.fields)
     {
@@ -220,7 +220,7 @@ void semantic_analyser::process(source_range location, node_function_call &n)
     }
 
     auto declared_type = parse_context.types[n.symbol_ref.get().signature.function_type];
-    auto declared_function_type = std::get<function_type>(std::get<type_kind2>(declared_type));
+    auto declared_function_type = std::get<function_type>(std::get<type_kind>(declared_type));
 
     if (!actual_func_type.is_call_signature_eq(declared_function_type))
     {

@@ -19,7 +19,7 @@ wasm_type from_type_kind(context& ctx, type_id idx)
     return std::visit([&](const auto &t) -> auto {
         using T = std::decay_t<decltype(t)>;
 
-        if constexpr (std::is_same_v<T, type_kind2>)
+        if constexpr (std::is_same_v<T, type_kind>)
         {
             const auto& type_spec = t;
 
@@ -87,7 +87,7 @@ size_t type_size(context& ctx, type_id idx)
     return std::visit([&](const auto &t) -> size_t {
         using T = std::decay_t<decltype(t)>;
 
-        if constexpr (std::is_same_v<T, type_kind2>)
+        if constexpr (std::is_same_v<T, type_kind>)
         {
             auto type_spec = t;
 
@@ -149,7 +149,7 @@ std::optional<size_t> record_field_offset(context& ctx, type_id idx, const std::
     }
 
     const auto& type_spec = ctx.types[idx];
-    const record_type& r = std::get<record_type>(std::get<type_kind2>(type_spec));
+    const record_type& r = std::get<record_type>(std::get<type_kind>(type_spec));
 
     size_t offset = 0;
     for (const auto& field_definition : r.fields)
@@ -229,7 +229,7 @@ void emitter::emit(const node_import_definition &import_def)
     auto function_name = import_def.function_head->name;
 
     auto function_type_entry = parse_context.types[import_def.function_head->signature.function_type];
-    auto func_type = std::get<function_type>(std::get<type_kind2>(function_type_entry));
+    auto func_type = std::get<function_type>(std::get<type_kind>(function_type_entry));
 
     const auto& parameter_names = import_def.function_head->signature.parameters;
     for (auto [param_name, param_typ] : std::views::zip(parameter_names,
@@ -289,7 +289,7 @@ void emitter::emit(const node_function_definition &func_def)
     auto function_name = func_def.function_head->name;
 
     auto function_type_entry = parse_context.types[func_def.function_head->signature.function_type];
-    auto func_type = std::get<function_type>(std::get<type_kind2>(function_type_entry));
+    auto func_type = std::get<function_type>(std::get<type_kind>(function_type_entry));
 
     const auto& parameter_names = func_def.function_head->signature.parameters;
     for (auto [param_name, param_typ] : std::views::zip(parameter_names,
@@ -424,7 +424,7 @@ void emitter::emit(const node_record_initialisation& record_init)
 
     // TODO: semantic check should make sure, that the type_spec really is a record
     const auto& type_spec = parse_context.types[record_init.type_spec];
-    auto& rec_type = std::get<record_type>(std::get<type_kind2>(type_spec));
+    auto& rec_type = std::get<record_type>(std::get<type_kind>(type_spec));
 
     size_t offset = 0;
     // TODO: make the inverse check if any field init tries to init a field that isn't
