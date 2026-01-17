@@ -62,15 +62,21 @@ int main(int argc, char *argv[])
     emitter capyemitter{parse_context};
     wasm_module mod = capyemitter.generate(root_node);
 
-    std::ofstream outfile(args.output_path);
-    wat_generator generator;
-    generator.generate(mod, outfile);
-    outfile.close();
+    if (args.output_path.ends_with(".wasm")) {
+        wasm_generator generator;
 
-    std::ofstream wasm_out("test.wasm", std::ios::out | std::ios::binary);
-    wasm_generator generator2;
-    generator2.generate(mod, wasm_out);
-    wasm_out.close();
+        std::ofstream outfile(args.output_path, std::ios::out | std::ios::binary);
+        generator.generate(mod, outfile);
+        outfile.close();
+    }
+    else
+    {
+        wat_generator generator;
+
+        std::ofstream outfile(args.output_path);
+        generator.generate(mod, outfile);
+        outfile.close();
+    }
 
     return 0;
 }
