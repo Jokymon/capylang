@@ -42,10 +42,16 @@ def test_binary_subtraction():
     assert exit_code == 6
 
 
+@pytest.mark.good
 def test_binary_int_division():
-    code = """proc_exit((10/3) as u32)"""
-    code = tools.expression_to_full_program(code)
-    exit_code, _ = tools.run_test_code(code)
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    proc_exit((10/3) as u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
 
     assert exit_code == 3
 

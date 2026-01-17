@@ -133,6 +133,26 @@ void encode_func_type(std::ostream& output, const wasm_function& function)
     }
 }
 
+bool is_wasm_type_signed(wasm_type typ)
+{
+    switch (typ) {
+        case wasm_type::none:
+            return false;
+        case wasm_type::i8:
+        case wasm_type::i16:
+        case wasm_type::i32:
+        case wasm_type::i64:
+        case wasm_type::f32:
+        case wasm_type::f64:
+            return true;
+        case wasm_type::u8:
+        case wasm_type::u16:
+        case wasm_type::u32:
+        case wasm_type::u64:
+            return false;
+    }
+}
+
 void wasm_generator::generate(const wasm_module& module, std::ostream &output)
 {
     output.write(MAGIC, 4);
@@ -378,6 +398,12 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
                     case wasm_op::imul:
                         output.put(INST_I32_MUL);
                         break;
+                    case wasm_op::eq:
+                        output.put(INST_I32_EQ);
+                        break;
+                    case wasm_op::ne:
+                        output.put(INST_I32_NE);
+                        break;
                     default:
                         break;
                 }
@@ -422,6 +448,24 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
                 // TODO: differentiate by type of the operation
                 output.put(INST_I32_CONST);
                 encode_leb128_signed(output, t.value);
+            }
+            else if constexpr (std::is_same_v<T, wasm_op_type_sign>) {
+                switch (t.op) {
+                    case wasm_op::idiv:
+                        if (is_wasm_type_signed(t.value_type))
+                            output.put(INST_I32_DIV_S);
+                        else
+                            output.put(INST_I32_DIV_U);
+                        break;
+                    case wasm_op::irem:
+                        if (is_wasm_type_signed(t.value_type))
+                            output.put(INST_I32_REM_S);
+                        else
+                            output.put(INST_I32_REM_U);
+                        break;
+                    default:
+                        break;
+                }
             }
             else if constexpr (std::is_same_v<T, wasm_op_func>) {
                 output.put(INST_CALL);

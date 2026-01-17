@@ -19,6 +19,8 @@ const char INST_I32_CONST = '\x41';
 const char INST_I64_CONST = '\x42';
 const char INST_F32_CONST = '\x43';
 const char INST_F64_CONST = '\x44';
+const char INST_I32_EQ = '\x46';
+const char INST_I32_NE = '\x47';
 
 const char INST_I32_CLZ = '\x67';
 const char INST_I32_CTZ = '\x68';
