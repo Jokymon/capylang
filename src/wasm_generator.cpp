@@ -51,6 +51,26 @@ void encode_leb128(std::ostream& out, uint64_t value)
     } while (value!=0);
 }
 
+void encode_leb128_signed(std::ostream& out, int64_t value)
+{
+    bool more = true;
+
+    while (more)
+    {
+        uint8_t b = value & 0x7f; /* low-order 7 bits of value */
+        value >>= 7;
+
+        /* sign bit of byte is second high-order bit (0x40) */
+        uint8_t sign_bit = b & 0x40;
+        if ((value == 0 && sign_bit == 0) || (value == -1 && sign_bit != 0))
+            more = false;
+        else
+            b |= 0x80; /* set high-order bit of byte */
+
+        out.put(b);
+    }
+}
+
 void encode_string(std::ostream& out, const std::string s)
 {
     encode_leb128(out, s.size());
@@ -319,7 +339,7 @@ void wasm_generator::generate_data(const wasm_module& module, std::ostream &outp
         encode_leb128(content, 0);  // active data section in memory 0
 
         content.put(INST_I32_CONST);
-        encode_leb128(content, data.init_offset);
+        encode_leb128_signed(content, data.init_offset);
         content.put(INST_TERMINATOR);
 
         encode_leb128(content, data.data_buffer.size());
@@ -401,7 +421,7 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
             else if constexpr (std::is_same_v<T, wasm_op_type_value>) {
                 // TODO: differentiate by type of the operation
                 output.put(INST_I32_CONST);
-                encode_leb128(output, t.value);
+                encode_leb128_signed(output, t.value);
             }
             else if constexpr (std::is_same_v<T, wasm_op_func>) {
                 output.put(INST_CALL);
