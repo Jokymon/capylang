@@ -64,10 +64,12 @@ wasm_op_func::wasm_op_func(wasm_op op, wasm_function_ref function)
 {
 }
 
-wasm_if_block::wasm_if_block(wasm_type return_type)
+wasm_if_block::wasm_if_block(wasm_type return_type, wasm_block* enclosing_block)
 : return_type(return_type), then_block(std::make_unique<wasm_block>()), 
 else_block(std::make_unique<wasm_block>())
 {
+    then_block->enclosing_block = enclosing_block;
+    else_block->enclosing_block = enclosing_block;
 }
 
 std::pair<wasm_block&, wasm_block&> wasm_if_block::blocks()
@@ -87,7 +89,7 @@ wasm_branch_label wasm_block::label() const
 
 wasm_block& wasm_block::block(wasm_type return_type)
 {
-    auto block = std::make_unique<wasm_statement>(wasm_internal_block{return_type});
+    auto block = std::make_unique<wasm_statement>(wasm_internal_block{return_type, this});
     wasm_block& new_block = std::get<wasm_internal_block>(*block);
     instructions.push_back(std::move(block));
     return new_block;
@@ -95,7 +97,7 @@ wasm_block& wasm_block::block(wasm_type return_type)
 
 wasm_block& wasm_block::loop(wasm_type return_type)
 {
-    auto block = std::make_unique<wasm_statement>(wasm_loop_block{return_type});
+    auto block = std::make_unique<wasm_statement>(wasm_loop_block{return_type, this});
     wasm_block& new_block = std::get<wasm_loop_block>(*block);
     instructions.push_back(std::move(block));
     return new_block;
@@ -103,7 +105,7 @@ wasm_block& wasm_block::loop(wasm_type return_type)
 
 std::pair<wasm_block&, wasm_block&> wasm_block::if_block(wasm_type return_type)
 {
-    auto if_block = std::make_unique<wasm_statement>(wasm_if_block{return_type});
+    auto if_block = std::make_unique<wasm_statement>(wasm_if_block{return_type, this});
     auto blocks = std::get<wasm_if_block>(*if_block).blocks();
     instructions.push_back(std::move(if_block));
     return blocks;
@@ -204,14 +206,16 @@ void wasm_block::call(const char* function_name)
     instructions.push_back(std::make_unique<wasm_statement>(wasm_op_func(wasm_op::call, wasm_function_ref(function_name))));
 }
 
-wasm_internal_block::wasm_internal_block(wasm_type return_type)
+wasm_internal_block::wasm_internal_block(wasm_type return_type, wasm_block* enclosing_block)
 : return_type(return_type)
 {
+    this->enclosing_block = enclosing_block;
 }
 
-wasm_loop_block::wasm_loop_block(wasm_type return_type)
+wasm_loop_block::wasm_loop_block(wasm_type return_type, wasm_block* enclosing_block)
 : return_type(return_type)
 {
+    this->enclosing_block = enclosing_block;
 }
 
 exportable::exportable(index_type index, wasm_extern_index export_type)

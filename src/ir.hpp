@@ -183,7 +183,7 @@ struct wasm_op_func : public wasm_instruction
 
 struct wasm_if_block
 {
-    explicit wasm_if_block(wasm_type return_type);
+    explicit wasm_if_block(wasm_type return_type, wasm_block* enclosing_block);
     std::pair<wasm_block&, wasm_block&> blocks();
 
     wasm_type return_type;
@@ -222,20 +222,21 @@ public:
     void call(const char* function_name);
 
     wasm_branch_label block_label;
+    wasm_block* enclosing_block = nullptr;
 
     std::vector<std::unique_ptr<wasm_statement>> instructions;
 };
 
 struct wasm_internal_block : public wasm_block
 {
-    explicit wasm_internal_block(wasm_type return_type);
+    explicit wasm_internal_block(wasm_type return_type, wasm_block* enclosing_block);
 
     wasm_type return_type;
 };
 
 struct wasm_loop_block : public wasm_block
 {
-    explicit wasm_loop_block(wasm_type return_type);
+    explicit wasm_loop_block(wasm_type return_type, wasm_block* enclosing_block);
 
     wasm_type return_type;
 };
