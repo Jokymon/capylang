@@ -433,6 +433,9 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
                     case wasm_op::ne:
                         output.put(INST_I32_NE);
                         break;
+                    case wasm_op::eqz:
+                        output.put(INST_I32_EQZ);
+                        break;
                     default:
                         break;
                 }
