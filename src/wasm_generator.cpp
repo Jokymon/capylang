@@ -153,6 +153,35 @@ bool is_wasm_type_signed(wasm_type typ)
     }
 }
 
+enum wasm_size_e
+{
+    Size8,
+    Size16,
+    Size32,
+    Size64
+};
+
+wasm_size_e wasm_type_size(wasm_type typ)
+{
+    switch (typ) {
+        case wasm_type::none:
+        case wasm_type::u32:
+        case wasm_type::i32:
+        case wasm_type::f32:
+            return wasm_size_e::Size32;
+        case wasm_type::u64:
+        case wasm_type::i64:
+        case wasm_type::f64:
+            return wasm_size_e::Size64;
+        case wasm_type::i8:
+        case wasm_type::u8:
+            return wasm_size_e::Size8;
+        case wasm_type::i16:
+        case wasm_type::u16:
+            return wasm_size_e::Size16;
+    }
+}
+
 void wasm_generator::generate(const wasm_module& module, std::ostream &output)
 {
     output.write(MAGIC, 4);
@@ -444,11 +473,6 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
                 }
                 encode_leb128(output, index);
             }
-            else if constexpr (std::is_same_v<T, wasm_op_type_value>) {
-                // TODO: differentiate by type of the operation
-                output.put(INST_I32_CONST);
-                encode_leb128_signed(output, t.value);
-            }
             else if constexpr (std::is_same_v<T, wasm_op_type_sign>) {
                 switch (t.op) {
                     case wasm_op::idiv:
@@ -462,6 +486,51 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
                             output.put(INST_I32_REM_S);
                         else
                             output.put(INST_I32_REM_U);
+                        break;
+                    default:
+                        break;
+                }
+            }
+            else if constexpr (std::is_same_v<T, wasm_op_type_value>) {
+                // TODO: differentiate by type of the operation
+                output.put(INST_I32_CONST);
+                encode_leb128_signed(output, t.value);
+            }
+            else if constexpr (std::is_same_v<T, wasm_op_align_offset>) {
+
+                switch (t.op) {
+                    case wasm_op::load:
+                        switch (wasm_type_size(t.value_type))
+                        {
+                            case wasm_size_e::Size8:
+                                if (is_wasm_type_signed(t.value_type))
+                                {
+                                    output.put(INST_I32_LOAD8_S);
+                                }
+                                else
+                                {
+                                    output.put(INST_I32_LOAD8_U);
+                                }
+                                break;
+                            default:
+                                output.put(INST_I32_LOAD);
+                                break;
+                        }
+                        encode_leb128(output, t.alignment);
+                        encode_leb128(output, t.offset);
+                        break;
+                    case wasm_op::store:
+                        switch (wasm_type_size(t.value_type))
+                        {
+                            case wasm_size_e::Size8:
+                                output.put(INST_I32_STORE8);
+                                break;
+                            default:
+                                output.put(INST_I32_STORE);
+                                break;
+                        }
+                        encode_leb128(output, t.alignment);
+                        encode_leb128(output, t.offset);
                         break;
                     default:
                         break;

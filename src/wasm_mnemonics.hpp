@@ -15,6 +15,12 @@ const char INST_LOCAL_TEE = '\x22';
 const char INST_GLOBAL_GET = '\x23';
 const char INST_GLOBAL_SET = '\x24';
 
+const char INST_I32_LOAD = '\x28';
+const char INST_I32_LOAD8_S = '\x2c';
+const char INST_I32_LOAD8_U = '\x2d';
+const char INST_I32_STORE = '\x36';
+const char INST_I32_STORE8 = '\x3a';
+
 const char INST_I32_CONST = '\x41';
 const char INST_I64_CONST = '\x42';
 const char INST_F32_CONST = '\x43';
