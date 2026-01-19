@@ -7,18 +7,12 @@ import gc
 import types
 
 
-def run_compile(source_path, wat_path, wasm_path) -> tuple[int, str]:
-    res = subprocess.run(
-        f"C:/sw/wasmtime-v33.0.0-x86_64-windows/wasmtime.exe run --dir {source_path.parent.as_posix()} ./build/capylang.wasm -i {source_path.as_posix()} -o {wat_path.as_posix()}",
-        capture_output=True,
-    )
-    if res.returncode != 0:
-        return res.returncode, res.stderr.decode()
-    res = subprocess.run(
-        f"C:/sw/wasm-tools-1.230.0-x86_64-windows/wasm-tools.exe parse {wat_path.as_posix()} -o {wasm_path.as_posix()}",
-        capture_output=True,
-    )
-    return res.returncode, res.stderr.decode()
+_compile_func = None
+
+
+def set_compile_func(compile_func):
+    global _compile_func
+    _compile_func = compile_func
 
 
 def run_compile_error(source_path, wat_path) -> tuple[int, str]:
@@ -51,8 +45,9 @@ def run_test_code(source_code) -> tuple[int, str]:
     wat_file_path = source_file_path.with_suffix(".wat")
     wasm_file_path = source_file_path.with_suffix(".wasm")
 
-    exit_code, stderr = run_compile(source_file_path, wat_file_path,
-                                    wasm_file_path)
+    assert _compile_func is not None
+    exit_code, stderr = _compile_func(source_file_path, wat_file_path,
+                                      wasm_file_path)
     if exit_code != 0:
         raise ValueError("Compilation unexpectedly failed:\n" + stderr)
     exit_code, stdout = run_wasmfile(wasm_file_path)
