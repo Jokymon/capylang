@@ -154,10 +154,10 @@ struct wasm_op_type_sign : public wasm_instruction
 
 struct wasm_op_type_value : public wasm_instruction
 {
-    explicit wasm_op_type_value(wasm_op op, wasm_type type, uint64_t value);
+    explicit wasm_op_type_value(wasm_op op, wasm_type type, int64_t value);
 
     wasm_type value_type;
-    uint64_t value;
+    int64_t value;
 };
 
 struct wasm_op_align_offset : public wasm_instruction
@@ -207,7 +207,7 @@ public:
     void local_set(const char* variable_name);
     void global_get(const char* variable_name);
     void global_set(const char* variable_name);
-    void const_val(wasm_type type, uint64_t value);
+    void const_val(wasm_type type, int64_t value);
     void drop();
     void add(wasm_type type);
     void div(wasm_type type);

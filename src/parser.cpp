@@ -1201,7 +1201,8 @@ ast_node parser::parse_primary()
             assign_context::rhs
         );
     }
-    else if (capy_lexer->ahead_is<token_integer>())
+    else if (capy_lexer->ahead_is<token_integer>()
+             || capy_lexer->ahead_is_sym(token_symbol::sym_minus))
     {
         return parse_number();
     }
@@ -1282,8 +1283,19 @@ type_id parser::parse_type_reference()
 
 ast_node parser::parse_number()
 {
+    bool is_negative = false;
+    if (capy_lexer->ahead_is_sym(token_symbol::sym_minus))
+    {
+        is_negative = true;
+        capy_lexer->expect<token_symbol>();
+    }
+
     auto lhs = capy_lexer->expect<token_integer>();
     auto lhs_location = lhs.location;
+    if (is_negative)
+    {
+        lhs.number = -lhs.number;
+    }
 
     auto number_type = type_from_id(parse_context, lhs.type_suffix);
     if (!number_type.has_value())

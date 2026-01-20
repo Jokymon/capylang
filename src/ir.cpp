@@ -49,7 +49,7 @@ wasm_op_type_sign::wasm_op_type_sign(wasm_op op, wasm_type type)
 {
 }
 
-wasm_op_type_value::wasm_op_type_value(wasm_op op, wasm_type type, uint64_t value)
+wasm_op_type_value::wasm_op_type_value(wasm_op op, wasm_type type, int64_t value)
     : wasm_instruction(op), value_type(type), value(value)
 {
 }
@@ -136,7 +136,7 @@ void wasm_block::global_set(const char* variable_name)
     instructions.push_back(std::make_unique<wasm_statement>(wasm_op_index(wasm_op::global_set, variable_name)));
 }
 
-void wasm_block::const_val(wasm_type type, uint64_t value)
+void wasm_block::const_val(wasm_type type, int64_t value)
 {
     instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type_value(wasm_op::typ_const, type, value)));
 }
