@@ -78,6 +78,8 @@ public:
     explicit wasm_branch_label();
     std::string repr() const;
 
+    bool operator==(const wasm_branch_label& other);
+
 private:
     static int label_index;
 

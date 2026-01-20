@@ -1,6 +1,7 @@
 #include "wasm_generator.hpp"
 #include "wasm_mnemonics.hpp"
 #include <algorithm>
+#include <cassert>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -91,6 +92,7 @@ char encode_wasm_type(wasm_type type)
         case wasm_type::f64:
             return '\x7C';
         default:
+            assert(false || "Trying to encode an unknown WASM type");
             // TODO shouldn't happen
             return '\x42';
     }
@@ -180,6 +182,19 @@ wasm_size_e wasm_type_size(wasm_type typ)
         case wasm_type::u16:
             return wasm_size_e::Size16;
     }
+}
+
+uint32_t resolve_block_label(const wasm_block& block, const wasm_branch_label& label, uint32_t nesting_level)
+{
+    if (label==block.label())
+    {
+        return nesting_level;
+    }
+    if (block.enclosing_block == nullptr)
+    {
+        return std::numeric_limits<uint32_t>::max();
+    }
+    return resolve_block_label(*block.enclosing_block, label, nesting_level+1);
 }
 
 void wasm_generator::generate(const wasm_module& module, std::ostream &output)
@@ -539,10 +554,62 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
                         break;
                 }
             }
+            else if constexpr (std::is_same_v<T, wasm_op_label>) {
+                uint32_t block_label = resolve_block_label(block, t.label, 0);
+                assert(block_label!=std::numeric_limits<uint32_t>::max() || "Can't resolve block label in jump instruction");
+
+                switch (t.op) {
+                    case wasm_op::br:
+                        output.put(INST_BR);
+                        break;
+                    case wasm_op::br_if:
+                        output.put(INST_BR_IF);
+                        break;
+                    default:
+                        break;
+                }
+        
+                encode_leb128(output, block_label);
+            }
             else if constexpr (std::is_same_v<T, wasm_op_func>) {
                 output.put(INST_CALL);
                 size_t function_index = module.functions_map.at(t.function.name());
                 encode_leb128(output, function_index);
+            }
+            else if constexpr (std::is_same_v<T, wasm_internal_block>) {
+                output.put(INST_BLOCK);
+                output.put(0x40);
+                generate_block(module, function, t, output);
+                output.put(INST_TERMINATOR);
+            }
+            else if constexpr (std::is_same_v<T, wasm_if_block>)
+            {
+                output.put(INST_IF);
+                if (t.return_type != wasm_type::none)
+                {
+                    output.put(encode_wasm_type(t.return_type));
+                }
+                else
+                {
+                    output.put(0x40); // block type 'void'
+                }
+
+                generate_block(module, function, *(t.then_block), output);
+
+                if (t.else_block)
+                {
+                    output.put(INST_ELSE);
+                    generate_block(module, function, *(t.else_block), output);
+                }
+
+                output.put(INST_TERMINATOR);
+            }
+            else if constexpr (std::is_same_v<T, wasm_loop_block>)
+            {
+                output.put(INST_LOOP);
+                output.put(0x40);
+                generate_block(module, function, t, output);
+                output.put(INST_TERMINATOR);
             }
         }, *inst);
     }

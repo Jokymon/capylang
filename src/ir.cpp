@@ -12,6 +12,11 @@ std::string wasm_branch_label::repr() const
     return label_representation;
 }
 
+bool wasm_branch_label::operator==(const wasm_branch_label& other)
+{
+    return this->label_representation == other.label_representation;
+}
+
 int wasm_branch_label::label_index = 0;
 
 wasm_function_ref::wasm_function_ref(const std::string& name)

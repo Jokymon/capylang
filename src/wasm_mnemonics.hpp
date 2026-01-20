@@ -1,6 +1,12 @@
 #pragma once
 
+const char INST_BLOCK = '\x02';
+const char INST_LOOP = '\x03';
+const char INST_IF = '\x04';
+const char INST_ELSE = '\x05';
 const char INST_TERMINATOR = '\x0b';
+const char INST_BR = '\x0c';
+const char INST_BR_IF = '\x0d';
 
 const char INST_UNREACHABLE = '\x00';
 const char INST_NOP = '\x01';
