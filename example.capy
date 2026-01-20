@@ -1,11 +1,28 @@
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+import wasi_snapshot_preview1::fd_write(fd: u32, io: *u32, count: u32, res: *u32) -> u32 as fd_write;
+// import wasi_snapshot_preview1::args_sizes_get(args_count: *u32, args_size: *u32) -> u32 as args_sizes_get;
 
-fn bla(a: s32) -> s32
-{
-    2 + a
-}
+record iovec {
+    buf: *u32,
+    len: u32,
+};
 
-// This file currently only contains some more data like parts
-export fn _start() {
-    proc_exit(bla(1))
+@export
+fn _start() {
+    let mut res: *u32 = 96 as *u32;
+
+    let s: string = "Hello \\strings 😀\u{932}\u{4dc} b\n";
+
+    let v: iovec = iovec{
+        buf = s.ptr as *u32,
+        len = s.size as u32 + 1u32,
+    };
+
+    fd_write(1u32, v as *u32, 1u32, res);
+
+    // let count: *u32 = 0 as *u32;
+    // let size: *u32 = 0 as *u32;
+    // res = args_sizes_get(count, size);
+    // proc_exit(*count)
+    proc_exit(2u32)
 }
