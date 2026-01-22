@@ -7,11 +7,6 @@
 #include <ranges>
 #include <sstream>
 
-std::string create_wasm_name(const std::string capy_name)
-{
-    return "$" + capy_name;
-}
-
 wasm_type from_type_kind(context& ctx, type_id idx)
 {
     const auto& type_entry = ctx.types[idx];
