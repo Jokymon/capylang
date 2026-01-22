@@ -46,3 +46,18 @@ fn _start() {
     exit_code, _ = tools.run_test_code(tools.get_doc_str())
 
     assert exit_code == 65
+
+
+@pytest.mark.good
+def test_variable_type_is_deduced_from_numeric_literal():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let a = 51u32;
+    proc_exit(a)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 51

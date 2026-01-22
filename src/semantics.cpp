@@ -8,7 +8,7 @@ type_id assigned_node_type(const ast_node &node, context& ctx)
         using T = std::decay_t<decltype(n)>;
 
         if constexpr (std::is_same_v<T, node_number>) {
-            return n.assigned_type;
+            return ctx.resolved_type(n.assigned_type);
         } else if constexpr (std::is_same_v<T, node_char_literal>) {
             return ctx.intern_primitive(primitive_type::Char);
         } else if constexpr (std::is_same_v<T, node_bool_const>) {
@@ -16,9 +16,9 @@ type_id assigned_node_type(const ast_node &node, context& ctx)
         } else if constexpr (std::is_same_v<T, node_string_literal>) {
             return ctx.intern_primitive(primitive_type::String);
         } else if constexpr (std::is_same_v<T, node_var_reference>) {
-            return n.symbol_ref.get().symbol_type;
+            return ctx.resolved_type(n.symbol_ref.get().symbol_type);
         } else if constexpr (std::is_same_v<T, node_pointer_deref>) {
-            return n.assigned_type;
+            return ctx.resolved_type(n.assigned_type);
         } else if constexpr (std::is_same_v<T, node_function_definition>) {
             return ctx.function_return_type(n.function_head->signature.function_type).value();
         } else if constexpr (std::is_same_v<T, node_function_call>) {
@@ -28,7 +28,7 @@ type_id assigned_node_type(const ast_node &node, context& ctx)
         } else if constexpr (std::is_same_v<T, node_record_initialisation>) {
             return n.type_spec;
         } else if constexpr (std::is_same_v<T, node_if_expression>) {
-            return n.assigned_type;
+            return ctx.resolved_type(n.assigned_type);
         } else if constexpr (std::is_same_v<T, node_while_expression>) {
             return ctx.intern_primitive(primitive_type::Void);
         } else if constexpr (std::is_same_v<T, node_field_deref>) {
@@ -39,9 +39,9 @@ type_id assigned_node_type(const ast_node &node, context& ctx)
             }
             return ILLEGAL_TYPE;
         } else if constexpr (std::is_same_v<T, node_cast_expression>) {
-             return n.cast_type;
+            return n.cast_type;
         } else if constexpr (std::is_same_v<T, node_expression>) {
-             return n.assigned_type;
+            return ctx.resolved_type(n.assigned_type);
         } else {
             return ILLEGAL_TYPE;
         } }, node.value);
@@ -292,11 +292,20 @@ void semantic_analyser::process(source_range location, node_let_expression &n)
         return;
         // TODO: we still need to add some bigger scope checks that a variable
         // will indeed get assigned to eventually and that the types do match
+
+        // TODO: This is still a problem, when the 'let'-variable was defined
+        // without a type
     }
 
     visit(*n.init_expression);
 
-    if (n.symbol_ref.get().symbol_type !=
+    if (parse_context.is_type_var(n.symbol_ref.get().symbol_type))
+    {
+        auto& t = parse_context.types.at(n.symbol_ref.get().symbol_type);
+        auto& var = std::get<type_var>(t);
+        var.parent = assigned_node_type(*n.init_expression, parse_context);
+    }
+    else if (n.symbol_ref.get().symbol_type !=
         assigned_node_type(*n.init_expression, parse_context))
     {
         append_error_at(

@@ -922,12 +922,16 @@ ast_node parser::parse_let_expression()
     }
     auto variable_name = capy_lexer->parse_or_default<token_identifier>();
 
-    if (!capy_lexer->expect_symbol(token_symbol::sym_colon))
+    type_id type_spec;
+    if (capy_lexer->ahead_is_sym(token_symbol::sym_colon))
     {
-        append_error("Expecting a ':' after variable name in 'let' expression");
+        capy_lexer->expect_symbol(token_symbol::sym_colon);
+        type_spec = parse_type_reference();
     }
-
-    auto type_spec = parse_type_reference();
+    else
+    {
+        type_spec = parse_context.create_type_var();
+    }
 
     auto new_symbol = symbol{
         .name = variable_name.name,

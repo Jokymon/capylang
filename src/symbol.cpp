@@ -122,6 +122,32 @@ bool context::is_type_var(type_id type_idx)
     return std::holds_alternative<type_var>(t);
 }
 
+type_id context::resolved_type(type_id type_idx)
+{
+    auto entry = types[type_idx];
+    // if this entry is not a type variable, we just return whatever index
+    // we just got. This also serves as recursion anchor
+    if (!std::holds_alternative<type_var>(entry))
+    {
+        return type_idx;
+    }
+
+    // we found a type variable so let's check if it is already resolved and has
+    // a parent value. If it is not resolved, we return the index of the type
+    // variable as is.
+    auto var = std::get<type_var>(entry);
+    if (!var.parent.has_value())
+    {
+        return type_idx;
+    }
+
+    // the type variable is resolved to another type so we have to recurse into
+    // it. That other type is either a concrete type in which case the recursion
+    // anchor is reached or it is another type variable which refers to yet
+    // another type entry.
+    return resolved_type(var.parent.value());
+}
+
 std::optional<type_id> context::record_field_type(type_id record_type_idx, const std::string& field_name)
 {
     auto t = types[record_type_idx];
@@ -241,7 +267,17 @@ std::string context::repr(type_id type_idx) const
         }
         else if constexpr (std::is_same_v<T, type_var>)
         {
-            return "type_var";
+            std::string v = "type_var(";
+            if (t.parent.has_value())
+            {
+                v += std::to_string(t.parent.value());
+            }
+            else
+            {
+                v += "unresolved";
+            }
+            v += ")";
+            return v;
         }
     }, typ);
 }

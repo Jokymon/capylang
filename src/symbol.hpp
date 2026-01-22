@@ -183,6 +183,11 @@ struct context
     bool is_pointer_type(type_id type_idx);
     bool is_type_var(type_id type_idx);
 
+    // Try to get the resolved type of a type_var by following through all the
+    // parent references with a value. If a type variable cannot be resolved or
+    // if it is not a type_var then type_idx will be returned.
+    type_id resolved_type(type_id type_idx);
+
     std::optional<type_id> record_field_type(type_id record_type_idx, const std::string& field_name);
     std::optional<type_id> function_return_type(type_id function_type_idx);
 
