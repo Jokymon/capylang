@@ -92,7 +92,7 @@ char encode_wasm_type(wasm_type type)
         case wasm_type::f64:
             return '\x7C';
         default:
-            assert(false || "Trying to encode an unknown WASM type");
+            assert(false && "Trying to encode an unknown WASM type");
             // TODO shouldn't happen
             return '\x42';
     }

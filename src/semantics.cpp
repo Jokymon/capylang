@@ -321,7 +321,7 @@ void semantic_analyser::process(source_range location, node_function_definition 
     auto declared_return_type = parse_context.function_return_type(n.function_head->signature.function_type);
     if (!declared_return_type.has_value())
     {
-        assert(false || "In a node_function_definition, the function_type should be a function and have a return type");
+        assert(false && "In a node_function_definition, the function_type should be a function and have a return type");
         append_error_at(location.start,
             "Fatal parser error in semantics check from this source location");
         return;

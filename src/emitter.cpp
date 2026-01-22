@@ -73,7 +73,7 @@ wasm_type from_type_kind(context& ctx, type_id idx)
             }
             else
             {
-                assert(false || "Encountered unresolved type variable when getting WASM type");
+                assert(false && "Encountered unresolved type variable when getting WASM type");
                 return wasm_type::none;
             }
         }
@@ -133,7 +133,7 @@ size_t type_size(context& ctx, type_id idx)
             }
             else
             {
-                assert(false || "Encountered unresolved type variable in when getting type size");
+                assert(false && "Encountered unresolved type variable in when getting type size");
                 return 0;
             }
         }
