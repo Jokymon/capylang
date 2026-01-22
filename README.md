@@ -41,6 +41,8 @@ uv run pytest tests/
  * Setup CI for automatic testing with every push 
  * Move TODO/decisions/... into dedicated documents and make the README an actual starting point for people interested
    in the project with getting started, examples etc.
+ * Improve runtime environment(s); currently the run script simplifies the compile process but it is still suboptimal;
+   it's not possible for example to choose between the WAT->WASM and the direct WASM approach
 
 ### Big refactoring
 
