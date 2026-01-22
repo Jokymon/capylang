@@ -54,8 +54,8 @@ wasm_type from_type_kind(context& ctx, type_id idx)
                 } else if constexpr (std::is_same_v<K, pointer_type>) {
                     return wasm_type::i32;
                 } else if constexpr (std::is_same_v<K, record_type>) {
-                    printf("Requested record type in conversion\n");
-                    return wasm_type::none;
+                    // records are stored as pointers
+                    return wasm_type::i32;
                 } else if constexpr (std::is_same_v<K, function_type>) {
                     printf("Requested function type in conversion\n");
                     return wasm_type::none;
@@ -322,7 +322,8 @@ void emitter::emit(const node_function_definition &func_def)
             }
             else
             {
-                func.allocate_local(identifier.c_str(), wasm_type::i32);
+                auto t = from_type_kind(parse_context, symbol.symbol_type);
+                func.allocate_local(identifier.c_str(), t);
             }
         }
     }
