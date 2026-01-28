@@ -814,7 +814,8 @@ ast_node parser::parse_function_call(source_range name_range, const std::string 
     auto func = current_scope->lookup_function(function_name);
     if (!func.has_value())
     {
-        append_error("Function '" + function_name + "' is not defined");
+        append_error_at(name_range.start,
+                        "Function '" + function_name + "' is not defined");
 
         return make_located<node_function_call>(
             name_range.start,
