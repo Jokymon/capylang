@@ -1,9 +1,9 @@
 set(CMAKE_SYSTEM_NAME Generic)
 
-set(CMAKE_SYSROOT C:/sw/wasi-sysroot-25.0)
+set(CMAKE_SYSROOT C:/sw/wasi-sysroot-29.0)
 
 set(target wasm32-wasip1)
-set(tools C:/sw/wasi-sdk-25.0-x86_64-windows/bin)
+set(tools C:/sw/wasi-sdk-29.0-x86_64-windows/bin)
 
 set(CMAKE_C_COMPILER ${tools}/clang.exe)
 set(CMAKE_C_COMPILER_WORKS 1)
