@@ -38,17 +38,17 @@ if (Test-Path $WasmFile) {
 }
 
 # Run the capylang compiler
-C:\sw\wasmtime-v33.0.0-x86_64-windows\wasmtime.exe run --dir . .\build\capylang.wasm -i $InputRel -o $WatFileRel
+wasmtime.exe run --dir . .\build\capylang.wasm -i $InputRel -o $WatFileRel
 if ($LASTEXITCODE -ne 0) {
     Write-Output "Compilation failed, terminating script"
     exit $LASTEXITCODE
 }
 
 # convert the WAT file to WASM
-C:\sw\wasm-tools-1.230.0-x86_64-windows\wasm-tools.exe parse $WatFile -o $WasmFile
+wasm-tools.exe parse $WatFile -o $WasmFile
 
 # Run the new WASM file with a WASM runtime
-C:\sw\wasmtime-v33.0.0-x86_64-windows\wasmtime.exe run $WasmFile @args
+wasmtime.exe run $WasmFile @args
 Write-Output "Lastexitcode: $LASTEXITCODE"
 # Report the WASM runtime exit code to the outside
 exit $LASTEXITCODE

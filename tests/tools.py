@@ -17,7 +17,7 @@ def set_compile_func(compile_func):
 
 def run_compile_error(source_path, wat_path) -> tuple[int, str]:
     res = subprocess.run(
-        f"C:/sw/wasmtime-v33.0.0-x86_64-windows/wasmtime.exe run --dir {source_path.parent.as_posix()} ./build/capylang.wasm -i {source_path.as_posix()} -o {wat_path.as_posix()}",
+        f"wasmtime.exe run --dir {source_path.parent.as_posix()} ./build/capylang.wasm -i {source_path.as_posix()} -o {wat_path.as_posix()}",
         capture_output=True,
     )
     return res.returncode, res.stderr.decode()
@@ -25,7 +25,7 @@ def run_compile_error(source_path, wat_path) -> tuple[int, str]:
 
 def run_wasmfile(wasm_path) -> tuple[int, str]:
     res = subprocess.run(
-        f"C:/sw/wasmtime-v33.0.0-x86_64-windows/wasmtime.exe run {wasm_path}",
+        f"wasmtime.exe run {wasm_path}",
         capture_output=True,
     )
     return res.returncode, res.stdout.decode()
