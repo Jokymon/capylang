@@ -12,7 +12,7 @@ import wasi_snapshot_preview1::proc_exit(exit_code u32) as proc_exit;
 
 @export
 fn _start() {
-    proc_exit(10)
+    proc_exit(10u32)
 }
 """
     exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
@@ -31,7 +31,7 @@ import wasi_snapshot_preview1::proc_exit exit_code: u32) as proc_exit;
 
 @export
 fn _start() {
-    proc_exit(10)
+    proc_exit(10u32)
 }
 """
     exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
@@ -50,7 +50,7 @@ import wasi_snapshot_preview1::proc_exit(exit_code: u32 as proc_exit;
 
 @export
 fn _start() {
-    proc_exit(10)
+    proc_exit(10u32)
 }
 """
     exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
@@ -69,7 +69,7 @@ import wasi_snapshot_preview1:: (exit_code: u32) as proc_exit;
 
 @export
 fn _start() {
-    proc_exit(10)
+    proc_exit(10u32)
 }
 """
     exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
@@ -92,7 +92,7 @@ import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 @export
 fn _start() {
-    proc_exit(add2(10, 20))
+    proc_exit(add2(10u32, 20u32))
 }
 """
     exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
@@ -115,7 +115,7 @@ fn add2(a: u32) -> u32 {
 
 @export
 fn _start() {
-    proc_exit(add2(10, 20))
+    proc_exit(add2(10s32, 20s32))
 }
 """
     exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
@@ -133,7 +133,7 @@ def test_mismatching_return_types():
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 fn const_u32() -> u32 {
-    34
+    34s32
 }
 
 @export

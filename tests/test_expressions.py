@@ -49,7 +49,7 @@ import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 @export
 fn _start() {
-    proc_exit((10/3) as u32)
+    proc_exit(10u32/3u32)
 }"""
     exit_code, _ = tools.run_test_code(tools.get_doc_str())
 
@@ -63,7 +63,7 @@ import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 @export
 fn _start() {
-    proc_exit((19%5) as u32)
+    proc_exit(19u32 % 5u32)
 }"""
     exit_code, _ = tools.run_test_code(tools.get_doc_str())
 
@@ -71,7 +71,7 @@ fn _start() {
 
 
 def test_binary_multiplication():
-    code = """proc_exit((3*5) as u32)"""
+    code = """proc_exit(3u32 * 5u32)"""
     code = tools.expression_to_full_program(code)
     exit_code, _ = tools.run_test_code(code)
 
@@ -79,7 +79,7 @@ def test_binary_multiplication():
 
 
 def test_multiple_operations():
-    code = """proc_exit((5+ 2+3) as u32)"""
+    code = """proc_exit(5u32+ 2u32+3u32)"""
     code = tools.expression_to_full_program(code)
     exit_code, _ = tools.run_test_code(code)
 
@@ -87,7 +87,7 @@ def test_multiple_operations():
 
 
 def test_simple_braced_expressions():
-    code = """proc_exit(((3+4)) as u32)"""
+    code = """proc_exit((3u32+4u32))"""
     code = tools.expression_to_full_program(code)
     exit_code, _ = tools.run_test_code(code)
 
@@ -95,7 +95,7 @@ def test_simple_braced_expressions():
 
 
 def test_complex_braced_expressions():
-    code = """proc_exit((3*(3+4)) as u32)"""
+    code = """proc_exit(3u32*(3u32+4u32))"""
     code = tools.expression_to_full_program(code)
     exit_code, _ = tools.run_test_code(code)
 
@@ -103,7 +103,7 @@ def test_complex_braced_expressions():
 
 
 def test_correct_priority_of_plus_and_multiply():
-    code = """proc_exit((4*3+3) as u32)"""
+    code = """proc_exit(4u32*3u32+3u32)"""
     code = tools.expression_to_full_program(code)
     exit_code, _ = tools.run_test_code(code)
 
@@ -161,7 +161,7 @@ def test_u8_deref_on_lhs():
     *addr2 = 40u8;
     // the following assignment shouldn't change addr2 because
     // it is only changing a u8
-    *addr1 = 11;
+    *addr1 = 11u32 as *u8;
 proc_exit(*addr2 as u32)"""
     code = tools.expression_to_full_program(code)
     exit_code, _ = tools.run_test_code(code)

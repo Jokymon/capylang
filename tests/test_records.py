@@ -14,7 +14,7 @@ record s {
 @export
 fn _start() {
     let v: s = s{
-        field1=18,
+        field1=18u32,
     };
     proc_exit(v.field1)
 }
@@ -40,7 +40,7 @@ record s1 {
 @export
 fn _start() {
     let v2: s2 = s2{
-        field1=18,
+        field1=18u32,
     };
     let v1: s1 = s1{
         sub=v2,
@@ -66,7 +66,7 @@ record s {
 @export
 fn _start() {
     let v: s = s{
-        field1=18,
+        field1=18u32,
     };
     proc_exit(v.)
 }
@@ -165,7 +165,7 @@ record s {
 @export
 fn _start() {
     let v: s = s{
-        field1=18,
+        field1=18u32,
     };
     proc_exit(v.fld)
 }
@@ -191,8 +191,8 @@ record s {
 @export
 fn _start() {
     let v: s = s{
-        field1=12,
-        fld=18,
+        field1=12u32,
+        fld=18u32,
     };
     proc_exit(v.field1)
 }

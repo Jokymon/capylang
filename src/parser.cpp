@@ -355,7 +355,7 @@ node_module parser::parse_module()
     current_scope = capy_module.module_scope.get();
 
     std::string library_code = R"(
-global mut heap_ptr: u32 = 1024;
+global mut heap_ptr: u32 = 1024u32;
 
 fn cabi_realloc(originalPtr: u32, originalSize: u32, alignment: u32, newSize: u32) -> u32
 {

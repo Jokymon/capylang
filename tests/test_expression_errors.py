@@ -46,7 +46,7 @@ import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 @export
 fn _start() {
-    4 = 4+2;
+    4u32 = 4u32+2u32;
     proc_exit(4u32)
 }"""
     tools.expression_to_full_program(tools.get_doc_str())
