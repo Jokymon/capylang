@@ -272,7 +272,7 @@ std::optional<type_id> type_from_id(context& ctx, const std::string& id)
     {
         return ctx.intern_primitive(primitive_type::U8);
     }
-    else if ((id == "s32") || (id == ""))
+    else if ((id == "s32"))
     {
         return ctx.intern_primitive(primitive_type::S32);
     }
@@ -874,7 +874,6 @@ ast_node parser::parse_if_expression()
         std::move(then_body),
         std::move(else_body),
         parse_context.create_type_var()
-        //parse_context.intern_primitive(primitive_type::Void)
     );
 }
 
@@ -1257,24 +1256,26 @@ type_id parser::parse_type_reference()
     token_location.end = capy_lexer->current_source_position();
     token_identifier type_name = {token_location, ""};
 
+    std::optional<type_id> type_spec = 
+        parse_context.intern_primitive(primitive_type::Void);
     if (capy_lexer->ahead_is<token_identifier>())
     {
         type_name = capy_lexer->expect<token_identifier>();
+
+        type_spec = type_from_id(parse_context, type_name.name);
+        if (!type_spec.has_value())
+        {
+            type_spec = current_scope->lookup_type(type_name.name);
+            if (!type_spec.has_value())
+            {
+                append_error("Unknown type specification: " + type_name.name);
+                type_spec = parse_context.intern_primitive(primitive_type::Void);
+            }
+        }
     }
     else
     {
         append_error("Expecting an identifier for the type specification");
-    }
-
-    auto type_spec = type_from_id(parse_context, type_name.name);
-    if (!type_spec.has_value())
-    {
-        type_spec = current_scope->lookup_type(type_name.name);
-        if (!type_spec.has_value())
-        {
-            append_error("Unknown type specification: " + type_name.name);
-            type_spec = parse_context.intern_primitive(primitive_type::Void);
-        }
     }
 
     if (is_pointer)
@@ -1302,7 +1303,16 @@ ast_node parser::parse_number()
         lhs.number = -lhs.number;
     }
 
-    auto number_type = type_from_id(parse_context, lhs.type_suffix);
+    std::optional<type_id> number_type;
+    if (lhs.type_suffix=="")
+    {
+        number_type = parse_context.create_type_var();
+        parse_context.constraints.emplace_back(numeric_constraint{number_type.value()});
+    }
+    else
+    {
+        number_type = type_from_id(parse_context, lhs.type_suffix);
+    }
     if (!number_type.has_value())
     {
         append_error("Number has an illegal suffix");

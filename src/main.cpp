@@ -2,6 +2,7 @@
 #include "emitter.hpp"
 #include "parser.hpp"
 #include "semantics.hpp"
+#include "type_inference.hpp"
 #include "wasm_generator.hpp"
 #include "wat_generator.hpp"
 #include <iostream>
@@ -42,6 +43,9 @@ int main(int argc, char *argv[])
         }
         return 1;
     }
+
+    type_inference inference{parse_context};
+    inference.infer_types(root_node);
 
     semantic_analyser analyser{parse_context};
     analyser.semantic_analysis(root_node);

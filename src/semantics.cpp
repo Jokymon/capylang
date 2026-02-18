@@ -299,13 +299,8 @@ void semantic_analyser::process(source_range location, node_let_expression &n)
 
     visit(*n.init_expression);
 
-    if (parse_context.is_type_var(n.symbol_ref.get().symbol_type))
-    {
-        auto& t = parse_context.types.at(n.symbol_ref.get().symbol_type);
-        auto& var = std::get<type_var>(t);
-        var.parent = assigned_node_type(*n.init_expression, parse_context);
-    }
-    else if (n.symbol_ref.get().symbol_type !=
+
+    if (parse_context.resolved_type(n.symbol_ref.get().symbol_type) !=
         assigned_node_type(*n.init_expression, parse_context))
     {
         append_error_at(

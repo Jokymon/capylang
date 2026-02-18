@@ -12,6 +12,7 @@ add_executable(${PROJECT_NAME}
     src/parser.cpp
     src/semantics.cpp
     src/symbol.cpp
+    src/type_inference.cpp
     src/wasm_generator.cpp
     src/wat_generator.cpp
 )

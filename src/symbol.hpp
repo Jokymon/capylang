@@ -166,6 +166,19 @@ struct type_var {
     std::optional<type_id> parent;
 };
 
+struct equal_constraint {
+    type_id a, b;
+};
+
+struct numeric_constraint {
+    type_id n;
+};
+
+using type_constraint = std::variant<
+    equal_constraint,
+    numeric_constraint
+>;
+
 // type used to represent the shape (or later also potential shape) of
 // types in one parsing pass
 using type_node = std::variant<type_kind, type_var>;
@@ -183,10 +196,12 @@ struct context
     bool is_pointer_type(type_id type_idx);
     bool is_type_var(type_id type_idx);
 
+    bool is_resolved(type_id type_idx) const;
     // Try to get the resolved type of a type_var by following through all the
     // parent references with a value. If a type variable cannot be resolved or
     // if it is not a type_var then type_idx will be returned.
-    type_id resolved_type(type_id type_idx);
+    type_id resolved_type(type_id type_idx) const;
+    bool resolve(type_id idx1, type_id idx2);
 
     std::optional<type_id> record_field_type(type_id record_type_idx, const std::string& field_name);
     std::optional<type_id> function_return_type(type_id function_type_idx);
@@ -196,6 +211,8 @@ struct context
     // indexing through type_id
     std::vector<type_node> types;
     std::unordered_map<type_kind, type_id, type_kind_hash, type_kind_eq> interned;
+
+    std::vector<type_constraint> constraints;
 };
 
 enum class symbol_kind {

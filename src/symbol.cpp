@@ -122,7 +122,30 @@ bool context::is_type_var(type_id type_idx)
     return std::holds_alternative<type_var>(t);
 }
 
-type_id context::resolved_type(type_id type_idx)
+bool context::is_resolved(type_id type_idx) const
+{
+    auto entry = types[type_idx];
+    // if this entry is not a type variable, then it is a concrete type and
+    // therefore by definition always resolved
+    if (!std::holds_alternative<type_var>(entry))
+    {
+        return true;
+    }
+
+    // the type variable has an unresolved parent, so it is definitly not
+    // resolved
+    auto var = std::get<type_var>(entry);
+    if (!var.parent.has_value())
+    {
+        return false;
+    }
+
+    // the parent of this type variable is resolved, so now we need to check
+    // if also all parents are resolved with it
+    return is_resolved(var.parent.value());
+}
+
+type_id context::resolved_type(type_id type_idx) const
 {
     auto entry = types[type_idx];
     // if this entry is not a type variable, we just return whatever index
@@ -146,6 +169,24 @@ type_id context::resolved_type(type_id type_idx)
     // anchor is reached or it is another type variable which refers to yet
     // another type entry.
     return resolved_type(var.parent.value());
+}
+
+bool context::resolve(type_id idx1, type_id idx2)
+{
+    if (is_resolved(idx1) && !is_resolved(idx2))
+    {
+        std::get<type_var>(types[idx2]).parent = idx1;
+        return true;
+    }
+    else if (!is_resolved(idx1) && is_resolved(idx2))
+    {
+        std::get<type_var>(types[idx1]).parent = idx2;
+        return true;
+    }
+    // TODO: actually, if both are unresolved, we should just be able to assign
+    // the parent of one to the other. But do we already cover all the corner
+    // cases that way?
+    return false;
 }
 
 std::optional<type_id> context::record_field_type(type_id record_type_idx, const std::string& field_name)
