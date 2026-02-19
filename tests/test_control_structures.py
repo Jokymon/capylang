@@ -228,3 +228,30 @@ fn _start() {
         tools.normalize_filename_from_output(stderr)
         == "filename:7:23: 'if' with return type is missing an 'else' branch\n"
     )
+
+
+@pytest.mark.parse_error
+def test_nested_if_branch_type_mismatch_is_reported():
+    code = """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let condition: bool = true;
+    let result: u32 = if condition {
+        if condition {
+            10u32
+        } else {
+            11u32
+        }
+    } else {
+        12s32
+    }
+    proc_exit(result)
+}
+"""
+    exit_code, stderr = tools.compile_test_code(code)
+    normalized = tools.normalize_filename_from_output(stderr)
+
+    assert exit_code == 1
+    assert "'then' and 'else' branches have mismatching types 'u32' and 's32'" in normalized
