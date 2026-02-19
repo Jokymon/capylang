@@ -86,7 +86,7 @@ struct node_string_literal
 struct node_var_reference
 {
     std::string name;
-    std::reference_wrapper<symbol> symbol_ref;
+    symbol_id symbol_ref;
     assign_context context;
 };
 
@@ -100,7 +100,7 @@ struct node_pointer_deref
 struct node_let_expression
 {
     std::string name;
-    std::reference_wrapper<symbol> symbol_ref;
+    symbol_id symbol_ref;
     std::unique_ptr<ast_node> init_expression;
 };
 
@@ -167,7 +167,7 @@ struct node_global
 {
     std::string name;
     type_id assigned_type;
-    std::reference_wrapper<symbol> symbol_ref;
+    symbol_id symbol_ref;
     int32_t init_value;
     //std::unique_ptr<ast_node> init_expression;
 };
@@ -175,7 +175,7 @@ struct node_global
 struct node_function_call
 {
     std::string function_name;
-    std::reference_wrapper<symbol> symbol_ref;
+    symbol_id symbol_ref;
     std::vector<std::unique_ptr<ast_node>> parameter;
 };
 
@@ -269,4 +269,5 @@ private:
     std::vector<capy_attribute> collected_attributes;
     scope* current_scope;
     node_module* current_module;
+    symbol_id error_symbol;
 };

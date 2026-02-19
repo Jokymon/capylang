@@ -255,19 +255,20 @@ void emitter::emit(const node_global& global_def)
     // }
 
     // emit(*global_def.init_expression);
-    // if (t_t::is_of<t_t::string>(global_def.symbol_ref.get().symbol_type))
+    // if (t_t::is_of<t_t::string>(parse_context.symbol_at(global_def.symbol_ref).symbol_type))
     // {
-    //     cur_block->global_set((global_def.symbol_ref.get().name+"_ptr").c_str());
-    //     cur_block->global_set((global_def.symbol_ref.get().name+"_size").c_str());
+    //     cur_block->global_set((parse_context.symbol_at(global_def.symbol_ref).name+"_ptr").c_str());
+    //     cur_block->global_set((parse_context.symbol_at(global_def.symbol_ref).name+"_size").c_str());
     // }
     // else
     // {
-    //     cur_block->global_set(global_def.symbol_ref.get().name.c_str());
+    //     cur_block->global_set(parse_context.symbol_at(global_def.symbol_ref).name.c_str());
     // }
-    auto mutability = global_def.symbol_ref.get().mutab ?
+    const auto& global_symbol = parse_context.symbol_at(global_def.symbol_ref);
+    auto mutability = global_symbol.mutab ?
                             wasm_module::access_type::mut :
                             wasm_module::access_type::immut;
-    cur_mod->create_global(global_def.symbol_ref.get().name.c_str(),
+    cur_mod->create_global(global_symbol.name.c_str(),
                            wasm_type::i32,
                            mutability,
                            global_def.init_value);
@@ -306,8 +307,9 @@ void emitter::emit(const node_function_definition &func_def)
 
     emit(*func_def.function_head);
 
-    for (auto& [identifier, symbol] : func_def.function_scope->symbol_table)
+    for (const auto& [identifier, symbol_id] : func_def.function_scope->symbol_table)
     {
+        const auto& symbol = parse_context.symbol_at(symbol_id);
         if (symbol.kind == symbol_kind::local_var)
         {
             if (parse_context.is_primitive_type(symbol.symbol_type, primitive_type::String))
@@ -397,14 +399,15 @@ void emitter::emit(const node_let_expression& let_expression)
     }
 
     emit(*let_expression.init_expression);
-    if (parse_context.is_primitive_type(let_expression.symbol_ref.get().symbol_type, primitive_type::String))
+    const auto& symbol = parse_context.symbol_at(let_expression.symbol_ref);
+    if (parse_context.is_primitive_type(symbol.symbol_type, primitive_type::String))
     {
-        cur_block->local_set((let_expression.symbol_ref.get().name+"_ptr").c_str());
-        cur_block->local_set((let_expression.symbol_ref.get().name+"_size").c_str());
+        cur_block->local_set((symbol.name+"_ptr").c_str());
+        cur_block->local_set((symbol.name+"_size").c_str());
     }
     else
     {
-        cur_block->local_set(let_expression.symbol_ref.get().name.c_str());
+        cur_block->local_set(symbol.name.c_str());
     }
 }
 
@@ -531,14 +534,15 @@ void emitter::emit(const node_expression &root)
         }
         else
         {
-            auto symbol = std::get<node_var_reference>(root.left->value).symbol_ref;
-            if (symbol.get().kind == symbol_kind::global_var)
+            auto symbol_id = std::get<node_var_reference>(root.left->value).symbol_ref;
+            const auto& symbol = parse_context.symbol_at(symbol_id);
+            if (symbol.kind == symbol_kind::global_var)
             {
-                cur_block->global_set(symbol.get().name.c_str());                
+                cur_block->global_set(symbol.name.c_str());
             }
             else
             {
-                cur_block->local_set(symbol.get().name.c_str());
+                cur_block->local_set(symbol.name.c_str());
             }
             break;
         }
@@ -576,14 +580,14 @@ void emitter::emit(const node_var_reference &variable)
     // handle the storing of the value differently
     if (variable.context == assign_context::rhs)
     {
-        auto symbol = variable.symbol_ref;
-        if (symbol.get().kind == symbol_kind::global_var)
+        const auto& symbol = parse_context.symbol_at(variable.symbol_ref);
+        if (symbol.kind == symbol_kind::global_var)
         {
-            cur_block->global_get(symbol.get().name.c_str());
+            cur_block->global_get(symbol.name.c_str());
         }
         else
         {
-            cur_block->local_get(symbol.get().name.c_str());
+            cur_block->local_get(symbol.name.c_str());
         }    
     }
 }
@@ -607,7 +611,8 @@ void emitter::emit(const node_pointer_deref& ptr_deref)
     {
         // in LHS context we have to get address, which in our
         // case means to get the index of the variable
-        cur_block->local_get(std::get<node_var_reference>(ptr_deref.pointer_expression->value).symbol_ref.get().name.c_str());
+        auto ptr_var_id = std::get<node_var_reference>(ptr_deref.pointer_expression->value).symbol_ref;
+        cur_block->local_get(parse_context.symbol_at(ptr_var_id).name.c_str());
     }
 }
 

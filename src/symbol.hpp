@@ -26,6 +26,10 @@ enum class primitive_type
 using type_id = std::uint32_t;
 static constexpr type_id ILLEGAL_TYPE = 0;
 
+// identity of a symbol in the global symbol arena in context.
+using symbol_id = std::uint32_t;
+static constexpr symbol_id ILLEGAL_SYMBOL = 0;
+
 struct pointer_type {
     type_id to;
 };
@@ -183,6 +187,29 @@ using type_constraint = std::variant<
 // types in one parsing pass
 using type_node = std::variant<type_kind, type_var>;
 
+enum class symbol_kind {
+    error,
+    global_var,
+    local_var,
+    argument,
+    function
+};
+
+struct function_signature
+{
+    std::vector<std::string> parameters;
+    type_id function_type;
+};
+
+struct symbol {
+    std::string name;
+    type_id symbol_type;
+    function_signature signature;
+    symbol_kind kind;
+    bool mutab;
+    bool is_assigned;
+};
+
 struct context
 {
     context();
@@ -208,43 +235,25 @@ struct context
 
     std::string repr(type_id type_idx) const;
 
+    symbol_id create_symbol(symbol sym);
+    symbol& symbol_at(symbol_id idx);
+    const symbol& symbol_at(symbol_id idx) const;
+
     // indexing through type_id
     std::vector<type_node> types;
     std::unordered_map<type_kind, type_id, type_kind_hash, type_kind_eq> interned;
 
     std::vector<type_constraint> constraints;
-};
-
-enum class symbol_kind {
-    global_var,
-    local_var,
-    argument,
-    function
-};
-
-struct function_signature
-{
-    std::vector<std::string> parameters;
-    type_id function_type;
-};
-
-struct symbol {
-    std::string name;
-    type_id symbol_type;
-    function_signature signature;
-    symbol_kind kind;
-    bool mutab;
-    bool is_assigned;
+    std::vector<symbol> symbols;
 };
 
 struct scope {
     scope* parent;
-    std::map<std::string, symbol> symbol_table;
+    std::map<std::string, symbol_id> symbol_table;
     std::map<std::string, type_id> type_table;
 
     scope* get_global_scope() const;
 
-    std::optional<std::reference_wrapper<symbol>> lookup(const std::string& name);
+    std::optional<symbol_id> lookup(const std::string& name);
     std::optional<type_id> lookup_type(const std::string& name);
-    std::optional<std::reference_wrapper<symbol>> lookup_function(const std::string& name);
 };

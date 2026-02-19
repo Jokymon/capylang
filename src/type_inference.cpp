@@ -125,8 +125,13 @@ void type_inference::process(source_range location, node_field_deref &n)
 void type_inference::process(source_range location, node_function_call &n)
 {
     (void)location;
+    const auto& called_symbol = parse_context.symbol_at(n.symbol_ref);
+    if (called_symbol.kind != symbol_kind::function)
+    {
+        return;
+    }
 
-    auto declared_type = parse_context.types[n.symbol_ref.get().signature.function_type];
+    auto declared_type = parse_context.types[called_symbol.signature.function_type];
     auto declared_function_type = std::get<function_type>(std::get<type_kind>(declared_type));
 
     for (auto [actual_value, declared_param]: std::views::zip(n.parameter, declared_function_type.parameter_types))
@@ -170,13 +175,14 @@ void type_inference::process(source_range location, node_while_expression &n)
 void type_inference::process(source_range location, node_let_expression &n)
 {
     (void)location;
-    if (n.init_expression)
+    if (!n.init_expression)
     {
-        visit(*n.init_expression);
+        return;
     }
+    visit(*n.init_expression);
 
     parse_context.constraints.emplace_back(equal_constraint{
-        n.symbol_ref.get().symbol_type,
+        parse_context.symbol_at(n.symbol_ref).symbol_type,
         assigned_node_type(*n.init_expression, parse_context)
     });
 }

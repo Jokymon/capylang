@@ -41,6 +41,15 @@ context::context()
 {
     // reserve entry for ILLEGAL_TYPE
     types.emplace_back(type_var{});
+    // reserve entry for ILLEGAL_SYMBOL
+    symbols.emplace_back(symbol{
+        .name = "_error",
+        .symbol_type = ILLEGAL_TYPE,
+        .signature = function_signature{},
+        .kind = symbol_kind::error,
+        .mutab = false,
+        .is_assigned = true,
+    });
 }
 
 type_id context::intern_primitive(primitive_type p_type)
@@ -323,6 +332,23 @@ std::string context::repr(type_id type_idx) const
     }, typ);
 }
 
+symbol_id context::create_symbol(symbol sym)
+{
+    symbol_id id = static_cast<symbol_id>(symbols.size());
+    symbols.push_back(std::move(sym));
+    return id;
+}
+
+symbol& context::symbol_at(symbol_id idx)
+{
+    return symbols[idx];
+}
+
+const symbol& context::symbol_at(symbol_id idx) const
+{
+    return symbols[idx];
+}
+
 scope* scope::get_global_scope() const
 {
     scope* scope_iter = const_cast<scope*>(this);
@@ -333,11 +359,12 @@ scope* scope::get_global_scope() const
     return scope_iter;
 }
 
-std::optional<std::reference_wrapper<symbol>> scope::lookup(const std::string &name)
+std::optional<symbol_id> scope::lookup(const std::string &name)
 {
-    if (symbol_table.find(name) != symbol_table.end())
+    auto it = symbol_table.find(name);
+    if (it != symbol_table.end())
     {
-        return symbol_table[name];
+        return it->second;
     }
     else if (parent != nullptr)
     {
@@ -351,9 +378,10 @@ std::optional<std::reference_wrapper<symbol>> scope::lookup(const std::string &n
 
 std::optional<type_id> scope::lookup_type(const std::string& name)
 {
-    if (type_table.find(name) != type_table.end())
+    auto it = type_table.find(name);
+    if (it != type_table.end())
     {
-        return type_table[name];
+        return it->second;
     }
     else if (parent != nullptr)
     {
@@ -365,18 +393,3 @@ std::optional<type_id> scope::lookup_type(const std::string& name)
     }
 }
 
-std::optional<std::reference_wrapper<symbol>> scope::lookup_function(const std::string &name)
-{
-    if ((symbol_table.find(name) != symbol_table.end()) && (symbol_table[name].kind == symbol_kind::function))
-    {
-        return symbol_table[name];
-    }
-    else if (parent != nullptr)
-    {
-        return parent->lookup_function(name);
-    }
-    else
-    {
-        return std::nullopt;
-    }
-}

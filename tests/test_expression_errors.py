@@ -79,6 +79,25 @@ fn _start() {
     )
 
 
+@pytest.mark.parse_error
+def test_undefined_identifiers_do_not_share_state():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let a: u32 = missing_a;
+    let b: u32 = missing_b;
+    proc_exit(0u32)
+}"""
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
+    normalized = tools.normalize_filename_from_output(stderr)
+
+    assert exit_code == 1
+    assert "Undefined variable: 'missing_a'" in normalized
+    assert "Undefined variable: 'missing_b'" in normalized
+
+
 # --------------------------------------------------------------------
 # numeric literal range errors
 @pytest.mark.parse_error

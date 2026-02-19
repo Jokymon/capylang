@@ -6,14 +6,6 @@
 #include <sstream>
 #include <string>
 
-static symbol ERROR_PLACEHOLDER_SYM = symbol{
-    "_",
-    static_cast<type_id>(ILLEGAL_TYPE),
-    function_signature{},
-    symbol_kind::global_var,
-    false,
-    false};
-
 template <typename T, typename... Args>
 ast_node make_located(source_position start, source_position end, Args &&...args)
 {
@@ -58,7 +50,7 @@ void dump_node(const context& ctx, const node_var_reference& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Var(" << ctx.repr(n.symbol_ref.get().symbol_type) << "):" << n.name << "\n";
+    std::cout << ind << "Var(" << ctx.repr(ctx.symbol_at(n.symbol_ref).symbol_type) << "):" << n.name << "\n";
 }
 
 void dump_node(const context& ctx, const node_pointer_deref& n, size_t indent)
@@ -315,7 +307,17 @@ bool node_function_definition::has_attribute(const std::string& attr_name) const
 parser::parser(std::shared_ptr<lexer> l, context& ctx)
     : capy_lexer(l)
     , parse_context(ctx)
-{}
+    , error_symbol(ILLEGAL_SYMBOL)
+{
+    error_symbol = parse_context.create_symbol(symbol{
+        .name = "_error",
+        .symbol_type = ILLEGAL_TYPE,
+        .signature = function_signature{},
+        .kind = symbol_kind::error,
+        .mutab = false,
+        .is_assigned = true,
+    });
+}
 
 node_module parser::parse()
 {
@@ -521,7 +523,8 @@ ast_node parser::parse_import_definition()
         {
             append_error("Expecting an alias identifier for imported symbol");
         }
-        auto alias_name = capy_lexer->expect<token_identifier>();
+        auto alias_token = capy_lexer->expect<token_identifier>();
+        alias_name = alias_token.name;
     }
 
     if (!capy_lexer->ahead_is_sym(token_symbol::sym_semicolon))
@@ -564,14 +567,15 @@ ast_node parser::parse_global()
 
     auto type_spec = parse_type_reference();
 
-    auto new_symbol = symbol{
+    auto global_symbol = symbol{
         .name = variable_name.name,
         .symbol_type = type_spec,
         .kind = symbol_kind::global_var,
         .mutab = is_mutable,
         .is_assigned = false,
     };
-    current_scope->symbol_table[variable_name.name] = new_symbol;
+    auto global_symbol_id = parse_context.create_symbol(std::move(global_symbol));
+    current_scope->symbol_table[variable_name.name] = global_symbol_id;
 
     int32_t init_value = 0;
     if (!capy_lexer->ahead_is_sym(token_symbol::sym_equal))
@@ -584,7 +588,7 @@ ast_node parser::parse_global()
 
         auto initializer = parse_number();
         init_value = std::get<node_number>(initializer.value).number;
-        current_scope->symbol_table[variable_name.name].is_assigned = true;
+        parse_context.symbol_at(global_symbol_id).is_assigned = true;
     }
 
     // eat the final semicolon
@@ -595,7 +599,7 @@ ast_node parser::parse_global()
         end_token.location.end,
         variable_name.name,
         type_spec,
-        current_scope->symbol_table[variable_name.name],
+        global_symbol_id,
         init_value);
 }
 
@@ -625,13 +629,14 @@ ast_node parser::parse_function_definition()
     for (auto [param_name, param_typ] : std::views::zip(parameter_names,
                                                     func_type.parameter_types))
     {
-        current_scope->symbol_table[param_name] = symbol{
+        auto param_symbol_id = parse_context.create_symbol(symbol{
             .name = param_name,
             .symbol_type = param_typ,
             .kind = symbol_kind::argument,
             .mutab = false,
             .is_assigned = true,    // function parameters are 'assigned' from the function call
-        };
+        });
+        current_scope->symbol_table[param_name] = param_symbol_id;
     }
 
     std::vector<std::unique_ptr<ast_node>> function_body;
@@ -662,13 +667,15 @@ node_function_head parser::parse_function_head()
     function_signature signature;
     parse_function_signature(signature);
 
-    current_scope->symbol_table[function_name.name] = symbol{
+    auto function_symbol_id = parse_context.create_symbol(symbol{
         .name = function_name.name,
         .symbol_type = signature.function_type,
         .signature = signature,
         .kind = symbol_kind::function,
         .mutab = false,
-    };
+        .is_assigned = true,
+    });
+    current_scope->symbol_table[function_name.name] = function_symbol_id;
 
     return node_function_head{
         start_range.start,
@@ -811,8 +818,9 @@ ast_node parser::parse_function_call(source_range name_range, const std::string 
     // TODO: check for closing )
     auto end_location = capy_lexer->expect<token_symbol>().location;
 
-    auto func = current_scope->lookup_function(function_name);
-    if (!func.has_value())
+    auto maybe_symbol_id = current_scope->lookup(function_name);
+    if ((!maybe_symbol_id.has_value()) ||
+        (parse_context.symbol_at(maybe_symbol_id.value()).kind != symbol_kind::function))
     {
         append_error_at(name_range.start,
                         "Function '" + function_name + "' is not defined");
@@ -821,7 +829,7 @@ ast_node parser::parse_function_call(source_range name_range, const std::string 
             name_range.start,
             end_location.end,
             function_name,
-            ERROR_PLACEHOLDER_SYM,
+            error_symbol,
             std::move(function_parameters));
     }
 
@@ -829,7 +837,7 @@ ast_node parser::parse_function_call(source_range name_range, const std::string 
         name_range.start,
         end_location.end,
         function_name,
-        func.value(),
+        maybe_symbol_id.value(),
         std::move(function_parameters));
 }
 
@@ -940,7 +948,8 @@ ast_node parser::parse_let_expression()
         .mutab = is_mutable,
         .is_assigned = false,
     };
-    current_scope->symbol_table[variable_name.name] = new_symbol;
+    auto local_symbol_id = parse_context.create_symbol(std::move(new_symbol));
+    current_scope->symbol_table[variable_name.name] = local_symbol_id;
 
     if (capy_lexer->ahead_is_sym(token_symbol::sym_equal))
     {
@@ -948,12 +957,12 @@ ast_node parser::parse_let_expression()
 
         auto initializer = parse_expression();
 
-        current_scope->symbol_table[variable_name.name].is_assigned = true;
+        parse_context.symbol_at(local_symbol_id).is_assigned = true;
         return make_located<node_let_expression>(
             start_location.start,
             initializer.location.end,
             variable_name.name,
-            current_scope->symbol_table[variable_name.name],
+            local_symbol_id,
             std::make_unique<ast_node>(std::move(initializer)));
     }
 
@@ -962,7 +971,7 @@ ast_node parser::parse_let_expression()
         start_location.start,
         end_position,
         variable_name.name,
-        new_symbol,
+        local_symbol_id,
         nullptr
     );
 }
@@ -1153,7 +1162,7 @@ ast_node parser::parse_primary()
             if (!var.has_value())
             {
                 append_error_at(id_range.start, "Undefined variable: '"+id.name+"'");
-                var = ERROR_PLACEHOLDER_SYM;
+                var = error_symbol;
             }
 
             ast_node object = make_located<node_var_reference>(
@@ -1162,7 +1171,7 @@ ast_node parser::parse_primary()
                 id.name,
                 var.value(),
                 assign_context::rhs);
-            auto var_type = var.value().get().symbol_type;
+            auto var_type = parse_context.symbol_at(var.value()).symbol_type;
 
             return parse_field_deref(var_type, std::move(object));
         }
@@ -1179,7 +1188,7 @@ ast_node parser::parse_primary()
                 }
 
                 append_error_at(id_range.start, "Undefined variable: '"+id.name+"'");
-                var = ERROR_PLACEHOLDER_SYM;
+                var = error_symbol;
             }
 
             return make_located<node_var_reference>(

@@ -34,6 +34,24 @@ fn _start() {
 
 
 @pytest.mark.good
+def test_uninitialised_let_binding_is_stable_with_multiple_bindings():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let mut a: u32;
+    let mut b: u32;
+    a = 9u32;
+    b = 8u32;
+    proc_exit(a + b)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 17
+
+
+@pytest.mark.good
 def test_pointer_dereferencing():
     # For this test, the data in the linear memory is hardcoded in the
     # compiled WAT file. That data starts at address 100

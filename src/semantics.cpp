@@ -16,13 +16,23 @@ type_id assigned_node_type(const ast_node &node, context& ctx)
         } else if constexpr (std::is_same_v<T, node_string_literal>) {
             return ctx.intern_primitive(primitive_type::String);
         } else if constexpr (std::is_same_v<T, node_var_reference>) {
-            return ctx.resolved_type(n.symbol_ref.get().symbol_type);
+            return ctx.resolved_type(ctx.symbol_at(n.symbol_ref).symbol_type);
         } else if constexpr (std::is_same_v<T, node_pointer_deref>) {
             return ctx.resolved_type(n.assigned_type);
         } else if constexpr (std::is_same_v<T, node_function_definition>) {
             return ctx.function_return_type(n.function_head->signature.function_type).value();
         } else if constexpr (std::is_same_v<T, node_function_call>) {
-            return ctx.function_return_type(n.symbol_ref.get().signature.function_type).value();
+            const auto& sym = ctx.symbol_at(n.symbol_ref);
+            if (sym.kind != symbol_kind::function)
+            {
+                return ILLEGAL_TYPE;
+            }
+            auto return_type = ctx.function_return_type(sym.signature.function_type);
+            if (!return_type.has_value())
+            {
+                return ILLEGAL_TYPE;
+            }
+            return return_type.value();
         } else if constexpr (std::is_same_v<T, node_let_expression>) {
             return ctx.intern_primitive(primitive_type::Void);
         } else if constexpr (std::is_same_v<T, node_record_initialisation>) {
@@ -86,9 +96,16 @@ void semantic_analyser::process(source_range location, node_string_literal &n)
 
 void semantic_analyser::process(source_range location, node_var_reference &n)
 {
+    auto& sym = parse_context.symbol_at(n.symbol_ref);
+    if (sym.kind == symbol_kind::error)
+    {
+        n.context = current_context;
+        return;
+    }
+
     if (current_context==assign_context::rhs)
     {
-        if (!n.symbol_ref.get().is_assigned)
+        if (!sym.is_assigned)
         {
             append_error_at(
                 location.start,
@@ -98,7 +115,7 @@ void semantic_analyser::process(source_range location, node_var_reference &n)
     }
     else if (current_context==assign_context::lhs)
     {
-        n.symbol_ref.get().is_assigned = true;
+        sym.is_assigned = true;
     }
     n.context = current_context;
 }
@@ -211,6 +228,12 @@ void semantic_analyser::process(source_range location, node_field_deref &n)
 
 void semantic_analyser::process(source_range location, node_function_call &n)
 {
+    const auto& symbol = parse_context.symbol_at(n.symbol_ref);
+    if (symbol.kind != symbol_kind::function)
+    {
+        return;
+    }
+
     function_type actual_func_type;
     for (const auto &param : n.parameter)
     {
@@ -219,14 +242,14 @@ void semantic_analyser::process(source_range location, node_function_call &n)
             assigned_node_type(*param, parse_context));
     }
 
-    auto declared_type = parse_context.types[n.symbol_ref.get().signature.function_type];
+    auto declared_type = parse_context.types[symbol.signature.function_type];
     auto declared_function_type = std::get<function_type>(std::get<type_kind>(declared_type));
 
     if (!actual_func_type.is_call_signature_eq(declared_function_type))
     {
         append_error_at(
             location.start,
-            "Function '" + n.symbol_ref.get().name + "' expects signature "
+            "Function '" + symbol.name + "' expects signature "
                 + declared_function_type.repr_call_sig(parse_context)
                 + "; called with signature "
                 + actual_func_type.repr_call_sig(parse_context));
@@ -300,13 +323,14 @@ void semantic_analyser::process(source_range location, node_let_expression &n)
     visit(*n.init_expression);
 
 
-    if (parse_context.resolved_type(n.symbol_ref.get().symbol_type) !=
+    const auto& symbol = parse_context.symbol_at(n.symbol_ref);
+    if (parse_context.resolved_type(symbol.symbol_type) !=
         assigned_node_type(*n.init_expression, parse_context))
     {
         append_error_at(
             location.start,
             "Type mismatch in let statement. Variable is of type '"
-                + parse_context.repr(n.symbol_ref.get().symbol_type) + "' but expression has type '"
+                + parse_context.repr(symbol.symbol_type) + "' but expression has type '"
                 + parse_context.repr(assigned_node_type(*n.init_expression, parse_context))+"'"
         );
     }
@@ -384,12 +408,13 @@ void semantic_analyser::process(source_range location, node_expression &n)
             auto* var_node = std::get_if<node_var_reference>(&n.left->value);
             if (var_node!=nullptr)
             {
+                const auto& symbol = parse_context.symbol_at(var_node->symbol_ref);
                 // TODO: What about mutable pointers?
-                if (!var_node->symbol_ref.get().mutab)
+                if (!symbol.mutab)
                 {
                     append_error_at(
                         location.start,
-                        "Can't assign to immutable variable '" + var_node->symbol_ref.get().name + "'");
+                        "Can't assign to immutable variable '" + symbol.name + "'");
                 }
             }
         }
