@@ -111,6 +111,22 @@ def test_correct_priority_of_plus_and_multiply():
 
 
 @pytest.mark.good
+def test_adding_of_two_converted_variables():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let a = 10u8;
+    let b = 23u8;
+    proc_exit((a as u32) + (b as u32))
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 33
+
+
+@pytest.mark.good
 def test_eq_has_lower_precedence_than_plus():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
