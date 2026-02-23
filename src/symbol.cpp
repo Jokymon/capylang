@@ -92,15 +92,8 @@ type_id context::create_type_var()
 
 bool context::is_primitive_type(type_id type_idx, primitive_type p_type)
 {
-    auto t = types[type_idx];
-    if (!std::holds_alternative<type_kind>(t))
-        return false;
-    
-    auto kind = std::get<type_kind>(t);
-    if (!std::holds_alternative<primitive_type>(kind))
-        return false;
-
-    return std::get<primitive_type>(kind) == p_type;
+    auto primitive = primitive_type_of(type_idx);
+    return primitive.has_value() && primitive.value() == p_type;
 }
 
 bool context::is_record_type(type_id type_idx)
@@ -247,6 +240,19 @@ std::optional<type_id> context::function_return_type(type_id function_type_idx)
         return f.return_type;
     }
 
+    return std::nullopt;
+}
+std::optional<primitive_type> context::primitive_type_of(type_id type_idx) const
+{
+    auto t = types[type_idx];
+    if (!std::holds_alternative<type_kind>(t))
+        return std::nullopt;
+
+    auto kind = std::get<type_kind>(t);
+    if (std::holds_alternative<primitive_type>(kind))
+    {
+        return std::get<primitive_type>(kind);
+    }
     return std::nullopt;
 }
 

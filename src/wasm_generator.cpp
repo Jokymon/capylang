@@ -2,6 +2,7 @@
 #include "wasm_mnemonics.hpp"
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -70,6 +71,18 @@ void encode_leb128_signed(std::ostream& out, int64_t value)
 
         out.put(b);
     }
+}
+
+int64_t normalize_i32_immediate(int64_t value)
+{
+    // WASM i32.const uses signed LEB128, but the payload represents 32-bit bits.
+    // Normalize through uint32_t first so values like 4294967295 become -1.
+    return static_cast<int32_t>(static_cast<uint32_t>(value));
+}
+
+void encode_i32_const_immediate(std::ostream& out, int64_t value)
+{
+    encode_leb128_signed(out, normalize_i32_immediate(value));
 }
 
 void encode_string(std::ostream& out, const std::string s)
@@ -331,7 +344,7 @@ void wasm_generator::generate_globals(const wasm_module& module, std::ostream &o
             content.put(MUTABILITY_IMMUT);
 
         content.put(INST_I32_CONST);
-        encode_leb128(content, g.initvalue);
+        encode_i32_const_immediate(content, static_cast<int64_t>(g.initvalue));
         content.put(INST_TERMINATOR);
     }
 
@@ -512,7 +525,7 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
             else if constexpr (std::is_same_v<T, wasm_op_type_value>) {
                 // TODO: differentiate by type of the operation
                 output.put(INST_I32_CONST);
-                encode_leb128_signed(output, t.value);
+                encode_i32_const_immediate(output, t.value);
             }
             else if constexpr (std::is_same_v<T, wasm_op_align_offset>) {
 

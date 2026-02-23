@@ -1,6 +1,9 @@
 #include "parser.hpp"
+#include <array>
 #include <assert.h>
+#include <format>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <ranges>
 #include <sstream>
@@ -303,6 +306,23 @@ bool node_function_definition::has_attribute(const std::string& attr_name) const
     }
     return false;
 }
+
+struct number_range_rule
+{
+    primitive_type primitive;
+    long long min_value;
+    long long max_value;
+    const char* label;
+};
+
+constexpr std::array<number_range_rule, 6> NUMBER_RANGE_RULES{{
+    {primitive_type::U8, 0, std::numeric_limits<uint8_t>::max(), "u8"},
+    {primitive_type::U16, 0, std::numeric_limits<uint16_t>::max(), "u16"},
+    {primitive_type::U32, 0, std::numeric_limits<uint32_t>::max(), "u32"},
+    {primitive_type::S8, std::numeric_limits<int8_t>::min(), std::numeric_limits<int8_t>::max(), "s8"},
+    {primitive_type::S16, std::numeric_limits<int16_t>::min(), std::numeric_limits<int16_t>::max(), "s16"},
+    {primitive_type::S32, std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::max(), "s32"},
+}};
 
 parser::parser(std::shared_ptr<lexer> l, context& ctx)
     : capy_lexer(l)
@@ -1320,65 +1340,23 @@ ast_node parser::parse_number()
             parse_context.intern_primitive(primitive_type::U32));
     }
 
-    
-    if (parse_context.is_primitive_type(number_type.value(), primitive_type::U8))
+    auto primitive = parse_context.primitive_type_of(number_type.value());
+    if (primitive.has_value())
     {
-        if ((lhs.number<0) || (lhs.number>std::numeric_limits<uint8_t>::max()))
+        for (const auto& rule : NUMBER_RANGE_RULES)
         {
-            append_error_at(
-                lhs_location.start,
-                std::format("Numeric literal '{}' exceeds valid range for u8 (0..{})",
-                    lhs.number, std::numeric_limits<uint8_t>::max()));
-        }
-    }
-    else if (parse_context.is_primitive_type(number_type.value(), primitive_type::U16))
-    {
-        if ((lhs.number<0) || (lhs.number>std::numeric_limits<uint16_t>::max()))
-        {
-            append_error_at(
-                lhs_location.start,
-                std::format("Numeric literal '{}' exceeds valid range for u16 (0..{})",
-                    lhs.number, std::numeric_limits<uint16_t>::max()));
-        }
-    }
-    else if (parse_context.is_primitive_type(number_type.value(), primitive_type::U32))
-    {
-        if ((lhs.number<0) || (lhs.number>std::numeric_limits<uint32_t>::max()))
-        {
-            append_error_at(
-                lhs_location.start,
-                std::format("Numeric literal '{}' exceeds valid range for u32 (0..{})",
-                    lhs.number, std::numeric_limits<uint32_t>::max()));
-        }
-    }
-    else if (parse_context.is_primitive_type(number_type.value(), primitive_type::S8))
-    {
-        if ((lhs.number<std::numeric_limits<int8_t>::min()) || (lhs.number>std::numeric_limits<int8_t>::max()))
-        {
-            append_error_at(
-                lhs_location.start,
-                std::format("Numeric literal '{}' exceeds valid range for s8 ({}..{})",
-                    lhs.number, std::numeric_limits<int8_t>::min(), std::numeric_limits<int8_t>::max()));
-        }
-    }
-    else if (parse_context.is_primitive_type(number_type.value(), primitive_type::S16))
-    {
-        if ((lhs.number<std::numeric_limits<int16_t>::min()) || (lhs.number>std::numeric_limits<int16_t>::max()))
-        {
-            append_error_at(
-                lhs_location.start,
-                std::format("Numeric literal '{}' exceeds valid range for s16 ({}..{})",
-                    lhs.number, std::numeric_limits<int16_t>::min(), std::numeric_limits<int16_t>::max()));
-        }
-    }
-    else if (parse_context.is_primitive_type(number_type.value(), primitive_type::S32))
-    {
-        if ((lhs.number<std::numeric_limits<int32_t>::min()) || (lhs.number>std::numeric_limits<int32_t>::max()))
-        {
-            append_error_at(
-                lhs_location.start,
-                std::format("Numeric literal '{}' exceeds valid range for s32 ({}..{})",
-                    lhs.number, std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::max()));
+            if (rule.primitive != primitive.value())
+            {
+                continue;
+            }
+            if ((lhs.number < rule.min_value) || (lhs.number > rule.max_value))
+            {
+                append_error_at(
+                    lhs_location.start,
+                        std::format("Numeric literal '{}' exceeds valid range for {} ({}..{})",
+                            lhs.number, rule.label, rule.min_value, rule.max_value));
+            }
+            break;
         }
     }
 

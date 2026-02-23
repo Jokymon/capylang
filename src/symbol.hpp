@@ -232,6 +232,7 @@ struct context
 
     std::optional<type_id> record_field_type(type_id record_type_idx, const std::string& field_name);
     std::optional<type_id> function_return_type(type_id function_type_idx);
+    std::optional<primitive_type> primitive_type_of(type_id type_idx) const;
 
     std::string repr(type_id type_idx) const;
 
