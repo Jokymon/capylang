@@ -6,7 +6,6 @@ include(FetchContent)
 add_executable(${PROJECT_NAME}
     src/main.cpp
     src/args_parse.cpp
-    src/ir.cpp
     src/lexer.cpp
     src/emitter.cpp
     src/parser.cpp
@@ -15,6 +14,7 @@ add_executable(${PROJECT_NAME}
     src/type_inference.cpp
     src/wasm_generator.cpp
     src/wat_generator.cpp
+    src/wasm_ir.cpp
 )
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 26)

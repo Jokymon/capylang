@@ -1,4 +1,4 @@
-#include "ir.hpp"
+#include "wasm_ir.hpp"
 #include <algorithm>
 #include <format>
 

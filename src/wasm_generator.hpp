@@ -1,5 +1,5 @@
 #pragma once
-#include "ir.hpp"
+#include "wasm_ir.hpp"
 #include <ostream>
 #include <string>
 #include <vector>

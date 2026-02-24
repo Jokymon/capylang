@@ -1,5 +1,5 @@
 #include "emitter.hpp"
-#include "ir.hpp"
+#include "wasm_ir.hpp"
 #include "semantics.hpp"
 #include <algorithm>
 #include <cassert>

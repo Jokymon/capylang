@@ -1,5 +1,5 @@
 #pragma once
-#include "ir.hpp"
+#include "wasm_ir.hpp"
 #include <ostream>
 
 class wat_generator
