@@ -1,84 +1,125 @@
+# Capylang Compiler and Language
+
+Welcome to the Capylang (so far toy) programming language. This goal of this
+language and ecosystem is to provide a programming experience that buys
+completely into the WebAssembly environment. The compiler and eventually all the
+surrounding tooling should be solidly based on WebAssembly and possibly even the
+component model with Wasi Preview 2 or newer.
+
+It is explicitly not a goal of Capylang to provide backends for any other
+target, including any native targets like X86, ARM, RISC etc. or another VM.
+This may proof to be more challenging due to at places still limited support for
+certain system functions in WASI but will hopefully also make tasks like backend
+implementation easier, because we can fully rely on the functionality provided
+by the WASM instruction set and environment.
+
 ## Goals
 
  * general purpose programming language that only targets WASM
    --> it may use WASM (WASM component model) specific concepts
- * build a WASM compiler that runs in a WASM runtime with WASI p1
+ * build a WASM compiler that itself runs in a WASM runtime with WASI p1
    or maybe p2
+ * provide a WASI-based development environment similar to `cargo`
+
+## Getting started
+
+## Building
+
+To compile any capylang source files, you first need to compile the C++-based
+Capylang compiler. Currently this relies on Clang-C++ and CMake. The compiler
+itself is run using the wasmtime runtime. So make sure, you have the following
+tools installed and available in the `PATH`:
+
+ * CMake, >= 4.2.0
+ * Wasmtime, >= 41.0.0
+ * Wasm-tools, >= 1.244.0
+ * Ninja, >= 1.13.0     (or alternatively Make or any other CMake backend)
+
+Additionally CMake will use `cmake/wasm-wasip-clang.cmake` as configuration for
+the toolchain. Install the following additional tools and adjust the paths in
+`cmake/wasm-wasip-clang.cmake` according to your installation paths:
+
+ * Wasi-sysroot, >= 29.0
+ * Wasi-SDK, >= 29.0
+
+With all the tools installed run the following commands once to initialize the
+build directory:
+
+```bash
+mkdir build
+cd build
+cmake -G"Ninja" --toolchain ../cmake/wasm-wasip-clang.cmake ..
+```
+
+And finally build the CMake project from inside the `build/` directory:
+
+```bash
+cmake --build .
+```
+
+Now the compiler is ready for use in `build/capylang.wasm` and can be run with
+any WASM runtime. Remember to give the Capylang compiler some access rights to
+the local filesystem to read source files and to generate WAT and WASM files.
+For example using wasmtime you would run the following command to compile the
+example source file:
+
+```bash
+wasmtime run --dir . build/capylang.wasm -i example.capy -o example.wasm
+```
+
+The generated `example.wasm` is again a runnable WASI module that can be run
+with a WASI-capable WebAssembly runtime:
+
+```bash
+wasmtime run example.wasm
+```
 
 ## Testing
 
 To check the compiler source, you can run all test vectors implemented in Python using
 
-```
+```bash
 uv run pytest tests/
 ```
 
-## TODO
- * formalizing the grammar
-   --> derive syntax highlighters and a language server
- * document or even automate the setup of the development tools
-   --> WASI SDK + Sysroot
-   --> Wasm tools
-   --> Wasmtime or other WASM runtimes
+Additionally a set of C++-based unittests are found in the `src/tests` folder.
+These tests are based on the Catch-2 framework and are also built with CMake.
+They can also be run with a WebAssembly runtime, for example by running
 
- * Extend comparisons with gt, lt, gte, lte and logic operators with short circuit eval
- * Early returns
- * add floating point number types
- * Add unicode code point support for characters (so far we only have it in strings)
- * design and add support for vector numeric types
- * add structured component model types (variant/enum, list, result, ...)
- * Extend the basic memory management
- * Make sure pointer types are correctly dereferenced; special checks for u8, u16, since we dereference u32 normally
- * design and implement a concept of symbol visibility
- * automatic number conversion for "trivial" cases
- * 'address of'-operator and where it should be supported; do we really want to go the path of C, where a local
-   variable always needs to be addressable? Maybe we can just not take an address of every variable, maybe that is
-   just a property of some data types
- * In some cases the parser seems to get stuck in an endless loop trying to look for some token that never appears
- * Add an option to main to just dump the sequence of tokens
- * Add --help option to the compiler
- * Add intrinsics
- * Setup CI for automatic testing with every push 
- * Move TODO/decisions/... into dedicated documents and make the README an actual starting point for people interested
-   in the project with getting started, examples etc.
- * Improve runtime environment(s); currently the run script simplifies the compile process but it is still suboptimal;
-   it's not possible for example to choose between the WAT->WASM and the direct WASM approach
+```bash
+wasmtime run build/capylang-unit-tests.wasm
+```
 
-### Big refactoring
+## Contributing
 
-The final goal is to use dedicated AST node types (if possible). If we manage to do that, then a lot of code should get
-simpler, because we no longer need to check for th variant of AST node in a lot of places.
+Contributions are welcome and will be considered. However this is a carefully
+curated, handcrafted compiler project grown out of passion for the ideas and
+concepts. Contributions in the form of Pull-Requests will be reviewed with
+similar attention to detail and the author might ask you for some adjustements
+in your PR before accepting it.
 
-This refactoring however has multiple steps:
+It is therefore also recommended to consider smaller modifications, extensions
+and additions rather than trying to push one large
+"change-and-improve-everything" PR which is hard to review.
 
- 1. All the parsing errors need to be converted to "multi-error" capable errors. This is necessary because so far,
-    still a few of the parsing functions can still either return a valid node or an error node. But we need a valid
-    though potentially dummy value for all the nodes.
-    --> COMPLETED
- 1. Step by step replace the generic AST node return by more specific returns. Some returns can be very specific, for
-    example a `node_module` can only ever be a `node_module`, but for expressions, we could still have some generic
-    parent type. This is where we would keep things such as a node type which is not needed for other AST nodes.
- 1. Finally or maybe partially interlinked with the previous step, we can get rid of the `located` concept for AST nodes
-    as we did with the tokens. This should make the type definitions and the code for accessing the AST node fields
-    much easier.
+The following guiding principles will more likely get your PR accepted:
 
-### String implementation
-
-The idea for strings and interop with WASI (preview1 and component model) is that strings would implicitly represent a
-record with the fields ptr: *u32 and size: u32 and that these fields are implicitly made available by the compiler.
-
-This also raises the question, how exactly such a structure would be represented in memory. We could start thinking
-about different lowering strategies and for example store a string in two local variables in some cases.
-
-### Inspiration for language design:
-
- - Discussion about dereference operator prefix/postfix: https://www.reddit.com/r/Compilers/comments/1bl7c1m/why_is_the_dereference_operator_generally_a/
- - The Nox language: https://codeberg.org/nox-language/nox
- - Things hated about Rust:
-   * part 1: https://blog.yossarian.net/2020/05/20/Things-I-hate-about-rust
-   * part 2: https://blog.yossarian.net/2022/03/10/Things-I-hate-about-Rust-redux
-- Thoughts about the future of RAII: https://verdagon.dev/blog/raii-next-steps
-- You need subtyping: https://blog.polybdenum.com/2025/03/26/why-you-need-subtyping.html
-- Safe navigation operator: https://en.wikipedia.org/wiki/Safe_navigation_operator
-- Null coalescing operator: https://en.wikipedia.org/wiki/Null_coalescing_operator
-- Chocopy WASM backend: https://yangdanny97.github.io/blog/2022/10/11/chocopy-wasm-backend
+ * The project still mostly uses C++ for the implementation of the compiler.
+   This is intended to change once the compiler is capable enough to host itself
+   but until then, that's how it is. For C++ stick to the following rules:
+   * Do not use/rely on exceptions. The WASM-backend Clang doesn't (yet) support
+     exceptions
+   * Use templates more as type-generics and restrain from extensive template
+     meta programming. This should keep the source more approachable for new
+     contributers.
+   * All commonly available features of C++26 language and STL may be used
+     except where already explicitly excluded in the points above.
+ * For every new language feature make sure to also add at least one or two
+   good case tests and if appropriate at least one parser/semantic check/...
+   failure case.
+ * For new infrastructure code check if it makes sense to also add unittests and
+   if yes, make sure to add them.
+ * Make sure to consider the WAT _and_ the WASM backends when adding a feature.
+   The Python-based parser tests already run with both backends, but if you add
+   functionality not covered by these tests, still make sure to also consider
+   both backends.
