@@ -42,6 +42,16 @@ the toolchain. Install the following additional tools and adjust the paths in
  * Wasi-sysroot, >= 29.0
  * Wasi-SDK, >= 29.0
 
+By default the toolchain file looks for these locations:
+
+ * Windows: `C:/sw/wasi-sysroot-29.0` and `C:/sw/wasi-sdk-29.0-x86_64-windows/bin`
+ * Linux: `/opt/wasi-sysroot-29.0` and `/opt/wasi-sdk-29.0/bin`
+
+You can override both explicitly with environment variables:
+
+ * `CAPYLANG_WASI_SYSROOT`
+ * `CAPYLANG_WASI_SDK_BIN`
+
 With all the tools installed run the following commands once to initialize the
 build directory:
 
