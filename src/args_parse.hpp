@@ -7,4 +7,4 @@ struct Args
     bool dump_ast;
 };
 
-Args parse_args(int argc, char *argv[]);
+Args parse_args(int argc, char* argv[]);

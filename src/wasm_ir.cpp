@@ -30,48 +30,59 @@ std::string wasm_function_ref::name() const
 }
 
 wasm_instruction::wasm_instruction(wasm_op op)
-    : op(op)
+: op(op)
 {
 }
 
 wasm_op_index::wasm_op_index(wasm_op op, const std::string var_name)
-    : wasm_instruction(op), name(var_name)
+: wasm_instruction(op)
+, name(var_name)
 {
 }
 
 wasm_op_type::wasm_op_type(wasm_op op, wasm_type type)
-    : wasm_instruction(op), value_type(type)
+: wasm_instruction(op)
+, value_type(type)
 {
 }
 
 wasm_op_type_sign::wasm_op_type_sign(wasm_op op, wasm_type type)
-    : wasm_instruction(op), value_type(type)
+: wasm_instruction(op)
+, value_type(type)
 {
 }
 
 wasm_op_type_value::wasm_op_type_value(wasm_op op, wasm_type type, int64_t value)
-    : wasm_instruction(op), value_type(type), value(value)
+: wasm_instruction(op)
+, value_type(type)
+, value(value)
 {
 }
 
 wasm_op_align_offset::wasm_op_align_offset(wasm_op op, wasm_type type, uint32_t alignment, uint64_t offset)
-    : wasm_instruction(op), value_type(type), alignment(alignment), offset(offset)
+: wasm_instruction(op)
+, value_type(type)
+, alignment(alignment)
+, offset(offset)
 {
 }
 
 wasm_op_label::wasm_op_label(wasm_op op, wasm_branch_label label)
-    : wasm_instruction(op), label(label)
+: wasm_instruction(op)
+, label(label)
 {
 }
 
 wasm_op_func::wasm_op_func(wasm_op op, wasm_function_ref function)
-    : wasm_instruction(op), function(function)
+: wasm_instruction(op)
+, function(function)
 {
 }
 
 wasm_if_block::wasm_if_block(wasm_type return_type, wasm_block* enclosing_block)
-: return_type(return_type), then_block(std::make_unique<wasm_block>()), 
-else_block(std::make_unique<wasm_block>())
+: return_type(return_type)
+, then_block(std::make_unique<wasm_block>())
+, else_block(std::make_unique<wasm_block>())
 {
     then_block->enclosing_block = enclosing_block;
     else_block->enclosing_block = enclosing_block;
@@ -224,7 +235,9 @@ wasm_loop_block::wasm_loop_block(wasm_type return_type, wasm_block* enclosing_bl
 }
 
 exportable::exportable(index_type index, wasm_extern_index export_type)
-    : name(), index(index), export_type(export_type)
+: name()
+, index(index)
+, export_type(export_type)
 {
 }
 
@@ -234,7 +247,9 @@ void exportable::export_as(const char* export_name)
 }
 
 wasm_function::wasm_function(index_type index, const std::string& name, wasm_type return_type, arguments_type arguments)
-    : exportable(index, wasm_extern_index::funcidx), return_type(return_type), arguments(arguments)
+: exportable(index, wasm_extern_index::funcidx)
+, return_type(return_type)
+, arguments(arguments)
 {
     this->name = name;
 
@@ -274,12 +289,15 @@ void wasm_function::import_from(const char* ns, const char* import_name)
 }
 
 wasm_memory::wasm_memory(index_type index, size_t initial_block_count)
-    : exportable(index, wasm_extern_index::memidx), initial_block_count(initial_block_count)
+: exportable(index, wasm_extern_index::memidx)
+, initial_block_count(initial_block_count)
 {
 }
 
 wasm_data_section::wasm_data_section(size_t offset)
-: init_offset(offset), offset(offset), data_buffer()
+: init_offset(offset)
+, offset(offset)
+, data_buffer()
 {
 }
 
@@ -298,7 +316,7 @@ wasm_module::wasm_module()
 wasm_memory& wasm_module::create_memory(size_t initial_block_count)
 {
     memories.push_back(wasm_memory{memories.size(), initial_block_count});
-    return memories[memories.size()-1];
+    return memories[memories.size() - 1];
 }
 
 wasm_data_section& wasm_module::create_data_section(size_t init_offset)

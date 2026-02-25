@@ -10,11 +10,14 @@ public:
     using difference_type = std::ptrdiff_t;
     using iterator_category = std::forward_iterator_tag;
 
-    ArgvIterator(char **ptr) : current(ptr) {}
+    ArgvIterator(char** ptr)
+    : current(ptr)
+    {
+    }
 
     reference operator*() const { return std::string(*current); }
 
-    ArgvIterator &operator++()
+    ArgvIterator& operator++()
     {
         ++current;
         return *this;
@@ -26,27 +29,31 @@ public:
         return tmp;
     }
 
-    bool operator==(const ArgvIterator &other) const { return current == other.current; }
-    bool operator!=(const ArgvIterator &other) const { return current != other.current; }
+    bool operator==(const ArgvIterator& other) const { return current == other.current; }
+    bool operator!=(const ArgvIterator& other) const { return current != other.current; }
 
 private:
-    char **current;
+    char** current;
 };
 
 class ArgvRange
 {
 public:
-    ArgvRange(int argc, char *argv[]) : begin_(argv), end_(argv + argc) {}
+    ArgvRange(int argc, char* argv[])
+    : begin_(argv)
+    , end_(argv + argc)
+    {
+    }
 
     ArgvIterator begin() const { return ArgvIterator(begin_); }
     ArgvIterator end() const { return ArgvIterator(end_); }
 
 private:
-    char **begin_;
-    char **end_;
+    char** begin_;
+    char** end_;
 };
 
-void parse_option(const char *option, ArgvIterator &start, const ArgvIterator &end, std::string &output_string)
+void parse_option(const char* option, ArgvIterator& start, const ArgvIterator& end, std::string& output_string)
 {
     if ((*start).starts_with(option))
     {
@@ -68,7 +75,7 @@ void parse_option(const char *option, ArgvIterator &start, const ArgvIterator &e
     }
 }
 
-void parse_flag(const char *option, ArgvIterator &start, const ArgvIterator &end, bool &output_flag)
+void parse_flag(const char* option, ArgvIterator& start, const ArgvIterator& end, bool& output_flag)
 {
     if ((*start) == std::string(option))
     {
@@ -76,7 +83,7 @@ void parse_flag(const char *option, ArgvIterator &start, const ArgvIterator &end
     }
 }
 
-Args parse_args(int argc, char *argv[])
+Args parse_args(int argc, char* argv[])
 {
     Args arguments;
     arguments.dump_ast = false;

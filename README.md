@@ -133,3 +133,5 @@ The following guiding principles will more likely get your PR accepted:
    The Python-based parser tests already run with both backends, but if you add
    functionality not covered by these tests, still make sure to also consider
    both backends.
+ * Use clang-format to get consistent formatting of your source code. The
+   required clang-format version is given at the top of the .clang-format file.

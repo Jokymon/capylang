@@ -8,7 +8,7 @@ bool function_type::is_call_signature_eq(const function_type& other)
     {
         return false;
     }
-    for (auto [this_id, other_id]: std::views::zip(parameter_types, other.parameter_types))
+    for (auto [this_id, other_id] : std::views::zip(parameter_types, other.parameter_types))
     {
         if (this_id != other_id)
         {
@@ -21,12 +21,12 @@ bool function_type::is_call_signature_eq(const function_type& other)
 std::string function_type::repr_call_sig(const context& ctx) const
 {
     std::string r = "(";
-    if (parameter_types.size()>0)
+    if (parameter_types.size() > 0)
     {
         r += ctx.repr(parameter_types[0]);
 
         size_t index = 1;
-        while (index<parameter_types.size())
+        while (index < parameter_types.size())
         {
             r += ", " + ctx.repr(parameter_types[index]);
             index++;
@@ -103,8 +103,8 @@ bool context::is_record_type(type_id type_idx)
         return false;
 
     auto kind = std::get<type_kind>(t);
-    return std::holds_alternative<record_type>(kind) || 
-        (std::holds_alternative<primitive_type>(kind) &&
+    return std::holds_alternative<record_type>(kind) ||
+           (std::holds_alternative<primitive_type>(kind) &&
             std::get<primitive_type>(kind) == primitive_type::String);
 }
 
@@ -263,79 +263,88 @@ std::string context::repr(type_id type_idx) const
         return "!unassigned";
     }
 
-    const auto &typ = types[type_idx];
-    return std::visit([&](const auto &t) -> std::string {
-        using T = std::decay_t<decltype(t)>;
-
-        if constexpr (std::is_same_v<T, type_kind>)
+    const auto& typ = types[type_idx];
+    return std::visit(
+        [&](const auto& t) -> std::string
         {
-            return std::visit([&](const auto &k) -> std::string {
-                using K = std::decay_t<decltype(k)>;
+            using T = std::decay_t<decltype(t)>;
 
-                if constexpr (std::is_same_v<K, primitive_type>)
-                {
-                    switch (k) {
-                        case primitive_type::Void:
-                            return "void";
-                        case primitive_type::Boolean:
-                            return "bool";
-                        case primitive_type::Char:
-                            return "char";
-                        case primitive_type::U8:
-                            return "u8";
-                        case primitive_type::U16:
-                            return "u16";
-                        case primitive_type::U32:
-                            return "u32";
-                        case primitive_type::S8:
-                            return "s8";
-                        case primitive_type::S16:
-                            return "s16";
-                        case primitive_type::S32:
-                            return "s32";
-                        case primitive_type::String:
-                            return "string";
-                    }
-                }
-                else if constexpr (std::is_same_v<K, pointer_type>)
-                {
-                    return repr(k.to) + "*";
-                }
-                else if constexpr (std::is_same_v<K, record_type>)
-                {
-                    std::string r = "record(";
-                    for (const auto& field : k.fields)
+            if constexpr (std::is_same_v<T, type_kind>)
+            {
+                return std::visit(
+                    [&](const auto& k) -> std::string
                     {
-                        r += field.first + ":";
-                        r += repr(field.second) + ",";
-                    }
-                    r += ")";
-                    return r;
-                }
-                else if constexpr (std::is_same_v<K, function_type>)
+                        using K = std::decay_t<decltype(k)>;
+
+                        if constexpr (std::is_same_v<K, primitive_type>)
+                        {
+                            switch (k)
+                            {
+                                case primitive_type::Void:
+                                    return "void";
+                                case primitive_type::Boolean:
+                                    return "bool";
+                                case primitive_type::Char:
+                                    return "char";
+                                case primitive_type::U8:
+                                    return "u8";
+                                case primitive_type::U16:
+                                    return "u16";
+                                case primitive_type::U32:
+                                    return "u32";
+                                case primitive_type::S8:
+                                    return "s8";
+                                case primitive_type::S16:
+                                    return "s16";
+                                case primitive_type::S32:
+                                    return "s32";
+                                case primitive_type::String:
+                                    return "string";
+                            }
+                        }
+                        else if constexpr (std::is_same_v<K, pointer_type>)
+                        {
+                            return repr(k.to) + "*";
+                        }
+                        else if constexpr (std::is_same_v<K, record_type>)
+                        {
+                            std::string r = "record(";
+                            for (const auto& field : k.fields)
+                            {
+                                r += field.first + ":";
+                                r += repr(field.second) + ",";
+                            }
+                            r += ")";
+                            return r;
+                        }
+                        else if constexpr (std::is_same_v<K, function_type>)
+                        {
+                            std::string r = "func";
+                            r += k.repr_call_sig(*this);
+                            r += " -> " + repr(k.return_type);
+                            return r;
+                        }
+                    },
+                    t
+                );
+            }
+            else if constexpr (std::is_same_v<T, type_var>)
+            {
+                std::string v = "type_var(";
+                if (t.parent.has_value())
                 {
-                    std::string r = "func";
-                    r += k.repr_call_sig(*this);
-                    r += " -> " + repr(k.return_type);
-                    return r;
+                    v += std::to_string(t.parent.value());
                 }
-            }, t);
-        }
-        else if constexpr (std::is_same_v<T, type_var>)
-        {
-            std::string v = "type_var(";
-            if (t.parent.has_value())
-            {
-                v += std::to_string(t.parent.value());
+                else
+                {
+                    v += "unresolved";
+                }
+                v += ")";
+                return v;
             }
-            else
-            {
-                v += "unresolved";
-            }
-            v += ")";
-            return v;
-        }
-    }, typ);
+        },
+        typ
+    );
 }
 
 symbol_id context::create_symbol(symbol sym)
@@ -365,7 +374,7 @@ scope* scope::get_global_scope() const
     return scope_iter;
 }
 
-std::optional<symbol_id> scope::lookup(const std::string &name)
+std::optional<symbol_id> scope::lookup(const std::string& name)
 {
     auto it = symbol_table.find(name);
     if (it != symbol_table.end())
@@ -398,4 +407,3 @@ std::optional<type_id> scope::lookup_type(const std::string& name)
         return std::nullopt;
     }
 }
-

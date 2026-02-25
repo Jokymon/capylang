@@ -1,15 +1,32 @@
+# Recommended clang-format: 21.1.x
 BasedOnStyle: LLVM
 UseTab: Never
 IndentWidth: 4
 TabWidth: 4
-BreakBeforeBraces: Allman
-AllowShortIfStatementsOnASingleLine: false
-IndentCaseLabels: false
 ColumnLimit: 0
+
+BreakBeforeBraces: Allman
+BreakBeforeTemplateCloser: true
+IndentCaseLabels: true
 AccessModifierOffset: -4
+
+PointerAlignment: Left
+ReferenceAlignment: Pointer
+SpaceBeforeParens: ControlStatements
+
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+
+SortIncludes: false
+IncludeBlocks: Preserve
+
 NamespaceIndentation: All
 FixNamespaceComments: false
-# BreakBeforeBraces: Custom
-# BraceWrapping:
-#   BeforeLambdaBody: false
-PointerAlignment: Left
+
+AlignAfterOpenBracket: BlockIndent
+BinPackArguments: false
+PackConstructorInitializers: Never
+BreakConstructorInitializers: BeforeComma
+ConstructorInitializerIndentWidth: 0

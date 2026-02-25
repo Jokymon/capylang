@@ -116,7 +116,7 @@ struct token_illegal : public located_token
 using token = std::variant<token_integer, token_char_literal, token_string_literal, token_identifier, token_symbol, token_eof, token_illegal>;
 
 std::string repr_op(operator_type op);
-std::string repr_token(const token &tok);
+std::string repr_token(const token& tok);
 
 class lexer
 {
@@ -125,14 +125,14 @@ public:
     /// and a file_path that is used as part of the location in error messages
     /// @param input Input stream for reading the characters
     /// @param file_path A file name or path representing the location of this input
-    explicit lexer(std::istream &input, const std::string& file_path);
+    explicit lexer(std::istream& input, const std::string& file_path);
 
     source_position current_source_position() const;
 
     template <typename T>
     bool ahead_is()
     {
-        const token &tok = peek_token();
+        const token& tok = peek_token();
         return std::holds_alternative<T>(tok);
     }
     bool ahead_is_sym(token_symbol::symbol_type symbol);
@@ -175,10 +175,10 @@ public:
     bool expect_symbol(token_symbol::symbol_type symbol);
 
     token next_token();
-    const token &peek_token();
+    const token& peek_token();
 
 private:
-    std::istream &input_;
+    std::istream& input_;
     std::string input_file_path;
     std::optional<token> lookahead_;
     source_position look_ahead_position;

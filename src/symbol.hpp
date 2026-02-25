@@ -30,17 +30,20 @@ static constexpr type_id ILLEGAL_TYPE = 0;
 using symbol_id = std::uint32_t;
 static constexpr symbol_id ILLEGAL_SYMBOL = 0;
 
-struct pointer_type {
+struct pointer_type
+{
     type_id to;
 };
 
-struct record_type {
+struct record_type
+{
     using field_type = std::pair<std::string, type_id>;
     std::vector<field_type> fields;
 };
 
 class context;
-struct function_type {
+struct function_type
+{
     type_id return_type;
     std::vector<type_id> parameter_types;
 
@@ -62,12 +65,15 @@ inline void hash_combine(size_t& seed, size_t value)
     seed ^= value + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2);
 }
 
-struct type_kind_hash {
-    size_t operator()(type_kind const& t) const {
+struct type_kind_hash
+{
+    size_t operator()(type_kind const& t) const
+    {
         size_t seed = t.index();
 
         std::visit(
-            [&](auto const& x) {
+            [&](auto const& x)
+            {
                 using typ_x = std::decay_t<decltype(x)>;
 
                 if constexpr (std::is_same_v<typ_x, primitive_type>)
@@ -102,28 +108,31 @@ struct type_kind_hash {
     }
 };
 
-struct type_kind_eq {
-    bool operator()(type_kind const& a, type_kind const& b) const {
+struct type_kind_eq
+{
+    bool operator()(type_kind const& a, type_kind const& b) const
+    {
         if (a.index() != b.index())
             return false;
 
         return std::visit(
-            [](auto const& x, auto const& y) -> bool {
+            [](auto const& x, auto const& y) -> bool
+            {
                 using typ_x = std::decay_t<decltype(x)>;
                 using typ_y = std::decay_t<decltype(y)>;
 
                 if constexpr (std::is_same_v<typ_x, primitive_type> &&
-                    std::is_same_v<typ_y, primitive_type>)
+                              std::is_same_v<typ_y, primitive_type>)
                 {
                     return x == y;
                 }
                 else if constexpr (std::is_same_v<typ_x, pointer_type> &&
-                    std::is_same_v<typ_y, pointer_type>)
+                                   std::is_same_v<typ_y, pointer_type>)
                 {
                     return x.to == y.to;
                 }
                 else if constexpr (std::is_same_v<typ_x, record_type> &&
-                    std::is_same_v<typ_y, record_type>)
+                                   std::is_same_v<typ_y, record_type>)
                 {
                     if (x.fields.size() != y.fields.size())
                     {
@@ -139,7 +148,7 @@ struct type_kind_eq {
                     return true;
                 }
                 else if constexpr (std::is_same_v<typ_x, function_type> &&
-                    std::is_same_v<typ_y, function_type>)
+                                   std::is_same_v<typ_y, function_type>)
                 {
                     if (x.return_type != y.return_type)
                     {
@@ -161,20 +170,24 @@ struct type_kind_eq {
                     return false;
                 }
             },
-            a, b
+            a,
+            b
         );
     }
 };
 
-struct type_var {
+struct type_var
+{
     std::optional<type_id> parent;
 };
 
-struct equal_constraint {
+struct equal_constraint
+{
     type_id a, b;
 };
 
-struct numeric_constraint {
+struct numeric_constraint
+{
     type_id n;
 };
 
@@ -187,7 +200,8 @@ using type_constraint = std::variant<
 // types in one parsing pass
 using type_node = std::variant<type_kind, type_var>;
 
-enum class symbol_kind {
+enum class symbol_kind
+{
     error,
     global_var,
     local_var,
@@ -201,7 +215,8 @@ struct function_signature
     type_id function_type;
 };
 
-struct symbol {
+struct symbol
+{
     std::string name;
     type_id symbol_type;
     function_signature signature;
@@ -248,7 +263,8 @@ struct context
     std::vector<symbol> symbols;
 };
 
-struct scope {
+struct scope
+{
     scope* parent;
     std::map<std::string, symbol_id> symbol_table;
     std::map<std::string, type_id> type_table;

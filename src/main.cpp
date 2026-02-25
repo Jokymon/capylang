@@ -8,7 +8,7 @@
 #include <iostream>
 #include <fstream>
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     auto args = parse_args(argc, argv);
 
@@ -49,7 +49,8 @@ int main(int argc, char *argv[])
 
     semantic_analyser analyser{parse_context};
     analyser.semantic_analysis(root_node);
-    if (args.dump_ast) {
+    if (args.dump_ast)
+    {
         dump_module(parse_context, root_node);
         return 0;
     }
@@ -66,7 +67,8 @@ int main(int argc, char *argv[])
     emitter capyemitter{parse_context};
     wasm_module mod = capyemitter.generate(root_node);
 
-    if (args.output_path.ends_with(".wasm")) {
+    if (args.output_path.ends_with(".wasm"))
+    {
         wasm_generator generator;
 
         std::ofstream outfile(args.output_path, std::ios::out | std::ios::binary);

@@ -11,11 +11,11 @@ const int TAG_FOUR_B = 0xf0;
 
 size_t len_utf8(uint32_t code)
 {
-    if (code<MAX_ONE_B)
+    if (code < MAX_ONE_B)
         return 1;
-    else if (code<MAX_TWO_B)
+    else if (code < MAX_TWO_B)
         return 2;
-    else if (code<MAX_THREE_B)
+    else if (code < MAX_THREE_B)
         return 3;
     return 4;
 }
@@ -34,14 +34,14 @@ void encode_utf8_raw_unchecked(uint32_t code, std::string& dst)
     int last3 = (code >> 12 & 0x3f) | TAG_CONT & 0xff;
     int last4 = (code >> 18 & 0x3f) | TAG_FOUR_B & 0xff;
 
-    if (len==2)
+    if (len == 2)
     {
         dst += (last2 | TAG_TWO_B);
         dst += last1;
         return;
     }
 
-    if (len==3)
+    if (len == 3)
     {
         dst += (last3 | TAG_THREE_B);
         dst += last2;
@@ -59,72 +59,73 @@ std::string token_symbol::to_string() const
 {
     switch (sym_type)
     {
-    case sym_kw_as:
-        return "as";
-    case sym_kw_else:
-        return "else";
-    case sym_kw_fn:
-        return "fn";
-    case sym_kw_global:
-        return "global";
-    case sym_kw_if:
-        return "if";
-    case sym_kw_import:
-        return "import";
-    case sym_kw_let:
-        return "let";
-    case sym_kw_mut:
-        return "mut";
-    case sym_kw_record:
-        return "record";
-    case sym_kw_while:
-        return "while";
-    case sym_arrow:
-        return "->";
-    case sym_at:
-        return "@";
-    case sym_colon:
-        return ":";
-    case sym_comma:
-        return ",";
-    case sym_dcolon:
-        return "::";
-    case sym_dquote:
-        return "\"";
-    case sym_eqeq:
-        return "==";
-    case sym_equal:
-        return "=";
-    case sym_noteq:
-        return "!=";
-    case sym_minus:
-        return "-";
-    case sym_percent:
-        return "%";
-    case sym_period:
-        return ".";
-    case sym_plus:
-        return "+";
-    case sym_semicolon:
-        return ";";
-    case sym_slash:
-        return "/";
-    case sym_star:
-        return "*";
-    case sym_paren_open:
-        return "(";
-    case sym_paren_close:
-        return ")";
-    case sym_curly_open:
-        return "{";
-    case sym_curly_close:
-        return "}";
+        case sym_kw_as:
+            return "as";
+        case sym_kw_else:
+            return "else";
+        case sym_kw_fn:
+            return "fn";
+        case sym_kw_global:
+            return "global";
+        case sym_kw_if:
+            return "if";
+        case sym_kw_import:
+            return "import";
+        case sym_kw_let:
+            return "let";
+        case sym_kw_mut:
+            return "mut";
+        case sym_kw_record:
+            return "record";
+        case sym_kw_while:
+            return "while";
+        case sym_arrow:
+            return "->";
+        case sym_at:
+            return "@";
+        case sym_colon:
+            return ":";
+        case sym_comma:
+            return ",";
+        case sym_dcolon:
+            return "::";
+        case sym_dquote:
+            return "\"";
+        case sym_eqeq:
+            return "==";
+        case sym_equal:
+            return "=";
+        case sym_noteq:
+            return "!=";
+        case sym_minus:
+            return "-";
+        case sym_percent:
+            return "%";
+        case sym_period:
+            return ".";
+        case sym_plus:
+            return "+";
+        case sym_semicolon:
+            return ";";
+        case sym_slash:
+            return "/";
+        case sym_star:
+            return "*";
+        case sym_paren_open:
+            return "(";
+        case sym_paren_close:
+            return ")";
+        case sym_curly_open:
+            return "{";
+        case sym_curly_close:
+            return "}";
     }
 }
 
 int get_precedence(operator_type op_type)
 {
-    switch (op_type) {
+    switch (op_type)
+    {
         case op_conversion:
             return 5;
         case op_multiply:
@@ -146,7 +147,8 @@ int get_precedence(operator_type op_type)
 
 operator_type op_from_symbol(const token_symbol& symbol)
 {
-    switch (symbol.sym_type) {
+    switch (symbol.sym_type)
+    {
         case token_symbol::sym_minus:
             return op_minus;
         case token_symbol::sym_plus:
@@ -205,30 +207,30 @@ std::string repr_op(operator_type op)
 {
     switch (op)
     {
-    case op_division:
-        return "/";
-    case op_multiply:
-        return "*";
-    case op_modulus:
-        return "%";
-    case op_minus:
-        return "-";
-    case op_plus:
-        return "+";
-    case op_assignment:
-        return "=";
-    case op_equals:
-        return "==";
-    case op_notequals:
-        return "!=";
-    case op_conversion:
-        return "as";
+        case op_division:
+            return "/";
+        case op_multiply:
+            return "*";
+        case op_modulus:
+            return "%";
+        case op_minus:
+            return "-";
+        case op_plus:
+            return "+";
+        case op_assignment:
+            return "=";
+        case op_equals:
+            return "==";
+        case op_notequals:
+            return "!=";
+        case op_conversion:
+            return "as";
     }
 }
 
-std::string repr_token(const token &tok)
+std::string repr_token(const token& tok)
 {
-    return std::visit([&](const auto &n) -> std::string
+    return std::visit([&](const auto& n) -> std::string
                       {
                           using T = std::decay_t<decltype(n)>;
 
@@ -252,14 +254,18 @@ std::string repr_token(const token &tok)
                       tok);
 }
 
-lexer::lexer(std::istream &input, const std::string& file_path)
-    : input_(input), input_file_path(file_path), lookahead_(std::nullopt), look_ahead_position{}, current_position{}
+lexer::lexer(std::istream& input, const std::string& file_path)
+: input_(input)
+, input_file_path(file_path)
+, lookahead_(std::nullopt)
+, look_ahead_position{}
+, current_position{}
 {
     look_ahead_position.filename = file_path;
     current_position.filename = file_path;
 }
 
-const token &lexer::peek_token()
+const token& lexer::peek_token()
 {
     if (!lookahead_)
     {
@@ -280,29 +286,37 @@ bool lexer::ahead_is_sym(token_symbol::symbol_type symbol)
 
 bool lexer::ahead_is_operator()
 {
-    const auto &tok = peek_token();
-    return std::visit([&](const auto &tok) -> bool {
-        using T = std::decay_t<decltype(tok)>;
+    const auto& tok = peek_token();
+    return std::visit(
+        [&](const auto& tok) -> bool
+        {
+            using T = std::decay_t<decltype(tok)>;
 
-        if constexpr (std::is_same_v<T, token_symbol>) {
-            switch (tok.sym_type) {
-                case token_symbol::sym_minus:
-                case token_symbol::sym_plus:
-                case token_symbol::sym_star:
-                case token_symbol::sym_slash:
-                case token_symbol::sym_percent:
-                case token_symbol::sym_equal:
-                case token_symbol::sym_eqeq:
-                case token_symbol::sym_noteq:
-                case token_symbol::sym_kw_as:
-                    return true;
-                default:
-                    return false;
+            if constexpr (std::is_same_v<T, token_symbol>)
+            {
+                switch (tok.sym_type)
+                {
+                    case token_symbol::sym_minus:
+                    case token_symbol::sym_plus:
+                    case token_symbol::sym_star:
+                    case token_symbol::sym_slash:
+                    case token_symbol::sym_percent:
+                    case token_symbol::sym_equal:
+                    case token_symbol::sym_eqeq:
+                    case token_symbol::sym_noteq:
+                    case token_symbol::sym_kw_as:
+                        return true;
+                    default:
+                        return false;
+                }
             }
-        } else {
-            return false;
-        }
-    }, tok);
+            else
+            {
+                return false;
+            }
+        },
+        tok
+    );
 }
 
 bool lexer::expect_symbol(token_symbol::symbol_type symbol)
@@ -344,7 +358,8 @@ int lexer::get_char()
 {
     char ch = input_.get();
 
-    if (ch == '\n') {
+    if (ch == '\n')
+    {
         look_ahead_position.line += 1;
         look_ahead_position.column = 1;
     }
@@ -397,44 +412,46 @@ token lexer::parse_token()
     {
         return parse_number();
     }
-    else if ((ch=='-') && (peek_ahead() == '>'))
+    else if ((ch == '-') && (peek_ahead() == '>'))
     {
         auto start_position = look_ahead_position;
-        get_char(); get_char();
+        get_char();
+        get_char();
         return token_symbol{start_position, look_ahead_position, token_symbol::sym_arrow};
     }
-    else if ((ch=='!') && (peek_ahead() == '='))
+    else if ((ch == '!') && (peek_ahead() == '='))
     {
         auto start_position = look_ahead_position;
-        get_char(); get_char();
+        get_char();
+        get_char();
         return token_symbol{start_position, look_ahead_position, token_symbol::sym_noteq};
     }
-    else if (ch=='/')
+    else if (ch == '/')
     {
         get_char();
         return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_slash};
     }
-    else if (ch=='*')
+    else if (ch == '*')
     {
         get_char();
         return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_star};
     }
-    else if (ch=='%')
+    else if (ch == '%')
     {
         get_char();
         return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_percent};
     }
-    else if (ch=='-')
+    else if (ch == '-')
     {
         get_char();
         return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_minus};
     }
-    else if (ch=='+')
+    else if (ch == '+')
     {
         get_char();
         return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_plus};
     }
-    else if (ch=='.')
+    else if (ch == '.')
     {
         get_char();
         return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_period};
@@ -442,7 +459,8 @@ token lexer::parse_token()
     else if ((ch == ':') && (peek_ahead() == ':'))
     {
         auto start_position = look_ahead_position;
-        get_char(); get_char();
+        get_char();
+        get_char();
         return token_symbol{start_position, look_ahead_position, token_symbol::sym_dcolon};
     }
     else if (ch == ';')
@@ -464,7 +482,7 @@ token lexer::parse_token()
     {
         auto start_position = look_ahead_position;
         get_char();
-        if (input_.peek()=='=')
+        if (input_.peek() == '=')
         {
             get_char();
             return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_eqeq};
@@ -600,21 +618,21 @@ token lexer::parse_char_literal()
         char next_ch = get_char();
         switch (next_ch)
         {
-        case 'n':
-            ch = '\n';
-            break;
-        case 't':
-            ch = '\t';
-            break;
-        case '\\':
-            ch = '\\';
-            break;
-        case '\"':
-            ch = '\"';
-            break;
-        default:
-            ch = next_ch;
-            break;
+            case 'n':
+                ch = '\n';
+                break;
+            case 't':
+                ch = '\t';
+                break;
+            case '\\':
+                ch = '\\';
+                break;
+            case '\"':
+                ch = '\"';
+                break;
+            default:
+                ch = next_ch;
+                break;
         }
     }
     get_char(); // parse over the closing '
@@ -631,7 +649,7 @@ token lexer::parse_string_literal()
     while (input_.peek() != '\"')
     {
         auto ch = get_char();
-        int char_code=0;
+        int char_code = 0;
         int digit;
 
         if (ch == '\\')
@@ -640,43 +658,43 @@ token lexer::parse_string_literal()
             char next_ch = get_char();
             switch (next_ch)
             {
-            case 'n':
-                string_literal += '\n';
-                break;
-            case 't':
-                string_literal += '\t';
-                break;
-            case '\\':
-                string_literal += '\\';
-                break;
-            case '\"':
-                string_literal += '\"';
-                break;
-            case 'u':
-                get_char(); // skip '{'; TODO: check for correct character
-                char_code = 0;
-                digit = get_char();
-                while (digit!='}')
-                {
-                    if ((digit>='0') && (digit<='9'))
-                    {
-                        char_code = (char_code*0x10) + (digit-'0');
-                    }
-                    else if ((digit>='a') && (digit<='f'))
-                    {
-                        char_code = (char_code*0x10) + (digit-'a'+10);
-                    }
-                    // TODO: handle invalid digit
+                case 'n':
+                    string_literal += '\n';
+                    break;
+                case 't':
+                    string_literal += '\t';
+                    break;
+                case '\\':
+                    string_literal += '\\';
+                    break;
+                case '\"':
+                    string_literal += '\"';
+                    break;
+                case 'u':
+                    get_char(); // skip '{'; TODO: check for correct character
+                    char_code = 0;
                     digit = get_char();
-                }
+                    while (digit != '}')
+                    {
+                        if ((digit >= '0') && (digit <= '9'))
+                        {
+                            char_code = (char_code * 0x10) + (digit - '0');
+                        }
+                        else if ((digit >= 'a') && (digit <= 'f'))
+                        {
+                            char_code = (char_code * 0x10) + (digit - 'a' + 10);
+                        }
+                        // TODO: handle invalid digit
+                        digit = get_char();
+                    }
 
-                encode_utf8_raw_unchecked(char_code, string_literal);
-                break;
-            default:
-                // unknown escape sequence, just add both characters as-is
-                string_literal += ch;
-                string_literal += next_ch;
-                break;
+                    encode_utf8_raw_unchecked(char_code, string_literal);
+                    break;
+                default:
+                    // unknown escape sequence, just add both characters as-is
+                    string_literal += ch;
+                    string_literal += next_ch;
+                    break;
             }
         }
         else

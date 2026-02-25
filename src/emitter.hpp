@@ -11,7 +11,7 @@ public:
     explicit emitter(context& ctx);
     ~emitter();
 
-    wasm_module generate(node_module &module_def);
+    wasm_module generate(node_module& module_def);
 
     void emit(ast_node& node);
 

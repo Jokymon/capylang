@@ -10,16 +10,18 @@
 #include <string>
 
 template <typename T, typename... Args>
-ast_node make_located(source_position start, source_position end, Args &&...args)
+ast_node make_located(source_position start, source_position end, Args&&... args)
 {
     return ast_node{
         .value = T{std::forward<Args>(args)...},
         .location = source_range{
             .start = start,
-            .end = end}};
+            .end = end
+        }
+    };
 }
 
-void dump_ast(const context& ctx, const ast_node& root, size_t indent=0);
+void dump_ast(const context& ctx, const ast_node& root, size_t indent = 0);
 
 void dump_node(const context& ctx, const node_number& n, size_t indent)
 {
@@ -61,7 +63,7 @@ void dump_node(const context& ctx, const node_pointer_deref& n, size_t indent)
     std::string ind = std::string(indent, ' ');
 
     std::cout << ind << "Pointer Deref:\n";
-    dump_ast(ctx, *n.pointer_expression, indent+4);
+    dump_ast(ctx, *n.pointer_expression, indent + 4);
 }
 
 void dump_node(const context& ctx, const node_let_expression& n, size_t indent)
@@ -70,7 +72,7 @@ void dump_node(const context& ctx, const node_let_expression& n, size_t indent)
 
     std::cout << ind << "Let:\n";
     std::cout << ind << "  " << n.name << "=\n";
-    dump_ast(ctx, *n.init_expression, indent+4);
+    dump_ast(ctx, *n.init_expression, indent + 4);
 }
 
 void dump_node(const context& ctx, const node_if_expression& n, size_t indent)
@@ -78,18 +80,18 @@ void dump_node(const context& ctx, const node_if_expression& n, size_t indent)
     std::string ind = std::string(indent, ' ');
     std::cout << ind << "If: " << ctx.repr(n.assigned_type) << "\n";
     std::cout << ind << "  Condition:\n";
-    dump_ast(ctx, *n.condition, indent+4);
+    dump_ast(ctx, *n.condition, indent + 4);
     std::cout << ind << "  Then-Body:\n";
     for (const auto& expression : n.then_code)
     {
-        dump_ast(ctx, *expression, indent+4);
+        dump_ast(ctx, *expression, indent + 4);
     }
-    if (n.else_code.size()>0)
+    if (n.else_code.size() > 0)
     {
         std::cout << ind << "  Else-Body:\n";
         for (const auto& expression : n.else_code)
         {
-            dump_ast(ctx, *expression, indent+4);
+            dump_ast(ctx, *expression, indent + 4);
         }
     }
 }
@@ -99,11 +101,11 @@ void dump_node(const context& ctx, const node_while_expression& n, size_t indent
     std::string ind = std::string(indent, ' ');
     std::cout << ind << "While\n";
     std::cout << ind << "  Condition:\n";
-    dump_ast(ctx, *n.condition, indent+4);
+    dump_ast(ctx, *n.condition, indent + 4);
     std::cout << ind << "  While-Body:\n";
     for (const auto& expression : n.while_code)
     {
-        dump_ast(ctx, *expression, indent+4);
+        dump_ast(ctx, *expression, indent + 4);
     }
 }
 
@@ -126,7 +128,7 @@ void dump_node(const context& ctx, const node_record_initialisation& n, size_t i
     for (const auto& field_init : n.initialisations)
     {
         std::cout << ind << "  " << field_init.field_name << "=\n";
-        dump_ast(ctx, *field_init.init_expression, indent+6);
+        dump_ast(ctx, *field_init.init_expression, indent + 6);
     }
 }
 
@@ -136,7 +138,7 @@ void dump_node(const context& ctx, const node_field_deref& n, size_t indent)
 
     std::cout << ind << "Deref:\n";
     std::cout << ind << "  object:\n";
-    dump_ast(ctx, *n.object, indent+4);
+    dump_ast(ctx, *n.object, indent + 4);
     std::cout << ind << "  field: " << n.fieldname << "\n";
 }
 
@@ -144,7 +146,7 @@ void dump_node(const context& ctx, const node_function_head& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    //std::cout << ind << "Function head: TODO\n";
+    // std::cout << ind << "Function head: TODO\n";
     std::cout << ind << "  Name: " << n.name << "\n";
 }
 
@@ -161,7 +163,7 @@ void dump_node(const context& ctx, const node_global& n, size_t indent)
 
     std::cout << ind << "Global:\n";
     std::cout << ind << "  " << n.name << "=\n";
-    //dump_ast(ctx, *n.init_expression, indent+4);
+    // dump_ast(ctx, *n.init_expression, indent+4);
 }
 
 void dump_node(const context& ctx, const node_function_call& n, size_t indent)
@@ -172,7 +174,7 @@ void dump_node(const context& ctx, const node_function_call& n, size_t indent)
     for (const auto& param : n.parameter)
     {
         std::cout << ind << "  Parameter:\n";
-        dump_ast(ctx, *param, indent+4);
+        dump_ast(ctx, *param, indent + 4);
     }
 }
 
@@ -185,7 +187,7 @@ void dump_node(const context& ctx, const node_function_definition& n, size_t ind
     std::cout << ind << "  Body:\n";
     for (const auto& expression : n.code)
     {
-        dump_ast(ctx, *expression, indent+4);
+        dump_ast(ctx, *expression, indent + 4);
     }
 }
 
@@ -194,20 +196,20 @@ void dump_node(const context& ctx, const node_cast_expression& n, size_t indent)
     std::string ind = std::string(indent, ' ');
 
     std::cout << ind << "Casting operation"
-            << "; target type: " << ctx.repr(n.cast_type) << "\n";
-    
-    dump_ast(ctx, *n.expression, indent+4);
+              << "; target type: " << ctx.repr(n.cast_type) << "\n";
+
+    dump_ast(ctx, *n.expression, indent + 4);
 }
 
 void dump_node(const context& ctx, const node_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Expression; op: " << repr_op(n.operation) 
-            << "; type: " << ctx.repr(n.assigned_type) << "\n";
-    
-    dump_ast(ctx, *n.left, indent+4);
-    dump_ast(ctx, *n.right, indent+4);
+    std::cout << ind << "Expression; op: " << repr_op(n.operation)
+              << "; type: " << ctx.repr(n.assigned_type) << "\n";
+
+    dump_ast(ctx, *n.left, indent + 4);
+    dump_ast(ctx, *n.right, indent + 4);
 }
 
 void dump_module(const context& ctx, const node_module& n, size_t indent)
@@ -217,40 +219,52 @@ void dump_module(const context& ctx, const node_module& n, size_t indent)
     std::cout << ind << "Module:\n";
     for (const auto& import : n.imports)
     {
-        dump_ast(ctx, *import, indent+4);
+        dump_ast(ctx, *import, indent + 4);
     }
     for (const auto& type_def : n.typedefs)
     {
-        dump_ast(ctx, *type_def, indent+4);
+        dump_ast(ctx, *type_def, indent + 4);
     }
     for (const auto& function : n.functions)
     {
-        dump_ast(ctx, *function, indent+4);
+        dump_ast(ctx, *function, indent + 4);
     }
 }
 
 void dump_ast(const context& ctx, const ast_node& root, size_t indent)
 {
-    std::visit([=, &ctx](const auto &n)
+    std::visit(
+        [=, &ctx](const auto& n)
         {
             dump_node(ctx, n, indent);
-        }, root.value);
+        },
+        root.value
+    );
 }
 
 std::string node_field_deref::repr_obj() const
 {
-    return std::visit([&](const auto &n) -> std::string {
-        using T = std::decay_t<decltype(n)>;
+    return std::visit(
+        [&](const auto& n) -> std::string
+        {
+            using T = std::decay_t<decltype(n)>;
 
-        if constexpr (std::is_same_v<T, node_field_deref>) {
-            return n.repr_obj() + "." + n.fieldname;
-        } else if constexpr (std::is_same_v<T, node_var_reference>) {
-            return n.name;
-        } else {
-            // this branch actually shouldn't happen
-            return "";
-        }
-    }, object->value);
+            if constexpr (std::is_same_v<T, node_field_deref>)
+            {
+                return n.repr_obj() + "." + n.fieldname;
+            }
+            else if constexpr (std::is_same_v<T, node_var_reference>)
+            {
+                return n.name;
+            }
+            else
+            {
+                // this branch actually shouldn't happen
+                return "";
+            }
+        },
+        object->value
+    );
 }
 
 std::optional<type_id> type_from_id(context& ctx, const std::string& id)
@@ -325,9 +339,9 @@ constexpr std::array<number_range_rule, 6> NUMBER_RANGE_RULES{{
 }};
 
 parser::parser(std::shared_ptr<lexer> l, context& ctx)
-    : capy_lexer(l)
-    , parse_context(ctx)
-    , error_symbol(ILLEGAL_SYMBOL)
+: capy_lexer(l)
+, parse_context(ctx)
+, error_symbol(ILLEGAL_SYMBOL)
 {
     error_symbol = parse_context.create_symbol(symbol{
         .name = "_error",
@@ -349,27 +363,30 @@ node_module parser::parse()
     return root;
 }
 
-void parser::append_error(const std::string &error_message)
+void parser::append_error(const std::string& error_message)
 {
     auto current_pos = capy_lexer->current_source_position();
 
     errors.emplace_back(parse_error(
         current_pos,
-        error_message));
+        error_message
+    ));
 }
 
-void parser::append_error_at(source_position location, const std::string &error_message)
+void parser::append_error_at(source_position location, const std::string& error_message)
 {
     errors.emplace_back(parse_error(
         location,
-        error_message));
+        error_message
+    ));
 }
 
 node_module parser::parse_module()
 {
     auto capy_module = node_module{
         source_position{"", 1, 1},
-        source_position{"", 1, 1}};
+        source_position{"", 1, 1}
+    };
 
     current_module = &capy_module;
 
@@ -401,10 +418,10 @@ fn cabi_realloc(originalPtr: u32, originalSize: u32, alignment: u32, newSize: u3
 void parser::parse_module_body()
 {
     while (capy_lexer->ahead_is_sym(token_symbol::sym_at) ||
-            capy_lexer->ahead_is_sym(token_symbol::sym_kw_import) ||
-            capy_lexer->ahead_is_sym(token_symbol::sym_kw_global) ||
-            capy_lexer->ahead_is_sym(token_symbol::sym_kw_record) ||
-            capy_lexer->ahead_is_sym(token_symbol::sym_kw_fn))
+           capy_lexer->ahead_is_sym(token_symbol::sym_kw_import) ||
+           capy_lexer->ahead_is_sym(token_symbol::sym_kw_global) ||
+           capy_lexer->ahead_is_sym(token_symbol::sym_kw_record) ||
+           capy_lexer->ahead_is_sym(token_symbol::sym_kw_fn))
     {
         if (capy_lexer->ahead_is_sym(token_symbol::sym_at))
         {
@@ -459,7 +476,7 @@ void parser::parse_attribute()
     }
 }
 
-void parser::parse_function_signature(function_signature &signature)
+void parser::parse_function_signature(function_signature& signature)
 {
     if (!capy_lexer->expect_symbol(token_symbol::sym_paren_open))
     {
@@ -558,7 +575,8 @@ ast_node parser::parse_import_definition()
         end_range.end,
         namespace_name.name,
         std::make_unique<node_function_head>(std::move(function_head)),
-        alias_name);
+        alias_name
+    );
 }
 
 ast_node parser::parse_global()
@@ -620,7 +638,8 @@ ast_node parser::parse_global()
         variable_name.name,
         type_spec,
         global_symbol_id,
-        init_value);
+        init_value
+    );
 }
 
 ast_node parser::parse_function_definition()
@@ -646,15 +665,14 @@ ast_node parser::parse_function_definition()
     auto func_type = std::get<function_type>(std::get<type_kind>(function_type_entry));
 
     const auto& parameter_names = function_head.signature.parameters;
-    for (auto [param_name, param_typ] : std::views::zip(parameter_names,
-                                                    func_type.parameter_types))
+    for (auto [param_name, param_typ] : std::views::zip(parameter_names, func_type.parameter_types))
     {
         auto param_symbol_id = parse_context.create_symbol(symbol{
             .name = param_name,
             .symbol_type = param_typ,
             .kind = symbol_kind::argument,
             .mutab = false,
-            .is_assigned = true,    // function parameters are 'assigned' from the function call
+            .is_assigned = true, // function parameters are 'assigned' from the function call
         });
         current_scope->symbol_table[param_name] = param_symbol_id;
     }
@@ -701,7 +719,8 @@ node_function_head parser::parse_function_head()
         start_range.start,
         start_range.end, // TODO: this should span the whole signature
         function_name.name,
-        signature};
+        signature
+    };
 }
 
 ast_node parser::parse_expression(int min_precedence)
@@ -830,15 +849,15 @@ ast_node parser::parse_function_call(source_range name_range, const std::string 
     if ((!maybe_symbol_id.has_value()) ||
         (parse_context.symbol_at(maybe_symbol_id.value()).kind != symbol_kind::function))
     {
-        append_error_at(name_range.start,
-                        "Function '" + function_name + "' is not defined");
+        append_error_at(name_range.start, "Function '" + function_name + "' is not defined");
 
         return make_located<node_function_call>(
             name_range.start,
             end_location.end,
             function_name,
             error_symbol,
-            std::move(function_parameters));
+            std::move(function_parameters)
+        );
     }
 
     return make_located<node_function_call>(
@@ -846,7 +865,8 @@ ast_node parser::parse_function_call(source_range name_range, const std::string 
         end_location.end,
         function_name,
         maybe_symbol_id.value(),
-        std::move(function_parameters));
+        std::move(function_parameters)
+    );
 }
 
 ast_node parser::parse_if_expression()
@@ -971,7 +991,8 @@ ast_node parser::parse_let_expression()
             initializer.location.end,
             variable_name.name,
             local_symbol_id,
-            std::make_unique<ast_node>(std::move(initializer)));
+            std::make_unique<ast_node>(std::move(initializer))
+        );
     }
 
     auto end_position = capy_lexer->current_source_position();
@@ -1000,7 +1021,7 @@ ast_node parser::parse_record_definition()
     {
         append_error("Expecting an opening brace '{' starting the record definition");
     }
-    
+
     std::vector<record_type::field_type> new_record_fields;
 
     while (capy_lexer->ahead_is<token_identifier>())
@@ -1048,7 +1069,7 @@ ast_node parser::parse_record_initialisation(source_range name_range, const std:
     auto record_type = current_scope->lookup_type(record_name);
     if (!record_type.has_value())
     {
-        append_error("Trying to initialise record of unknown type '"+record_name+"'");
+        append_error("Trying to initialise record of unknown type '" + record_name + "'");
         record_type = parse_context.intern_primitive(primitive_type::Void);
     }
 
@@ -1075,7 +1096,7 @@ ast_node parser::parse_record_initialisation(source_range name_range, const std:
             append_error("Field initialisations must be terminated by a comma");
         }
         capy_lexer->expect<token_symbol>();
-        
+
         fields.emplace_back(field_initialisation{field_position.start, field_name.name, std::make_unique<ast_node>(std::move(init_expression))});
     }
 
@@ -1126,7 +1147,7 @@ ast_node parser::parse_field_deref(type_id base_type, ast_node object)
         {
             // TODO: when are these errors even triggered? In the current tests
             // such errors are only reported from semantic checks
-            append_error("Can't dereference field '"+field_name.name+"'");
+            append_error("Can't dereference field '" + field_name.name + "'");
             // After the error, just return what we have so far
             return node;
         }
@@ -1135,7 +1156,7 @@ ast_node parser::parse_field_deref(type_id base_type, ast_node object)
         {
             // TODO: when are these errors even triggered? In the current tests
             // such errors are only reported from semantic checks
-            append_error("Record doesn't contain a field named '"+field_name.name+"'");
+            append_error("Record doesn't contain a field named '" + field_name.name + "'");
             return node;
         }
 
@@ -1169,7 +1190,7 @@ ast_node parser::parse_primary()
             auto var = current_scope->lookup(id.name);
             if (!var.has_value())
             {
-                append_error_at(id_range.start, "Undefined variable: '"+id.name+"'");
+                append_error_at(id_range.start, "Undefined variable: '" + id.name + "'");
                 var = error_symbol;
             }
 
@@ -1178,7 +1199,8 @@ ast_node parser::parse_primary()
                 id_range.end,
                 id.name,
                 var.value(),
-                assign_context::rhs);
+                assign_context::rhs
+            );
             auto var_type = parse_context.symbol_at(var.value()).symbol_type;
 
             return parse_field_deref(var_type, std::move(object));
@@ -1188,14 +1210,16 @@ ast_node parser::parse_primary()
             auto var = current_scope->lookup(id.name);
             if (!var.has_value())
             {
-                if ((id.name == "true") || (id.name == "false")) {
+                if ((id.name == "true") || (id.name == "false"))
+                {
                     return make_located<node_bool_const>(
                         id_range.start,
                         id_range.end,
-                        node_bool_const::from_string(id.name));
+                        node_bool_const::from_string(id.name)
+                    );
                 }
 
-                append_error_at(id_range.start, "Undefined variable: '"+id.name+"'");
+                append_error_at(id_range.start, "Undefined variable: '" + id.name + "'");
                 var = error_symbol;
             }
 
@@ -1204,7 +1228,8 @@ ast_node parser::parse_primary()
                 id_range.end,
                 id.name,
                 var.value(),
-                assign_context::rhs);
+                assign_context::rhs
+            );
         }
     }
     else if (capy_lexer->ahead_is_sym(token_symbol::sym_star))
@@ -1218,12 +1243,11 @@ ast_node parser::parse_primary()
             pointer_expr.location.end,
             std::make_unique<ast_node>(std::move(pointer_expr)),
             parse_context.create_type_var(),
-            //parse_context.intern_primitive(primitive_type::Void),
+            // parse_context.intern_primitive(primitive_type::Void),
             assign_context::rhs
         );
     }
-    else if (capy_lexer->ahead_is<token_integer>()
-             || capy_lexer->ahead_is_sym(token_symbol::sym_minus))
+    else if (capy_lexer->ahead_is<token_integer>() || capy_lexer->ahead_is_sym(token_symbol::sym_minus))
     {
         return parse_number();
     }
@@ -1236,7 +1260,8 @@ ast_node parser::parse_primary()
             literal_location.start,
             literal_location.end,
             literal_index,
-            literal.str.size());
+            literal.str.size()
+        );
     }
     else if (capy_lexer->ahead_is<token_char_literal>())
     {
@@ -1245,7 +1270,8 @@ ast_node parser::parse_primary()
         return make_located<node_char_literal>(
             literal_location.start,
             literal_location.end,
-            literal.ch);
+            literal.ch
+        );
     }
     else
     {
@@ -1255,7 +1281,8 @@ ast_node parser::parse_primary()
             capy_lexer->current_source_position(),
             capy_lexer->current_source_position(),
             0,
-            parse_context.intern_primitive(primitive_type::U32));
+            parse_context.intern_primitive(primitive_type::U32)
+        );
     }
 }
 
@@ -1273,7 +1300,7 @@ type_id parser::parse_type_reference()
     token_location.end = capy_lexer->current_source_position();
     token_identifier type_name = {token_location, ""};
 
-    std::optional<type_id> type_spec = 
+    std::optional<type_id> type_spec =
         parse_context.intern_primitive(primitive_type::Void);
     if (capy_lexer->ahead_is<token_identifier>())
     {
@@ -1321,7 +1348,7 @@ ast_node parser::parse_number()
     }
 
     std::optional<type_id> number_type;
-    if (lhs.type_suffix=="")
+    if (lhs.type_suffix == "")
     {
         number_type = parse_context.create_type_var();
         parse_context.constraints.emplace_back(numeric_constraint{number_type.value()});
@@ -1337,7 +1364,8 @@ ast_node parser::parse_number()
             capy_lexer->current_source_position(),
             lhs_location.end,
             0,
-            parse_context.intern_primitive(primitive_type::U32));
+            parse_context.intern_primitive(primitive_type::U32)
+        );
     }
 
     auto primitive = parse_context.primitive_type_of(number_type.value());
@@ -1353,8 +1381,8 @@ ast_node parser::parse_number()
             {
                 append_error_at(
                     lhs_location.start,
-                        std::format("Numeric literal '{}' exceeds valid range for {} ({}..{})",
-                            lhs.number, rule.label, rule.min_value, rule.max_value));
+                    std::format("Numeric literal '{}' exceeds valid range for {} ({}..{})", lhs.number, rule.label, rule.min_value, rule.max_value)
+                );
             }
             break;
         }
@@ -1364,7 +1392,8 @@ ast_node parser::parse_number()
         lhs_location.start,
         lhs_location.end,
         lhs.number,
-        number_type.value());
+        number_type.value()
+    );
 }
 
 void parser::parse_body(std::vector<std::unique_ptr<ast_node>>& body)
@@ -1385,7 +1414,7 @@ void parser::parse_body(std::vector<std::unique_ptr<ast_node>>& body)
             // so the emitter can insert a 'drop' instruction
             auto previous_expression = std::move(body.back());
             body.pop_back();
-        
+
             auto drop_wrapper = make_located<node_cast_expression>(
                 previous_expression->location.start,
                 previous_expression->location.end,
@@ -1406,7 +1435,8 @@ size_t parser::collect_literal(const std::string& literal)
 {
     size_t insert_index = current_module->string_literals.size();
     current_module->string_literals.emplace_back(
-        node_module::string_literal_entry{0, literal});
+        node_module::string_literal_entry{0, literal}
+    );
 
     return insert_index;
 }

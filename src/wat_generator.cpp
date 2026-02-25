@@ -6,7 +6,8 @@
 
 std::string repr_wasm_type(wasm_type typ)
 {
-    switch (typ) {
+    switch (typ)
+    {
         case wasm_type::none:
             return "";
         case wasm_type::u8:
@@ -31,7 +32,8 @@ std::string repr_wasm_type(wasm_type typ)
 
 std::string repr_wasm_extern_type(wasm_extern_index index)
 {
-    switch (index) {
+    switch (index)
+    {
         case wasm_extern_index::funcidx:
             return "func";
         case wasm_extern_index::tableidx:
@@ -47,7 +49,8 @@ std::string repr_wasm_extern_type(wasm_extern_index index)
 
 std::string sign_wasm_type(wasm_type typ)
 {
-    switch (typ) {
+    switch (typ)
+    {
         case wasm_type::none:
             return "";
         case wasm_type::i8:
@@ -67,7 +70,8 @@ std::string sign_wasm_type(wasm_type typ)
 
 std::string size_wasm_type(wasm_type typ)
 {
-    switch (typ) {
+    switch (typ)
+    {
         case wasm_type::none:
         case wasm_type::u32:
         case wasm_type::i32:
@@ -85,7 +89,7 @@ std::string size_wasm_type(wasm_type typ)
     }
 }
 
-void wat_generator::generate(const wasm_module& module, std::ostream &output)
+void wat_generator::generate(const wasm_module& module, std::ostream& output)
 {
     std::string ind(2, ' ');
 
@@ -113,7 +117,8 @@ void wat_generator::generate(const wasm_module& module, std::ostream &output)
     for (const auto& global : module.globals)
     {
         output << ind << "(global $" << global.name;
-        if (global.access==wasm_module::access_type::mut) {
+        if (global.access == wasm_module::access_type::mut)
+        {
             output << " (mut ";
             output << repr_wasm_type(global.typ);
             output << ")";
@@ -142,7 +147,7 @@ void wat_generator::generate(const wasm_module& module, std::ostream &output)
     output << ")\n";
 }
 
-void wat_generator::generate(const wasm_function& function, std::ostream &output, size_t indent)
+void wat_generator::generate(const wasm_function& function, std::ostream& output, size_t indent)
 {
     std::string ind(indent, ' ');
     output << ind << "(func $" << function.name;
@@ -163,8 +168,7 @@ void wat_generator::generate(const wasm_function& function, std::ostream &output
 
         for (auto& local_var : function.locals)
         {
-            output << ind << ind << "(local $" << local_var.name << " " << 
-            repr_wasm_type(local_var.type) << ")\n";
+            output << ind << ind << "(local $" << local_var.name << " " << repr_wasm_type(local_var.type) << ")\n";
         }
 
         generate(function.function_body, output, indent + 2);
@@ -179,12 +183,14 @@ void wat_generator::generate(const wasm_function& function, std::ostream &output
     }
 }
 
-void wat_generator::generate(const wasm_data_section& section, std::ostream &output, size_t indent)
+void wat_generator::generate(const wasm_data_section& section, std::ostream& output, size_t indent)
 {
     std::string ind(2, ' ');
     output << ind << "(data (i32.const " << section.init_offset << ") \"";
-    for (const char& ch : section.data_buffer) {
-        switch (ch) {
+    for (const char& ch : section.data_buffer)
+    {
+        switch (ch)
+        {
             case '\\':
                 output << "\\\\";
                 break;
@@ -204,39 +210,43 @@ void wat_generator::generate(const wasm_data_section& section, std::ostream &out
                 output << "\\n";
                 break;
             default:
-                if (ch>='\x20')
+                if (ch >= '\x20')
                 {
                     output << std::string(1, ch);
                 }
                 else
                 {
                     std::ostringstream oss;
-                    oss << "\\" << std::uppercase << std::hex << std::setw(2) << std::setfill('0') 
+                    oss << "\\" << std::uppercase << std::hex << std::setw(2) << std::setfill('0')
                         << ((unsigned int)ch & 0xff);
                     output << oss.str();
                 }
         }
     }
-    output << "\")\n";    
+    output << "\")\n";
 }
 
-void wat_generator::generate(const wasm_memory& memory, std::ostream &output, size_t indent)
+void wat_generator::generate(const wasm_memory& memory, std::ostream& output, size_t indent)
 {
     std::string ind(2, ' ');
     output << ind << "(memory " << memory.initial_block_count << ")\n";
 }
 
-void wat_generator::generate(const wasm_block& block, std::ostream &output, size_t indent)
+void wat_generator::generate(const wasm_block& block, std::ostream& output, size_t indent)
 {
     for (const auto& inst : block.instructions)
     {
-        std::visit([&, this](const auto& n) {
-            this->generate(n, output, indent);
-        }, *inst);
+        std::visit(
+            [&, this](const auto& n)
+            {
+                this->generate(n, output, indent);
+            },
+            *inst
+        );
     }
 }
 
-void wat_generator::generate(const wasm_if_block& block, std::ostream &output, size_t indent)
+void wat_generator::generate(const wasm_if_block& block, std::ostream& output, size_t indent)
 {
     std::string ind(indent, ' ');
     output << ind << "if";
@@ -248,36 +258,36 @@ void wat_generator::generate(const wasm_if_block& block, std::ostream &output, s
     {
         output << "\n";
     }
-    generate(*block.then_block, output, indent+2);
+    generate(*block.then_block, output, indent + 2);
     if (block.else_block->inst_count() > 0)
     {
         output << ind << "else\n";
-        generate(*block.else_block, output, indent+2);
+        generate(*block.else_block, output, indent + 2);
     }
     output << ind << "end\n";
 }
 
-void wat_generator::generate(const wasm_loop_block& block, std::ostream &output, size_t indent)
+void wat_generator::generate(const wasm_loop_block& block, std::ostream& output, size_t indent)
 {
     std::string ind(indent, ' ');
     output << ind << "loop $" << block.block_label.repr() << "\n";
 
-    generate((wasm_block&)block, output, indent+2);
+    generate((wasm_block&)block, output, indent + 2);
 
     output << ind << "end\n";
 }
 
-void wat_generator::generate(const wasm_internal_block& block, std::ostream &output, size_t indent)
+void wat_generator::generate(const wasm_internal_block& block, std::ostream& output, size_t indent)
 {
     std::string ind(indent, ' ');
     output << ind << "block $" << block.block_label.repr() << "\n";
 
-    generate((wasm_block&)block, output, indent+2);
+    generate((wasm_block&)block, output, indent + 2);
 
     output << ind << "end\n";
 }
 
-void wat_generator::generate(const wasm_instruction& inst, std::ostream &output, size_t indent)
+void wat_generator::generate(const wasm_instruction& inst, std::ostream& output, size_t indent)
 {
     std::string ind(indent, ' ');
     output << ind;
@@ -297,7 +307,7 @@ void wat_generator::generate(const wasm_instruction& inst, std::ostream &output,
     }
 }
 
-void wat_generator::generate(const wasm_op_index& inst, std::ostream &output, size_t indent)
+void wat_generator::generate(const wasm_op_index& inst, std::ostream& output, size_t indent)
 {
     std::string ind(indent, ' ');
     output << ind;
@@ -324,7 +334,7 @@ void wat_generator::generate(const wasm_op_index& inst, std::ostream &output, si
     output << "$" << inst.name << "\n";
 }
 
-void wat_generator::generate(const wasm_op_type& inst, std::ostream &output, size_t indent)
+void wat_generator::generate(const wasm_op_type& inst, std::ostream& output, size_t indent)
 {
     std::string ind(indent, ' ');
     output << ind;
@@ -355,7 +365,7 @@ void wat_generator::generate(const wasm_op_type& inst, std::ostream &output, siz
     }
 }
 
-void wat_generator::generate(const wasm_op_type_sign& inst, std::ostream &output, size_t indent)
+void wat_generator::generate(const wasm_op_type_sign& inst, std::ostream& output, size_t indent)
 {
     std::string ind(indent, ' ');
     output << ind;
@@ -375,7 +385,7 @@ void wat_generator::generate(const wasm_op_type_sign& inst, std::ostream &output
     output << sign_wasm_type(inst.value_type) << "\n";
 }
 
-void wat_generator::generate(const wasm_op_type_value& inst, std::ostream &output, size_t indent)
+void wat_generator::generate(const wasm_op_type_value& inst, std::ostream& output, size_t indent)
 {
     std::string ind(indent, ' ');
     output << ind;
@@ -392,7 +402,7 @@ void wat_generator::generate(const wasm_op_type_value& inst, std::ostream &outpu
     output << inst.value << "\n";
 }
 
-void wat_generator::generate(const wasm_op_align_offset& inst, std::ostream &output, size_t indent)
+void wat_generator::generate(const wasm_op_align_offset& inst, std::ostream& output, size_t indent)
 {
     std::string ind(indent, ' ');
     output << ind;
@@ -406,7 +416,7 @@ void wat_generator::generate(const wasm_op_align_offset& inst, std::ostream &out
     {
         suffix = std::format("{}_{}", sz, sx);
     }
-    if (inst.offset>0)
+    if (inst.offset > 0)
     {
         offset_suffix = std::format(" offset={}", inst.offset);
     }
@@ -426,7 +436,7 @@ void wat_generator::generate(const wasm_op_align_offset& inst, std::ostream &out
     output << "\n";
 }
 
-void wat_generator::generate(const wasm_op_label& inst, std::ostream &output, size_t indent)
+void wat_generator::generate(const wasm_op_label& inst, std::ostream& output, size_t indent)
 {
     std::string ind(indent, ' ');
     output << ind;
@@ -445,7 +455,7 @@ void wat_generator::generate(const wasm_op_label& inst, std::ostream &output, si
     output << inst.label.repr() << "\n";
 }
 
-void wat_generator::generate(const wasm_op_func& inst, std::ostream &output, size_t indent)
+void wat_generator::generate(const wasm_op_func& inst, std::ostream& output, size_t indent)
 {
     std::string ind(indent, ' ');
     output << ind;
@@ -461,7 +471,7 @@ void wat_generator::generate(const wasm_op_func& inst, std::ostream &output, siz
     output << inst.function.name() << "\n";
 }
 
-void wat_generator::generate_export(const exportable& exp, std::ostream &output, size_t indent)
+void wat_generator::generate_export(const exportable& exp, std::ostream& output, size_t indent)
 {
     std::string ind(indent, ' ');
     output << ind << "(export \"" << exp.export_name << "\" (";

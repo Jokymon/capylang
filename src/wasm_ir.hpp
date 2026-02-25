@@ -35,7 +35,8 @@ enum class wasm_extern_index
 
 using index_type = uint32_t;
 
-struct argument_type {
+struct argument_type
+{
     std::string name;
     wasm_type type;
 };
@@ -215,8 +216,8 @@ public:
     void mod(wasm_type type);
     void mul(wasm_type type);
     void sub(wasm_type type);
-    void load(wasm_type type, size_t offset=0);
-    void store(wasm_type type, size_t offset=0);
+    void load(wasm_type type, size_t offset = 0);
+    void store(wasm_type type, size_t offset = 0);
     void eq(wasm_type type);
     void ne(wasm_type type);
     void eqz(wasm_type type);
@@ -308,8 +309,10 @@ struct wasm_memory : public exportable
 
 struct wasm_module
 {
-    enum access_type {
-        mut, immut
+    enum access_type
+    {
+        mut,
+        immut
     };
 
     explicit wasm_module();
@@ -323,13 +326,14 @@ struct wasm_module
 
     void export_as(const char* export_name, exportable& object);
 
-    struct global_sym{
+    struct global_sym
+    {
         std::string name;
         access_type access;
         wasm_type typ;
         uint64_t initvalue;
     };
-    
+
     // vectors with WASM items where the index in the vector represents the
     // index in corresponding WASM section
     std::vector<wasm_memory> memories;

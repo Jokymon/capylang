@@ -49,9 +49,10 @@ struct node_module;
 using ast_node_raw = std::variant<node_number, node_char_literal, node_bool_const, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_if_expression, node_while_expression, node_record_definition, node_record_initialisation, node_field_deref, node_import_definition, node_global, node_function_call, node_function_definition, node_cast_expression, node_expression>;
 using ast_node = located<ast_node_raw>;
 
-void dump_module(const context& ctx, const node_module& module, size_t indent=0);
+void dump_module(const context& ctx, const node_module& module, size_t indent = 0);
 
-enum class assign_context {
+enum class assign_context
+{
     lhs,
     rhs
 };
@@ -71,7 +72,8 @@ struct node_bool_const
 {
     bool value;
 
-    static bool from_string(const std::string& str) {
+    static bool from_string(const std::string& str)
+    {
         return (str == "true");
     }
 };
@@ -169,7 +171,7 @@ struct node_global
     type_id assigned_type;
     symbol_id symbol_ref;
     int32_t init_value;
-    //std::unique_ptr<ast_node> init_expression;
+    // std::unique_ptr<ast_node> init_expression;
 };
 
 struct node_function_call
@@ -211,7 +213,8 @@ struct node_module : public located_node
     std::vector<std::unique_ptr<ast_node>> functions;
     std::vector<std::unique_ptr<ast_node>> typedefs;
 
-    struct string_literal_entry {
+    struct string_literal_entry
+    {
         uint32_t start_address;
         std::string literal;
     };
@@ -238,8 +241,8 @@ private:
     std::shared_ptr<lexer> capy_lexer;
     context& parse_context;
 
-    void append_error(const std::string &error_message);
-    void append_error_at(source_position location, const std::string &error_message);
+    void append_error(const std::string& error_message);
+    void append_error_at(source_position location, const std::string& error_message);
 
     node_module parse_module();
     void parse_module_body();

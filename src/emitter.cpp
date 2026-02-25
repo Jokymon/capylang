@@ -11,129 +11,138 @@ wasm_type from_type_kind(context& ctx, type_id idx)
 {
     const auto& type_entry = ctx.types[idx];
 
-    return std::visit([&](const auto &t) -> auto {
-        using T = std::decay_t<decltype(t)>;
-
-        if constexpr (std::is_same_v<T, type_kind>)
+    return std::visit(
+        [&](const auto& t) -> auto
         {
-            const auto& type_spec = t;
+            using T = std::decay_t<decltype(t)>;
 
-            return std::visit([&](const auto& k) -> wasm_type {
-                using K = std::decay_t<decltype(k)>;
+            if constexpr (std::is_same_v<T, type_kind>)
+            {
+                const auto& type_spec = t;
 
-                if constexpr (std::is_same_v<K, primitive_type>) {
-                    switch (k) {
-                        case primitive_type::Void:
-                            return wasm_type::none;
-                        case primitive_type::Char:
-                        case primitive_type::S8:
-                            return wasm_type::i8;
-                        case primitive_type::S16:
-                            return wasm_type::i16;
-                        case primitive_type::S32:
-                            return wasm_type::i32;
-                        case primitive_type::U8:
-                            return wasm_type::u8;
-                        case primitive_type::U16:
-                            return wasm_type::u16;
-                        case primitive_type::U32:
-                            return wasm_type::u32;
-                        case primitive_type::Boolean:
-                            return wasm_type::i32;
-                        case primitive_type::String:
-                            return wasm_type::i32;
-                        default:
-                            printf("Unknown primitive type in from_type_kind\n");
-                            return wasm_type::none;
-                    }
-                } else if constexpr (std::is_same_v<K, pointer_type>) {
-                    return wasm_type::i32;
-                } else if constexpr (std::is_same_v<K, record_type>) {
-                    // records are stored as pointers
-                    return wasm_type::i32;
-                } else if constexpr (std::is_same_v<K, function_type>) {
-                    printf("Requested function type in conversion\n");
-                    return wasm_type::none;
-                } else {
-                    printf("Unknown type kind in from_type_kind\n");
+                return std::visit([&](const auto& k) -> wasm_type
+                                  {
+                    using K = std::decay_t<decltype(k)>;
+
+                    if constexpr (std::is_same_v<K, primitive_type>) {
+                        switch (k) {
+                            case primitive_type::Void:
+                                return wasm_type::none;
+                            case primitive_type::Char:
+                            case primitive_type::S8:
+                                return wasm_type::i8;
+                            case primitive_type::S16:
+                                return wasm_type::i16;
+                            case primitive_type::S32:
+                                return wasm_type::i32;
+                            case primitive_type::U8:
+                                return wasm_type::u8;
+                            case primitive_type::U16:
+                                return wasm_type::u16;
+                            case primitive_type::U32:
+                                return wasm_type::u32;
+                            case primitive_type::Boolean:
+                                return wasm_type::i32;
+                            case primitive_type::String:
+                                return wasm_type::i32;
+                            default:
+                                printf("Unknown primitive type in from_type_kind\n");
+                                return wasm_type::none;
+                        }
+                    } else if constexpr (std::is_same_v<K, pointer_type>) {
+                        return wasm_type::i32;
+                    } else if constexpr (std::is_same_v<K, record_type>) {
+                        // records are stored as pointers
+                        return wasm_type::i32;
+                    } else if constexpr (std::is_same_v<K, function_type>) {
+                        printf("Requested function type in conversion\n");
+                        return wasm_type::none;
+                    } else {
+                        printf("Unknown type kind in from_type_kind\n");
+                        return wasm_type::none;
+                    } },
+                                  type_spec);
+            }
+            else if constexpr (std::is_same_v<T, type_var>)
+            {
+                if (t.parent.has_value())
+                {
+                    return from_type_kind(ctx, t.parent.value());
+                }
+                else
+                {
+                    assert(false && "Encountered unresolved type variable when getting WASM type");
                     return wasm_type::none;
                 }
-            }, type_spec);
-        }
-        else if constexpr (std::is_same_v<T, type_var>)
-        {
-            if (t.parent.has_value())
-            {
-                return from_type_kind(ctx, t.parent.value());
             }
-            else
-            {
-                assert(false && "Encountered unresolved type variable when getting WASM type");
-                return wasm_type::none;
-            }
-        }
-    }, type_entry);
+        },
+        type_entry
+    );
 }
 
 size_t type_size(context& ctx, type_id idx)
 {
     const auto& type_entry = ctx.types[idx];
 
-    return std::visit([&](const auto &t) -> size_t {
-        using T = std::decay_t<decltype(t)>;
-
-        if constexpr (std::is_same_v<T, type_kind>)
+    return std::visit(
+        [&](const auto& t) -> size_t
         {
-            auto type_spec = t;
+            using T = std::decay_t<decltype(t)>;
 
-            return std::visit([&](const auto &k) -> size_t {
-                using K = std::decay_t<decltype(k)>;
+            if constexpr (std::is_same_v<T, type_kind>)
+            {
+                auto type_spec = t;
 
-                if constexpr (std::is_same_v<K, primitive_type>) {
-                    switch (k) {
-                        case primitive_type::Void:
-                            return 0;
-                        case primitive_type::U8:
-                        case primitive_type::S8:
-                            return 1;
-                        case primitive_type::U16:
-                        case primitive_type::S16:
-                            return 2;
-                        case primitive_type::U32:
-                        case primitive_type::S32:
-                        case primitive_type::Char:
-                        case primitive_type::Boolean:
-                            return 4;
-                        case primitive_type::String:
-                            return 8; // ptr and size fields
-                    }
-                } else if constexpr (std::is_same_v<K, pointer_type>) {
-                    return 4;
-                } else if constexpr (std::is_same_v<K, record_type>) {
-                    size_t size = 0;
-                    for (const auto& field : k.fields) {
-                        size += type_size(ctx, field.second);
-                    }
-                    return size;
-                } else {
+                return std::visit([&](const auto& k) -> size_t
+                                  {
+                    using K = std::decay_t<decltype(k)>;
+
+                    if constexpr (std::is_same_v<K, primitive_type>) {
+                        switch (k) {
+                            case primitive_type::Void:
+                                return 0;
+                            case primitive_type::U8:
+                            case primitive_type::S8:
+                                return 1;
+                            case primitive_type::U16:
+                            case primitive_type::S16:
+                                return 2;
+                            case primitive_type::U32:
+                            case primitive_type::S32:
+                            case primitive_type::Char:
+                            case primitive_type::Boolean:
+                                return 4;
+                            case primitive_type::String:
+                                return 8; // ptr and size fields
+                        }
+                    } else if constexpr (std::is_same_v<K, pointer_type>) {
+                        return 4;
+                    } else if constexpr (std::is_same_v<K, record_type>) {
+                        size_t size = 0;
+                        for (const auto& field : k.fields) {
+                            size += type_size(ctx, field.second);
+                        }
+                        return size;
+                    } else {
+                        return 0;
+                    } },
+                                  type_spec);
+            }
+            else if constexpr (std::is_same_v<T, type_var>)
+            {
+                if (t.parent.has_value())
+                {
+                    return type_size(ctx, t.parent.value());
+                }
+                else
+                {
+                    assert(false && "Encountered unresolved type variable in when getting type size");
                     return 0;
                 }
-            }, type_spec);
-        }
-        else if constexpr (std::is_same_v<T, type_var>)
-        {
-            if (t.parent.has_value())
-            {
-                return type_size(ctx, t.parent.value());
             }
-            else
-            {
-                assert(false && "Encountered unresolved type variable in when getting type size");
-                return 0;
-            }
-        }
-    }, type_entry);
-
+        },
+        type_entry
+    );
 }
 
 std::optional<size_t> record_field_offset(context& ctx, type_id idx, const std::string& field_name)
@@ -172,7 +181,7 @@ emitter::~emitter()
     delete cur_data;
 }
 
-wasm_module emitter::generate(node_module &module_def)
+wasm_module emitter::generate(node_module& module_def)
 {
     wasm_module ir_module;
     cur_mod = &ir_module;
@@ -182,22 +191,22 @@ wasm_module emitter::generate(node_module &module_def)
     auto& memory = ir_module.create_memory(2);
     ir_module.export_as("memory", memory);
 
-    for (auto& literal: module_def.string_literals)
+    for (auto& literal : module_def.string_literals)
     {
         literal.start_address = allocate_data(literal.literal);
     }
 
-    for (const auto &import_def : module_def.imports)
+    for (const auto& import_def : module_def.imports)
     {
         emit(*import_def);
     }
 
-    for (const auto &global_def : module_def.globals)
+    for (const auto& global_def : module_def.globals)
     {
         emit(*global_def);
     }
 
-    for (const auto &func_def : module_def.functions)
+    for (const auto& func_def : module_def.functions)
     {
         emit(*func_def);
     }
@@ -210,15 +219,18 @@ wasm_module emitter::generate(node_module &module_def)
     return ir_module;
 }
 
-void emitter::emit(ast_node &node)
+void emitter::emit(ast_node& node)
 {
-    std::visit([this](auto &n)
-    {
-        this->emit(n);
-    }, node.value);
+    std::visit(
+        [this](auto& n)
+        {
+            this->emit(n);
+        },
+        node.value
+    );
 }
 
-void emitter::emit(const node_import_definition &import_def)
+void emitter::emit(const node_import_definition& import_def)
 {
     arguments_type args;
     auto function_name = import_def.function_head->name;
@@ -227,18 +239,12 @@ void emitter::emit(const node_import_definition &import_def)
     auto func_type = std::get<function_type>(std::get<type_kind>(function_type_entry));
 
     const auto& parameter_names = import_def.function_head->signature.parameters;
-    for (auto [param_name, param_typ] : std::views::zip(parameter_names,
-                                                    func_type.parameter_types))
+    for (auto [param_name, param_typ] : std::views::zip(parameter_names, func_type.parameter_types))
     {
         args.push_back({param_name, from_type_kind(parse_context, param_typ)});
     }
     // TODO: we should actually use the alias name here if it is defined
-    auto& import_func = cur_mod->create_function(import_def.function_head->name.c_str(),
-        from_type_kind(parse_context,
-                       parse_context.function_return_type(
-                            import_def.function_head->signature.function_type).value()),
-        args
-    );
+    auto& import_func = cur_mod->create_function(import_def.function_head->name.c_str(), from_type_kind(parse_context, parse_context.function_return_type(import_def.function_head->signature.function_type).value()), args);
     import_func.import_from(import_def.ns_name.c_str(), import_def.function_head->name.c_str());
 
     emit(*import_def.function_head);
@@ -265,21 +271,16 @@ void emitter::emit(const node_global& global_def)
     //     cur_block->global_set(parse_context.symbol_at(global_def.symbol_ref).name.c_str());
     // }
     const auto& global_symbol = parse_context.symbol_at(global_def.symbol_ref);
-    auto mutability = global_symbol.mutab ?
-                            wasm_module::access_type::mut :
-                            wasm_module::access_type::immut;
-    cur_mod->create_global(global_symbol.name.c_str(),
-                           wasm_type::i32,
-                           mutability,
-                           global_def.init_value);
+    auto mutability = global_symbol.mutab ? wasm_module::access_type::mut : wasm_module::access_type::immut;
+    cur_mod->create_global(global_symbol.name.c_str(), wasm_type::i32, mutability, global_def.init_value);
 }
 
-void emitter::emit(const node_function_head &function_head)
+void emitter::emit(const node_function_head& function_head)
 {
     emit_function_signature(function_head.name, function_head.signature);
 }
 
-void emitter::emit(const node_function_definition &func_def)
+void emitter::emit(const node_function_definition& func_def)
 {
     arguments_type args;
     auto function_name = func_def.function_head->name;
@@ -288,17 +289,12 @@ void emitter::emit(const node_function_definition &func_def)
     auto func_type = std::get<function_type>(std::get<type_kind>(function_type_entry));
 
     const auto& parameter_names = func_def.function_head->signature.parameters;
-    for (auto [param_name, param_typ] : std::views::zip(parameter_names,
-                                                    func_type.parameter_types))
+    for (auto [param_name, param_typ] : std::views::zip(parameter_names, func_type.parameter_types))
     {
         args.push_back({param_name, from_type_kind(parse_context, param_typ)});
     }
 
-    auto &func = cur_mod->create_function(function_name.c_str(),
-        from_type_kind(parse_context,
-            parse_context.function_return_type(
-                func_def.function_head->signature.function_type).value()),
-        args);
+    auto& func = cur_mod->create_function(function_name.c_str(), from_type_kind(parse_context, parse_context.function_return_type(func_def.function_head->signature.function_type).value()), args);
     if (func_def.has_attribute("export"))
     {
         cur_mod->export_as(function_name.c_str(), func);
@@ -314,8 +310,8 @@ void emitter::emit(const node_function_definition &func_def)
         {
             if (parse_context.is_primitive_type(symbol.symbol_type, primitive_type::String))
             {
-                func.allocate_local((identifier+"_ptr").c_str(), wasm_type::i32);
-                func.allocate_local((identifier+"_size").c_str(), wasm_type::i32);
+                func.allocate_local((identifier + "_ptr").c_str(), wasm_type::i32);
+                func.allocate_local((identifier + "_size").c_str(), wasm_type::i32);
             }
             else
             {
@@ -326,7 +322,7 @@ void emitter::emit(const node_function_definition &func_def)
     }
     func.allocate_local("_rec_ptr", wasm_type::i32);
 
-    for (const auto &expression : func_def.code)
+    for (const auto& expression : func_def.code)
     {
         emit(*expression);
     }
@@ -380,9 +376,9 @@ void emitter::emit(const node_while_expression& while_expr)
     cur_block = prev_block;
 }
 
-void emitter::emit(const node_function_call &func_call)
+void emitter::emit(const node_function_call& func_call)
 {
-    for (const auto &param : func_call.parameter)
+    for (const auto& param : func_call.parameter)
     {
         emit(*param);
     }
@@ -402,8 +398,8 @@ void emitter::emit(const node_let_expression& let_expression)
     const auto& symbol = parse_context.symbol_at(let_expression.symbol_ref);
     if (parse_context.is_primitive_type(symbol.symbol_type, primitive_type::String))
     {
-        cur_block->local_set((symbol.name+"_ptr").c_str());
-        cur_block->local_set((symbol.name+"_size").c_str());
+        cur_block->local_set((symbol.name + "_ptr").c_str());
+        cur_block->local_set((symbol.name + "_size").c_str());
     }
     else
     {
@@ -465,7 +461,7 @@ void emitter::emit(const node_field_deref& field_deref)
         // TODO: for the moment we can only handle variables of types strings
         // but not strings that are fields of records
         auto var_name = std::get<node_var_reference>(field_deref.object->value).name;
-        cur_block->local_get((var_name + "_"+field_deref.fieldname).c_str());
+        cur_block->local_get((var_name + "_" + field_deref.fieldname).c_str());
     }
     else
     {
@@ -473,82 +469,82 @@ void emitter::emit(const node_field_deref& field_deref)
         auto maybe_size = record_field_offset(
             parse_context,
             field_deref.object_type,
-            field_deref.fieldname);
+            field_deref.fieldname
+        );
         assert(maybe_size.has_value() && "A record field should have its offset calculated by this point");
 
         cur_block->load(wasm_type::i32, maybe_size.value());
     }
 }
 
-void emitter::emit(const node_cast_expression &root)
+void emitter::emit(const node_cast_expression& root)
 {
     emit(*root.expression);
     if ((parse_context.is_primitive_type(root.cast_type, primitive_type::Void)) &&
-        (!parse_context.is_primitive_type(assigned_node_type(*root.expression, parse_context),
-                primitive_type::Void)))
+        (!parse_context.is_primitive_type(assigned_node_type(*root.expression, parse_context), primitive_type::Void)))
     {
         cur_block->drop();
     }
 }
 
-void emitter::emit(const node_expression &root)
+void emitter::emit(const node_expression& root)
 {
     emit(*root.left);
     emit(*root.right);
     switch (root.operation)
     {
-    case op_minus:
-        cur_block->sub(wasm_type::i32);
-        break;
-    case op_plus:
-        cur_block->add(wasm_type::i32);
-        break;
-    case op_multiply:
-        cur_block->mul(wasm_type::i32);
-        break;
-    case op_division:
-        cur_block->div(wasm_type::i32);
-        break;
-    case op_modulus:
-        cur_block->mod(wasm_type::i32);
-        break;
-    case op_equals:
-        cur_block->eq(wasm_type::i32);
-        break;
-    case op_notequals:
-        cur_block->ne(wasm_type::i32);
-        break;
-    case op_assignment:
-        if (std::holds_alternative<node_pointer_deref>(root.left->value))
-        {
-            if (parse_context.is_primitive_type(assigned_node_type(*root.left, parse_context), primitive_type::U8))
-            {
-                cur_block->store(wasm_type::i8);
-                break;
-            }
-            else
-            {
-                cur_block->store(wasm_type::i32);
-                break;
-            }
-        }
-        else
-        {
-            auto symbol_id = std::get<node_var_reference>(root.left->value).symbol_ref;
-            const auto& symbol = parse_context.symbol_at(symbol_id);
-            if (symbol.kind == symbol_kind::global_var)
-            {
-                cur_block->global_set(symbol.name.c_str());
-            }
-            else
-            {
-                cur_block->local_set(symbol.name.c_str());
-            }
+        case op_minus:
+            cur_block->sub(wasm_type::i32);
             break;
-        }
-    case op_conversion:
-        assert(false && "Conversions should not appear as simple expressions");
-        break;
+        case op_plus:
+            cur_block->add(wasm_type::i32);
+            break;
+        case op_multiply:
+            cur_block->mul(wasm_type::i32);
+            break;
+        case op_division:
+            cur_block->div(wasm_type::i32);
+            break;
+        case op_modulus:
+            cur_block->mod(wasm_type::i32);
+            break;
+        case op_equals:
+            cur_block->eq(wasm_type::i32);
+            break;
+        case op_notequals:
+            cur_block->ne(wasm_type::i32);
+            break;
+        case op_assignment:
+            if (std::holds_alternative<node_pointer_deref>(root.left->value))
+            {
+                if (parse_context.is_primitive_type(assigned_node_type(*root.left, parse_context), primitive_type::U8))
+                {
+                    cur_block->store(wasm_type::i8);
+                    break;
+                }
+                else
+                {
+                    cur_block->store(wasm_type::i32);
+                    break;
+                }
+            }
+            else
+            {
+                auto symbol_id = std::get<node_var_reference>(root.left->value).symbol_ref;
+                const auto& symbol = parse_context.symbol_at(symbol_id);
+                if (symbol.kind == symbol_kind::global_var)
+                {
+                    cur_block->global_set(symbol.name.c_str());
+                }
+                else
+                {
+                    cur_block->local_set(symbol.name.c_str());
+                }
+                break;
+            }
+        case op_conversion:
+            assert(false && "Conversions should not appear as simple expressions");
+            break;
     }
 }
 
@@ -569,12 +565,12 @@ void emitter::emit(const node_bool_const& bool_const)
     cur_block->const_val(wasm_type::i32, bool_const.value ? 1 : 0);
 }
 
-void emitter::emit(const node_number &number)
+void emitter::emit(const node_number& number)
 {
     cur_block->const_val(wasm_type::i32, number.number);
 }
 
-void emitter::emit(const node_var_reference &variable)
+void emitter::emit(const node_var_reference& variable)
 {
     // When the variable is used in an LHS context, then we need to
     // handle the storing of the value differently
@@ -588,7 +584,7 @@ void emitter::emit(const node_var_reference &variable)
         else
         {
             cur_block->local_get(symbol.name.c_str());
-        }    
+        }
     }
 }
 
@@ -597,8 +593,10 @@ void emitter::emit(const node_pointer_deref& ptr_deref)
     emit(*ptr_deref.pointer_expression);
     if (ptr_deref.context == assign_context::rhs)
     {
-        if (parse_context.is_primitive_type(ptr_deref.assigned_type,
-                                            primitive_type::U8))
+        if (parse_context.is_primitive_type(
+                ptr_deref.assigned_type,
+                primitive_type::U8
+            ))
         {
             cur_block->load(wasm_type::u8);
         }
@@ -616,7 +614,7 @@ void emitter::emit(const node_pointer_deref& ptr_deref)
     }
 }
 
-void emitter::emit_function_signature(const std::string &function_name, const function_signature &signature)
+void emitter::emit_function_signature(const std::string& function_name, const function_signature& signature)
 {
 }
 
