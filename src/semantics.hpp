@@ -1,10 +1,11 @@
 #pragma once
+#include "ast_visitor.hpp"
 #include "parser.hpp"
 #include <optional>
 
 type_id assigned_node_type(const ast_node& node, context& ctx);
 
-class semantic_analyser
+class semantic_analyser : public ast_visitor
 {
 public:
     explicit semantic_analyser(context& ctx);
@@ -15,7 +16,6 @@ public:
 private:
     void append_error_at(source_position location, const std::string& error_message);
 
-    void visit(ast_node& root);
     void process(source_range location, node_number& n);
     void process(source_range location, node_char_literal& n);
     void process(source_range location, node_bool_const& n);
@@ -29,13 +29,13 @@ private:
     void process(source_range location, node_if_expression& n);
     void process(source_range location, node_while_expression& n);
     void process(source_range location, node_let_expression& n);
-    void process(source_range location, node_import_definition& n);
     void process(source_range location, node_global& n);
+    void process(source_range location, node_function_head& n);
     void process(source_range location, node_function_definition& n);
     void process(source_range location, node_cast_expression& n);
     void process(source_range location, node_expression& n);
+    void process(source_range location, node_import_definition& n);
     void process(source_range location, node_module& n);
 
     context& parse_context;
-    assign_context current_context;
 };

@@ -94,7 +94,7 @@ type_id assigned_node_type(const ast_node& node, context& ctx)
 }
 
 semantic_analyser::semantic_analyser(context& ctx)
-: current_context{assign_context::rhs}
+: ast_visitor()
 , parse_context(ctx)
 {
 }
@@ -109,10 +109,7 @@ void semantic_analyser::append_error_at(source_position location, const std::str
 
 void semantic_analyser::semantic_analysis(node_module& module)
 {
-    for (const auto& func_def : module.functions)
-    {
-        visit(*func_def);
-    }
+    visit_nodes(module);
 }
 
 void semantic_analyser::process(source_range location, node_number& n)
@@ -133,10 +130,11 @@ void semantic_analyser::process(source_range location, node_string_literal& n)
 
 void semantic_analyser::process(source_range location, node_var_reference& n)
 {
+    n.context = current_context;
+
     auto& sym = parse_context.symbol_at(n.symbol_ref);
     if (sym.kind == symbol_kind::error)
     {
-        n.context = current_context;
         return;
     }
 
@@ -154,14 +152,13 @@ void semantic_analyser::process(source_range location, node_var_reference& n)
     {
         sym.is_assigned = true;
     }
-    n.context = current_context;
 }
 
 void semantic_analyser::process(source_range location, node_pointer_deref& n)
 {
     n.context = current_context;
 
-    visit(*n.pointer_expression);
+    visit_nodes(n);
 
     type_id expression_type = assigned_node_type(*n.pointer_expression, parse_context);
     if (!parse_context.is_pointer_type(expression_type))
@@ -207,10 +204,10 @@ void semantic_analyser::process(source_range location, node_record_initialisatio
         }
     }
 
+    visit_nodes(n);
+
     for (const auto& init : n.initialisations)
     {
-        visit(*init.init_expression);
-
         bool is_actual_field = false;
         for (const auto& field : r.fields)
         {
@@ -273,10 +270,11 @@ void semantic_analyser::process(source_range location, node_function_call& n)
         return;
     }
 
+    visit_nodes(n);
+
     function_type actual_func_type;
     for (const auto& param : n.parameter)
     {
-        visit(*param);
         actual_func_type.parameter_types.push_back(
             assigned_node_type(*param, parse_context)
         );
@@ -296,20 +294,18 @@ void semantic_analyser::process(source_range location, node_function_call& n)
 
 void semantic_analyser::process(source_range location, node_if_expression& n)
 {
-    visit(*n.condition);
+    visit_nodes(n);
 
     type_id then_return_type = parse_context.intern_primitive(primitive_type::Void);
-    for (const auto& expression : n.then_code)
+    if (!n.then_code.empty())
     {
-        visit(*expression);
-        then_return_type = assigned_node_type(*expression, parse_context);
+        then_return_type = assigned_node_type(*n.then_code.back(), parse_context);
     }
 
     type_id else_return_type = parse_context.intern_primitive(primitive_type::Void);
-    for (const auto& expression : n.else_code)
+    if (!n.else_code.empty())
     {
-        visit(*expression);
-        else_return_type = assigned_node_type(*expression, parse_context);
+        else_return_type = assigned_node_type(*n.else_code.back(), parse_context);
     }
 
     if (then_return_type != else_return_type)
@@ -337,12 +333,7 @@ void semantic_analyser::process(source_range location, node_if_expression& n)
 
 void semantic_analyser::process(source_range location, node_while_expression& n)
 {
-    visit(*n.condition);
-
-    for (const auto& expression : n.while_code)
-    {
-        visit(*expression);
-    }
+    visit_nodes(n);
 }
 
 void semantic_analyser::process(source_range location, node_let_expression& n)
@@ -352,14 +343,9 @@ void semantic_analyser::process(source_range location, node_let_expression& n)
         // There is no init expression to run any semantic analysis on, so we
         // can skip this here
         return;
-        // TODO: we still need to add some bigger scope checks that a variable
-        // will indeed get assigned to eventually and that the types do match
-
-        // TODO: This is still a problem, when the 'let'-variable was defined
-        // without a type
     }
 
-    visit(*n.init_expression);
+    visit_nodes(n);
 
     const auto& symbol = parse_context.symbol_at(n.symbol_ref);
     if (parse_context.resolved_type(symbol.symbol_type) !=
@@ -380,6 +366,10 @@ void semantic_analyser::process(source_range location, node_global& n)
 {
 }
 
+void semantic_analyser::process(source_range location, node_function_head& n)
+{
+}
+
 void semantic_analyser::process(source_range location, node_function_definition& n)
 {
     auto declared_return_type = parse_context.function_return_type(n.function_head->signature.function_type);
@@ -393,16 +383,14 @@ void semantic_analyser::process(source_range location, node_function_definition&
         return;
     }
 
+    visit_nodes(n);
+
     type_id actual_return_type = parse_context.intern_primitive(primitive_type::Void);
     source_range error_location;
-    for (const auto& expression : n.code)
+    if (!n.code.empty())
     {
-        visit(*expression);
-
-        // TODO: move these parts out of the loop, we already know which entry
-        // to check for the actual return type
-        actual_return_type = assigned_node_type(*expression, parse_context);
-        error_location = expression->location;
+        actual_return_type = assigned_node_type(*n.code.back(), parse_context);
+        error_location = n.code.back()->location;
     }
 
     if (declared_return_type.value() != actual_return_type)
@@ -418,25 +406,14 @@ void semantic_analyser::process(source_range location, node_function_definition&
 
 void semantic_analyser::process(source_range location, node_cast_expression& n)
 {
-    visit(*n.expression);
+    visit_nodes(n);
 }
 
 void semantic_analyser::process(source_range location, node_expression& n)
 {
-    if (n.operation == op_assignment)
-    {
-        current_context = assign_context::lhs;
-    }
-    else
-    {
-        current_context = assign_context::rhs;
-    }
+    visit_nodes(n);
 
-    visit(*n.left);
     auto lhs_type = assigned_node_type(*n.left, parse_context);
-
-    current_context = assign_context::rhs;
-    visit(*n.right);
     auto rhs_type = assigned_node_type(*n.right, parse_context);
 
     // propagate the type upwards based on the operands
@@ -488,13 +465,7 @@ void semantic_analyser::process(source_range location, node_expression& n)
     }
 }
 
-void semantic_analyser::visit(ast_node& root)
+void semantic_analyser::process(source_range location, node_module& module)
 {
-    std::visit(
-        [&](auto& n) -> void
-        {
-            process(root.location, n);
-        },
-        root.value
-    );
+    visit_nodes(module);
 }
