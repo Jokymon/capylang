@@ -3,7 +3,8 @@
 # module with a WASM runtime
 
 param (
-    [string]$InputFile = $(throw "Input file path is required")
+    [string]$InputFile = $(throw "Input file path is required"),
+    [switch]$Direct
 )
 
 # --- Compute relative paths manually (without requiring existence) ---
@@ -25,9 +26,11 @@ $WasmFile = Join-Path $DirName ($BaseName + ".wasm")
 $CurrentDir = (Resolve-Path ".").Path
 $InputRel   = Get-RelativePath $ResolvedInput $CurrentDir
 $WatFileRel = Get-RelativePath $WatFile $CurrentDir
+$WasmFileRel = Get-RelativePath $WasmFile $CurrentDir
 
 $InputRel  = $InputRel -replace '\\', '/'
 $WatFileRel = $WatFileRel -replace '\\', '/'
+$WasmFileRel = $WasmFileRel -replace '\\', '/'
 
 # Cleanup first
 if (Test-Path $WatFile) {
@@ -38,14 +41,21 @@ if (Test-Path $WasmFile) {
 }
 
 # Run the capylang compiler
-wasmtime.exe run --dir . .\build\capylang.wasm -i $InputRel -o $WatFileRel
+$CompilerOutput = if ($Direct) { $WasmFileRel } else { $WatFileRel }
+wasmtime.exe run --dir . .\build\capylang.wasm -i $InputRel -o $CompilerOutput
 if ($LASTEXITCODE -ne 0) {
     Write-Output "Compilation failed, terminating script"
     exit $LASTEXITCODE
 }
 
-# convert the WAT file to WASM
-wasm-tools.exe parse $WatFile -o $WasmFile
+if (-not $Direct) {
+    # convert the WAT file to WASM
+    wasm-tools.exe parse $WatFile -o $WasmFile
+    if ($LASTEXITCODE -ne 0) {
+        Write-Output "WAT to WASM conversion failed, terminating script"
+        exit $LASTEXITCODE
+    }
+}
 
 # Run the new WASM file with a WASM runtime
 wasmtime.exe run $WasmFile @args
