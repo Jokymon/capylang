@@ -343,7 +343,8 @@ constexpr std::array<number_range_rule, 6> NUMBER_RANGE_RULES{{
 }};
 
 parser::parser(std::shared_ptr<lexer> l, context& ctx)
-: capy_lexer(l)
+: diagnostic_emitter(diagnostic_phase::parser)
+, capy_lexer(l)
 , parse_context(ctx)
 , error_symbol(ILLEGAL_SYMBOL)
 {
@@ -359,6 +360,7 @@ parser::parser(std::shared_ptr<lexer> l, context& ctx)
 
 node_module parser::parse()
 {
+    diagnostics_.clear();
     auto root = parse_module();
     if (!capy_lexer->ahead_is<token_eof>())
     {
@@ -367,22 +369,20 @@ node_module parser::parse()
     return root;
 }
 
+const diagnostic_bag& parser::diagnostics() const
+{
+    return diagnostics_;
+}
+
+diagnostic_bag& parser::diagnostics_sink()
+{
+    return diagnostics_;
+}
+
 void parser::append_error(const std::string& error_message)
 {
     auto current_pos = capy_lexer->current_source_position();
-
-    errors.emplace_back(parse_error(
-        current_pos,
-        error_message
-    ));
-}
-
-void parser::append_error_at(source_position location, const std::string& error_message)
-{
-    errors.emplace_back(parse_error(
-        location,
-        error_message
-    ));
+    append_error_at(current_pos, error_message);
 }
 
 node_module parser::parse_module()

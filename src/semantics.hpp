@@ -1,20 +1,21 @@
 #pragma once
 #include "ast_visitor.hpp"
+#include "diagnostics.hpp"
 #include "parser.hpp"
 #include <optional>
 
 type_id assigned_node_type(const ast_node& node, context& ctx);
 
-class semantic_analyser : public ast_visitor
+class semantic_analyser : public ast_visitor, private diagnostic_emitter
 {
 public:
     explicit semantic_analyser(context& ctx);
     void semantic_analysis(node_module& module);
 
-    std::vector<parse_error> errors;
+    const diagnostic_bag& diagnostics() const;
 
 private:
-    void append_error_at(source_position location, const std::string& error_message);
+    diagnostic_bag& diagnostics_sink() override;
 
     void process(source_range location, node_number& n) override;
     void process(source_range location, node_char_literal& n) override;
@@ -38,4 +39,5 @@ private:
     void process(source_range location, node_module& n) override;
 
     context& parse_context;
+    diagnostic_bag diagnostics_;
 };

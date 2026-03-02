@@ -1,4 +1,5 @@
 #include "args_parse.hpp"
+#include "diagnostics.hpp"
 #include "emitter.hpp"
 #include "parser.hpp"
 #include "semantics.hpp"
@@ -35,17 +36,19 @@ int main(int argc, char* argv[])
     parser capyparser{capylexer, parse_context};
     auto root_node = capyparser.parse();
 
-    if (!capyparser.errors.empty())
+    if (capyparser.diagnostics().has_errors())
     {
-        for (const auto& error : capyparser.errors)
-        {
-            std::cerr << error.error_location.filename << ":" << error.error_location.line << ":" << error.error_location.column << ": " << error.error_message << "\n";
-        }
+        print_diagnostics(std::cerr, capyparser.diagnostics());
         return 1;
     }
 
     type_inference inference{parse_context};
     inference.infer_types(root_node);
+    if (inference.diagnostics().has_errors())
+    {
+        print_diagnostics(std::cerr, inference.diagnostics());
+        return 1;
+    }
 
     semantic_analyser analyser{parse_context};
     analyser.semantic_analysis(root_node);
@@ -55,12 +58,9 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    if (!analyser.errors.empty())
+    if (analyser.diagnostics().has_errors())
     {
-        for (const auto& error : analyser.errors)
-        {
-            std::cerr << error.error_location.filename << ":" << error.error_location.line << ":" << error.error_location.column << ": " << error.error_message << "\n";
-        }
+        print_diagnostics(std::cerr, analyser.diagnostics());
         return 1;
     }
 

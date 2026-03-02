@@ -3,15 +3,27 @@
 #include <ranges>
 
 type_inference::type_inference(context& ctx)
-: parse_context(ctx)
+: diagnostic_emitter(diagnostic_phase::type_inference)
+, parse_context(ctx)
 {
 }
 
 void type_inference::infer_types(node_module& module)
 {
+    diagnostics_.clear();
     visit_nodes(module);
 
     unify();
+}
+
+const diagnostic_bag& type_inference::diagnostics() const
+{
+    return diagnostics_;
+}
+
+diagnostic_bag& type_inference::diagnostics_sink()
+{
+    return diagnostics_;
 }
 
 void type_inference::unify()

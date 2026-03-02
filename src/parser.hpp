@@ -5,6 +5,7 @@
 #include <string>
 #include <variant>
 #include <vector>
+#include "diagnostics.hpp"
 #include "lexer.hpp"
 #include "symbol.hpp"
 
@@ -223,26 +224,22 @@ struct node_module : public located_node
     std::unique_ptr<scope> module_scope;
 };
 
-struct parse_error
-{
-    source_position error_location;
-    std::string error_message;
-};
-
-class parser
+class parser : private diagnostic_emitter
 {
 public:
     explicit parser(std::shared_ptr<lexer> l, context& ctx);
 
-    std::vector<parse_error> errors;
+    const diagnostic_bag& diagnostics() const;
     node_module parse();
 
 private:
+    diagnostic_bag& diagnostics_sink() override;
+
     std::shared_ptr<lexer> capy_lexer;
     context& parse_context;
+    diagnostic_bag diagnostics_;
 
     void append_error(const std::string& error_message);
-    void append_error_at(source_position location, const std::string& error_message);
 
     node_module parse_module();
     void parse_module_body();

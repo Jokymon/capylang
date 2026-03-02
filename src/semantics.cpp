@@ -95,20 +95,24 @@ type_id assigned_node_type(const ast_node& node, context& ctx)
 
 semantic_analyser::semantic_analyser(context& ctx)
 : ast_visitor()
+, diagnostic_emitter(diagnostic_phase::semantics)
 , parse_context(ctx)
 {
 }
 
-void semantic_analyser::append_error_at(source_position location, const std::string& error_message)
+const diagnostic_bag& semantic_analyser::diagnostics() const
 {
-    errors.emplace_back(parse_error(
-        location,
-        error_message
-    ));
+    return diagnostics_;
+}
+
+diagnostic_bag& semantic_analyser::diagnostics_sink()
+{
+    return diagnostics_;
 }
 
 void semantic_analyser::semantic_analysis(node_module& module)
 {
+    diagnostics_.clear();
     visit_nodes(module);
 }
 

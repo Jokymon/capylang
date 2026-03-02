@@ -1,16 +1,18 @@
 #pragma once
 #include "ast_visitor.hpp"
+#include "diagnostics.hpp"
 #include "parser.hpp"
 
-class type_inference : public ast_visitor
+class type_inference : public ast_visitor, private diagnostic_emitter
 {
 public:
     explicit type_inference(context& ctx);
     void infer_types(node_module& module);
 
-    std::vector<parse_error> errors;
+    const diagnostic_bag& diagnostics() const;
 
 private:
+    diagnostic_bag& diagnostics_sink() override;
     void unify();
 
     void process(source_range location, node_number& n) override;
@@ -35,4 +37,5 @@ private:
     void process(source_range location, node_module& n) override;
 
     context& parse_context;
+    diagnostic_bag diagnostics_;
 };
