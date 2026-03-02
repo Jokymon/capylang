@@ -20,17 +20,17 @@ void ast_visitor::visit_nodes(node_module& module)
 {
     for (const auto& import_def : module.imports)
     {
-        visit(*import_def);
+        process(import_def->location, *import_def);
     }
 
     for (const auto& global_def : module.globals)
     {
-        visit(*global_def);
+        process(global_def->location, *global_def);
     }
 
     for (const auto& func_def : module.functions)
     {
-        visit(*func_def);
+        process(func_def->location, *func_def);
     }
 }
 

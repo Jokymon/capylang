@@ -157,7 +157,7 @@ void dump_node(const context& ctx, const node_import_definition& n, size_t inden
     std::cout << ind << "Import definition: TODO\n";
 }
 
-void dump_node(const context& ctx, const node_global& n, size_t indent)
+void dump_node(const context& ctx, const node_global_definition& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
@@ -219,15 +219,19 @@ void dump_module(const context& ctx, const node_module& n, size_t indent)
     std::cout << ind << "Module:\n";
     for (const auto& import : n.imports)
     {
-        dump_ast(ctx, *import, indent + 4);
+        dump_node(ctx, *import, indent + 4);
     }
     for (const auto& type_def : n.typedefs)
     {
         dump_ast(ctx, *type_def, indent + 4);
     }
+    for (const auto& global : n.globals)
+    {
+        dump_node(ctx, *global, indent + 4);
+    }
     for (const auto& function : n.functions)
     {
-        dump_ast(ctx, *function, indent + 4);
+        dump_node(ctx, *function, indent + 4);
     }
 }
 
@@ -431,12 +435,12 @@ void parser::parse_module_body()
         {
             auto import_def = parse_import_definition();
 
-            current_module->imports.push_back(std::make_unique<ast_node>(std::move(import_def)));
+            current_module->imports.push_back(std::make_unique<node_import_definition>(std::move(import_def)));
         }
         else if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_global))
         {
             auto global_def = parse_global();
-            current_module->globals.push_back(std::make_unique<ast_node>(std::move(global_def)));
+            current_module->globals.push_back(std::make_unique<node_global_definition>(std::move(global_def)));
         }
         else if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_record))
         {
@@ -447,7 +451,7 @@ void parser::parse_module_body()
         {
             auto function = parse_function_definition();
 
-            current_module->functions.push_back(std::make_unique<ast_node>(std::move(function)));
+            current_module->functions.push_back(std::make_unique<node_function_definition>(std::move(function)));
         }
     }
 }
@@ -531,7 +535,7 @@ void parser::parse_parameters(function_signature& signature, function_type& func
     }
 }
 
-ast_node parser::parse_import_definition()
+node_import_definition parser::parse_import_definition()
 {
     // Eat the 'import' keyword that we already established in
     // the calling function
@@ -570,16 +574,16 @@ ast_node parser::parse_import_definition()
     }
     auto end_range = capy_lexer->expect<token_symbol>().location;
 
-    return make_located<node_import_definition>(
+    return node_import_definition{
         start_range.start,
         end_range.end,
         namespace_name.name,
         std::make_unique<node_function_head>(std::move(function_head)),
         alias_name
-    );
+    };
 }
 
-ast_node parser::parse_global()
+node_global_definition parser::parse_global()
 {
     // eat the 'global' keyword
     auto start_location = capy_lexer->expect<token_symbol>().location;
@@ -632,17 +636,17 @@ ast_node parser::parse_global()
     // eat the final semicolon
     auto end_token = capy_lexer->expect<token_symbol>();
 
-    return make_located<node_global>(
+    return node_global_definition{
         start_location.start,
         end_token.location.end,
         variable_name.name,
         type_spec,
         global_symbol_id,
         init_value
-    );
+    };
 }
 
-ast_node parser::parse_function_definition()
+node_function_definition parser::parse_function_definition()
 {
     auto attributes = collected_attributes;
     collected_attributes.clear();
@@ -683,14 +687,14 @@ ast_node parser::parse_function_definition()
 
     current_scope = current_scope->parent;
 
-    return make_located<node_function_definition>(
+    return node_function_definition{
         start_range.start,
         end_range.end,
-        attributes,
+        std::move(attributes),
         std::make_unique<node_function_head>(std::move(function_head)),
         std::move(function_body),
         std::move(func_scope)
-    );
+    };
 }
 
 node_function_head parser::parse_function_head()

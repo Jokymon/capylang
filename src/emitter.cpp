@@ -250,7 +250,7 @@ void emitter::emit(const node_import_definition& import_def)
     emit(*import_def.function_head);
 }
 
-void emitter::emit(const node_global& global_def)
+void emitter::emit(const node_global_definition& global_def)
 {
     // if (!global_def.init_expression)
     // {

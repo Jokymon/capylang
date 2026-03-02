@@ -362,7 +362,7 @@ void semantic_analyser::process(source_range location, node_import_definition& n
 {
 }
 
-void semantic_analyser::process(source_range location, node_global& n)
+void semantic_analyser::process(source_range location, node_global_definition& n)
 {
 }
 

@@ -154,7 +154,7 @@ void type_inference::process(source_range location, node_let_expression& n)
     parse_context.constraints.emplace_back(equal_constraint{parse_context.symbol_at(n.symbol_ref).symbol_type, assigned_node_type(*n.init_expression, parse_context)});
 }
 
-void type_inference::process(source_range location, node_global& n)
+void type_inference::process(source_range location, node_global_definition& n)
 {
     (void)location;
     (void)n;

@@ -39,14 +39,14 @@ struct node_record_initialisation;
 struct node_field_deref;
 struct node_function_head;
 struct node_import_definition;
-struct node_global;
+struct node_global_definition;
 struct node_function_call;
 struct node_function_definition;
 struct node_cast_expression;
 struct node_expression;
 struct node_module;
 
-using ast_node_raw = std::variant<node_number, node_char_literal, node_bool_const, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_if_expression, node_while_expression, node_record_definition, node_record_initialisation, node_field_deref, node_import_definition, node_global, node_function_call, node_function_definition, node_cast_expression, node_expression>;
+using ast_node_raw = std::variant<node_number, node_char_literal, node_bool_const, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_if_expression, node_while_expression, node_record_definition, node_record_initialisation, node_field_deref, node_function_call, node_cast_expression, node_expression>;
 using ast_node = located<ast_node_raw>;
 
 void dump_module(const context& ctx, const node_module& module, size_t indent = 0);
@@ -157,7 +157,7 @@ struct node_function_head : public located_node
     function_signature signature;
 };
 
-struct node_import_definition
+struct node_import_definition : public located_node
 {
     std::string ns_name;
     std::unique_ptr<node_function_head> function_head;
@@ -165,7 +165,7 @@ struct node_import_definition
     std::optional<std::string> alias;
 };
 
-struct node_global
+struct node_global_definition : public located_node
 {
     std::string name;
     type_id assigned_type;
@@ -181,7 +181,7 @@ struct node_function_call
     std::vector<std::unique_ptr<ast_node>> parameter;
 };
 
-struct node_function_definition
+struct node_function_definition : public located_node
 {
     std::vector<capy_attribute> attributes;
     bool has_attribute(const std::string& attr_name) const;
@@ -208,9 +208,9 @@ struct node_expression
 
 struct node_module : public located_node
 {
-    std::vector<std::unique_ptr<ast_node>> imports;
-    std::vector<std::unique_ptr<ast_node>> globals;
-    std::vector<std::unique_ptr<ast_node>> functions;
+    std::vector<std::unique_ptr<node_import_definition>> imports;
+    std::vector<std::unique_ptr<node_global_definition>> globals;
+    std::vector<std::unique_ptr<node_function_definition>> functions;
     std::vector<std::unique_ptr<ast_node>> typedefs;
 
     struct string_literal_entry
@@ -249,9 +249,9 @@ private:
     void parse_attribute();
     void parse_parameters(function_signature& signature, function_type& func_type);
     void parse_function_signature(function_signature& signature);
-    ast_node parse_import_definition();
-    ast_node parse_global();
-    ast_node parse_function_definition();
+    node_import_definition parse_import_definition();
+    node_global_definition parse_global();
+    node_function_definition parse_function_definition();
     node_function_head parse_function_head();
     ast_node parse_expression(int min_precedence = 0);
     ast_node parse_function_call(source_range name_range, const std::string function_name);

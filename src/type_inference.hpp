@@ -29,7 +29,7 @@ private:
     void process(source_range location, node_while_expression& n);
     void process(source_range location, node_let_expression& n);
     void process(source_range location, node_import_definition& n);
-    void process(source_range location, node_global& n);
+    void process(source_range location, node_global_definition& n);
     void process(source_range location, node_function_head& n);
     void process(source_range location, node_function_definition& n);
     void process(source_range location, node_module& n);

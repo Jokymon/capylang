@@ -35,7 +35,7 @@ protected:
     virtual void process(source_range location, node_if_expression& n) = 0;
     virtual void process(source_range location, node_while_expression& n) = 0;
     virtual void process(source_range location, node_let_expression& n) = 0;
-    virtual void process(source_range location, node_global& n) = 0;
+    virtual void process(source_range location, node_global_definition& n) = 0;
     virtual void process(source_range location, node_function_head& n) = 0;
     virtual void process(source_range location, node_function_definition& n) = 0;
     virtual void process(source_range location, node_import_definition& n) = 0;
