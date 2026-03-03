@@ -5,6 +5,7 @@ include(FetchContent)
 
 add_executable(${PROJECT_NAME}
     src/main.cpp
+    src/anf.cpp
     src/args_parse.cpp
     src/ast_visitor.cpp
     src/diagnostics.cpp

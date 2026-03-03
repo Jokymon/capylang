@@ -1,3 +1,4 @@
+#include "anf.hpp"
 #include "args_parse.hpp"
 #include "diagnostics.hpp"
 #include "emitter.hpp"
@@ -14,7 +15,7 @@ int main(int argc, char* argv[])
 {
     auto args = parse_args(argc, argv);
 
-    if ((args.output_path == "") && !args.dump_ast)
+    if ((args.output_path == "") && !args.dump_ast && !args.dump_anf)
     {
         std::cerr << "Argument required: -o\n";
         return 1;
@@ -53,16 +54,29 @@ int main(int argc, char* argv[])
 
     semantic_analyser analyser{parse_context};
     analyser.semantic_analysis(root_node);
+    if (analyser.diagnostics().has_errors())
+    {
+        print_diagnostics(std::cerr, analyser.diagnostics());
+        return 1;
+    }
+
     if (args.dump_ast)
     {
         dump_module(parse_context, root_node);
         return 0;
     }
 
-    if (analyser.diagnostics().has_errors())
+    if (args.dump_anf)
     {
-        print_diagnostics(std::cerr, analyser.diagnostics());
-        return 1;
+        anf_generator anf_gen{parse_context};
+        auto anf_module = anf_gen.generate(root_node);
+        // if (anf_gen.diagnostics().has_errors())
+        // {
+        //     print_diagnostics(std::cerr, anf_gen.diagnostics());
+        //     return 1;
+        // }
+        dump_anf_module(parse_context, anf_module);
+        return 0;
     }
 
     normalization normalizer{parse_context};

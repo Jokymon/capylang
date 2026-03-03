@@ -87,6 +87,7 @@ Args parse_args(int argc, char* argv[])
 {
     Args arguments;
     arguments.dump_ast = false;
+    arguments.dump_anf = false;
 
     ArgvRange args{argc, argv};
     auto args_start = args.begin();
@@ -97,6 +98,7 @@ Args parse_args(int argc, char* argv[])
         parse_option("-o", args_start, args_end, arguments.output_path);
         parse_option("-i", args_start, args_end, arguments.input_path);
         parse_flag("--dump-ast", args_start, args_end, arguments.dump_ast);
+        parse_flag("--dump-anf", args_start, args_end, arguments.dump_anf);
     }
     return arguments;
 }
