@@ -367,7 +367,7 @@ bool anf_generator::lower_statement(const ast_node& node, anf_block& block)
                     return true;
                 }
 
-                auto value = lower_let_value(*n.init_expression);
+                auto value = lower_let_value(*n.init_expression, block);
                 if (!value.has_value())
                 {
                     return false;
@@ -386,7 +386,7 @@ bool anf_generator::lower_statement(const ast_node& node, anf_block& block)
                     return false;
                 }
 
-                auto value = lower_atom(*n.right);
+                auto value = lower_atomized(*n.right, block);
                 if (!value.has_value())
                 {
                     return false;
@@ -409,7 +409,7 @@ bool anf_generator::lower_statement(const ast_node& node, anf_block& block)
                 }
 
                 const auto& field = std::get<node_field_deref>(n.left->value);
-                auto obj = lower_atom(*field.object);
+                auto obj = lower_atomized(*field.object, block);
                 if (!obj.has_value())
                 {
                     return false;
@@ -449,7 +449,7 @@ bool anf_generator::lower_statement(const ast_node& node, anf_block& block)
                 args.reserve(n.parameter.size());
                 for (const auto& p : n.parameter)
                 {
-                    auto atom = lower_atom(*p);
+                    auto atom = lower_atomized(*p, block);
                     if (!atom.has_value())
                     {
                         return false;
@@ -463,6 +463,13 @@ bool anf_generator::lower_statement(const ast_node& node, anf_block& block)
                     .arguments = std::move(args),
                 });
                 return true;
+            }
+            else if constexpr (std::is_same_v<T, node_cast_expression>)
+            {
+                // parse_body wraps semicolon-terminated expressions in a cast-to-void
+                // node so they can be dropped for stack-based codegen. ANF still needs
+                // to lower the wrapped statement effects.
+                return lower_statement(*n.expression, block);
             }
             else if constexpr (std::is_same_v<T, node_if_expression>)
             {
@@ -597,7 +604,34 @@ std::optional<anf_atom> anf_generator::lower_atom(const ast_node& node) const
     );
 }
 
-std::optional<anf_let_value> anf_generator::lower_let_value(const ast_node& node)
+std::optional<anf_atom> anf_generator::lower_atomized(const ast_node& node, anf_block& block)
+{
+    if (auto atom = lower_atom(node); atom.has_value())
+    {
+        return std::move(atom.value());
+    }
+
+    auto value = lower_let_value(node, block);
+    if (!value.has_value())
+    {
+        return std::nullopt;
+    }
+
+    anf_binding temp_binding{
+        .name = next_temp_name(),
+        .symbol_ref = ILLEGAL_SYMBOL,
+        .assigned_type = assigned_node_type(node, parse_context),
+    };
+
+    block.statements.push_back(anf_let_statement{
+        .target = temp_binding,
+        .value = std::move(value.value()),
+    });
+
+    return anf_atom_var{.binding = temp_binding};
+}
+
+std::optional<anf_let_value> anf_generator::lower_let_value(const ast_node& node, anf_block& block)
 {
     if (auto atom = lower_atom(node); atom.has_value())
     {
@@ -616,8 +650,8 @@ std::optional<anf_let_value> anf_generator::lower_let_value(const ast_node& node
                     return std::nullopt;
                 }
 
-                auto left = lower_atom(*n.left);
-                auto right = lower_atom(*n.right);
+                auto left = lower_atomized(*n.left, block);
+                auto right = lower_atomized(*n.right, block);
                 if (!left.has_value() || !right.has_value())
                 {
                     return std::nullopt;
@@ -637,7 +671,7 @@ std::optional<anf_let_value> anf_generator::lower_let_value(const ast_node& node
                 args.reserve(n.parameter.size());
                 for (const auto& param : n.parameter)
                 {
-                    auto atom = lower_atom(*param);
+                    auto atom = lower_atomized(*param, block);
                     if (!atom.has_value())
                     {
                         return std::nullopt;
@@ -656,7 +690,7 @@ std::optional<anf_let_value> anf_generator::lower_let_value(const ast_node& node
             }
             else if constexpr (std::is_same_v<T, node_field_deref>)
             {
-                auto object = lower_atom(*n.object);
+                auto object = lower_atomized(*n.object, block);
                 if (!object.has_value())
                 {
                     return std::nullopt;
@@ -687,30 +721,7 @@ std::optional<anf_let_value> anf_generator::lower_let_value(const ast_node& node
 
 std::optional<anf_atom> anf_generator::lower_condition(const ast_node& node, anf_block& block)
 {
-    if (auto atom = lower_atom(node); atom.has_value())
-    {
-        return std::move(atom.value());
-    }
-
-    auto value = lower_let_value(node);
-    if (!value.has_value())
-    {
-        return std::nullopt;
-    }
-
-    anf_binding temp_binding{
-        .name = next_temp_name(),
-        .symbol_ref = ILLEGAL_SYMBOL,
-        .assigned_type = assigned_node_type(node, parse_context),
-    };
-    anf_atom temp_atom = anf_atom_var{.binding = temp_binding};
-
-    block.statements.push_back(anf_let_statement{
-        .target = temp_binding,
-        .value = std::move(value.value()),
-    });
-
-    return std::move(temp_atom);
+    return lower_atomized(node, block);
 }
 
 anf_binding anf_generator::binding_from_symbol(symbol_id symbol_ref, const std::string& fallback_name, type_id explicit_type) const

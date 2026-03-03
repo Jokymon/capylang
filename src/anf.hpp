@@ -206,7 +206,8 @@ private:
     bool lower_statement(const ast_node& node, anf_block& block);
     void lower_block(const std::vector<std::unique_ptr<ast_node>>& expressions, anf_block& block);
     std::optional<anf_atom> lower_atom(const ast_node& node) const;
-    std::optional<anf_let_value> lower_let_value(const ast_node& node);
+    std::optional<anf_atom> lower_atomized(const ast_node& node, anf_block& block);
+    std::optional<anf_let_value> lower_let_value(const ast_node& node, anf_block& block);
     std::optional<anf_atom> lower_condition(const ast_node& node, anf_block& block);
     std::optional<size_t> record_field_index(type_id record_type_id, const std::string& field_name) const;
 
