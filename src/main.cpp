@@ -66,6 +66,9 @@ int main(int argc, char* argv[])
         return 0;
     }
 
+    normalization normalizer{parse_context};
+    normalizer.normalize(root_node);
+
     if (args.dump_anf)
     {
         anf_generator anf_gen{parse_context};
@@ -78,9 +81,6 @@ int main(int argc, char* argv[])
         dump_anf_module(parse_context, anf_module);
         return 0;
     }
-
-    normalization normalizer{parse_context};
-    normalizer.normalize(root_node);
 
     emitter capyemitter{parse_context};
     wasm_module mod = capyemitter.generate(root_node);
