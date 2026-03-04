@@ -190,6 +190,18 @@ static void dump_anf_statement(const context& ctx, const anf_statement& stmt, si
                     dump_anf_atom(ctx, arg, indent + 2);
                 }
             }
+            else if constexpr (std::is_same_v<T, anf_return_statement>)
+            {
+                std::cout << ind << "return\n";
+                if (s.value.has_value())
+                {
+                    dump_anf_atom(ctx, s.value.value(), indent + 2);
+                }
+                else
+                {
+                    std::cout << ind << "  <void>\n";
+                }
+            }
             else if constexpr (std::is_same_v<T, anf_if_statement>)
             {
                 std::cout << ind << "if\n";
@@ -464,11 +476,37 @@ bool anf_generator::lower_statement(const ast_node& node, anf_block& block)
                 });
                 return true;
             }
+            else if constexpr (std::is_same_v<T, node_discard_expression>)
+            {
+                if (lower_statement(*n.expression, block))
+                {
+                    return true;
+                }
+
+                auto ignored = lower_atomized(*n.expression, block);
+                return ignored.has_value();
+            }
+            else if constexpr (std::is_same_v<T, node_return_expression>)
+            {
+                if (!n.expression)
+                {
+                    block.statements.push_back(anf_return_statement{.value = std::nullopt});
+                    return true;
+                }
+                auto value = lower_atomized(*n.expression, block);
+                if (!value.has_value())
+                {
+                    return false;
+                }
+                block.statements.push_back(anf_return_statement{
+                    .value = std::move(value.value()),
+                });
+                return true;
+            }
             else if constexpr (std::is_same_v<T, node_cast_expression>)
             {
-                // parse_body wraps semicolon-terminated expressions in a cast-to-void
-                // node so they can be dropped for stack-based codegen. ANF still needs
-                // to lower the wrapped statement effects.
+                // Preserve side effects if a cast expression appears in statement
+                // position (for example from future explicit cast syntax).
                 return lower_statement(*n.expression, block);
             }
             else if constexpr (std::is_same_v<T, node_if_expression>)

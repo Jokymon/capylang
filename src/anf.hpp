@@ -125,6 +125,11 @@ struct anf_call_statement
     std::vector<anf_atom> arguments;
 };
 
+struct anf_return_statement
+{
+    std::optional<anf_atom> value;
+};
+
 struct anf_block;
 struct anf_if_statement
 {
@@ -144,6 +149,7 @@ using anf_statement = std::variant<
     anf_record_set_statement,
     anf_assign_statement,
     anf_call_statement,
+    anf_return_statement,
     anf_if_statement,
     anf_while_statement
 >;
