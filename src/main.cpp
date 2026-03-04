@@ -1,6 +1,7 @@
 #include "args_parse.hpp"
 #include "diagnostics.hpp"
 #include "emitter.hpp"
+#include "normalization.hpp"
 #include "parser.hpp"
 #include "semantics.hpp"
 #include "type_inference.hpp"
@@ -63,6 +64,9 @@ int main(int argc, char* argv[])
         print_diagnostics(std::cerr, analyser.diagnostics());
         return 1;
     }
+
+    normalization normalizer{parse_context};
+    normalizer.normalize(root_node);
 
     emitter capyemitter{parse_context};
     wasm_module mod = capyemitter.generate(root_node);

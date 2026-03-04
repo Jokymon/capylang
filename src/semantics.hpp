@@ -34,6 +34,8 @@ private:
     void process(source_range location, node_function_head& n) override;
     void process(source_range location, node_function_definition& n) override;
     void process(source_range location, node_cast_expression& n) override;
+    void process(source_range location, node_discard_expression& n) override;
+    void process(source_range location, node_return_expression& n) override;
     void process(source_range location, node_expression& n) override;
     void process(source_range location, node_import_definition& n) override;
     void process(source_range location, node_module& n) override;

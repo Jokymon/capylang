@@ -1,20 +1,14 @@
 #pragma once
 #include "ast_visitor.hpp"
-#include "diagnostics.hpp"
 #include "parser.hpp"
 
-class type_inference : public ast_visitor, private diagnostic_emitter
+class normalization : public ast_visitor
 {
 public:
-    explicit type_inference(context& ctx);
-    void infer_types(node_module& module);
-
-    const diagnostic_bag& diagnostics() const;
+    explicit normalization(context& ctx);
+    void normalize(node_module& module);
 
 private:
-    diagnostic_bag& diagnostics_sink() override;
-    void unify();
-
     void process(source_range location, node_number& n) override;
     void process(source_range location, node_char_literal& n) override;
     void process(source_range location, node_bool_const& n) override;
@@ -28,16 +22,16 @@ private:
     void process(source_range location, node_cast_expression& n) override;
     void process(source_range location, node_discard_expression& n) override;
     void process(source_range location, node_return_expression& n) override;
-    void process(source_range location, node_if_expression& n) override;
     void process(source_range location, node_expression& n) override;
+    void process(source_range location, node_if_expression& n) override;
     void process(source_range location, node_while_expression& n) override;
     void process(source_range location, node_let_expression& n) override;
-    void process(source_range location, node_import_definition& n) override;
     void process(source_range location, node_global_definition& n) override;
     void process(source_range location, node_function_head& n) override;
     void process(source_range location, node_function_definition& n) override;
+    void process(source_range location, node_import_definition& n) override;
     void process(source_range location, node_module& n) override;
 
+private:
     context& parse_context;
-    diagnostic_bag diagnostics_;
 };

@@ -80,6 +80,14 @@ type_id assigned_node_type(const ast_node& node, context& ctx)
             {
                 return n.cast_type;
             }
+            else if constexpr (std::is_same_v<T, node_discard_expression>)
+            {
+                return ctx.intern_primitive(primitive_type::Void);
+            }
+            else if constexpr (std::is_same_v<T, node_return_expression>)
+            {
+                return ctx.intern_primitive(primitive_type::Void);
+            }
             else if constexpr (std::is_same_v<T, node_expression>)
             {
                 return ctx.resolved_type(n.assigned_type);
@@ -409,6 +417,16 @@ void semantic_analyser::process(source_range location, node_function_definition&
 }
 
 void semantic_analyser::process(source_range location, node_cast_expression& n)
+{
+    visit_nodes(n);
+}
+
+void semantic_analyser::process(source_range location, node_discard_expression& n)
+{
+    visit_nodes(n);
+}
+
+void semantic_analyser::process(source_range location, node_return_expression& n)
 {
     visit_nodes(n);
 }

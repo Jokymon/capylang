@@ -487,6 +487,23 @@ void emitter::emit(const node_cast_expression& root)
     }
 }
 
+void emitter::emit(const node_discard_expression& root)
+{
+    emit(*root.expression);
+    if (!parse_context.is_primitive_type(assigned_node_type(*root.expression, parse_context), primitive_type::Void))
+    {
+        cur_block->drop();
+    }
+}
+
+void emitter::emit(const node_return_expression& root)
+{
+    if (root.expression)
+    {
+        emit(*root.expression);
+    }
+}
+
 void emitter::emit(const node_expression& root)
 {
     emit(*root.left);

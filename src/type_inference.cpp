@@ -135,6 +135,18 @@ void type_inference::process(source_range location, node_cast_expression& n)
     visit_nodes(n);
 }
 
+void type_inference::process(source_range location, node_discard_expression& n)
+{
+    (void)location;
+    visit_nodes(n);
+}
+
+void type_inference::process(source_range location, node_return_expression& n)
+{
+    (void)location;
+    visit_nodes(n);
+}
+
 void type_inference::process(source_range location, node_expression& n)
 {
     (void)location;

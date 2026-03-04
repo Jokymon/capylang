@@ -101,6 +101,19 @@ void ast_visitor::visit_nodes(node_cast_expression& expr)
     visit(*expr.expression);
 }
 
+void ast_visitor::visit_nodes(node_discard_expression& expr)
+{
+    visit(*expr.expression);
+}
+
+void ast_visitor::visit_nodes(node_return_expression& expr)
+{
+    if (expr.expression)
+    {
+        visit(*expr.expression);
+    }
+}
+
 void ast_visitor::visit_nodes(node_function_call& func_call)
 {
     for (const auto& param : func_call.parameter)

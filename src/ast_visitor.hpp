@@ -16,6 +16,8 @@ protected:
     void visit_nodes(node_let_expression& l_expr);
     void visit_nodes(node_expression& expr);
     void visit_nodes(node_cast_expression& expr);
+    void visit_nodes(node_discard_expression& expr);
+    void visit_nodes(node_return_expression& expr);
     void visit_nodes(node_function_call& func_call);
     void visit_nodes(node_record_initialisation& r_init);
     void visit_nodes(node_pointer_deref& ptr_deref);
@@ -31,6 +33,8 @@ protected:
     virtual void process(source_range location, node_field_deref& n) = 0;
     virtual void process(source_range location, node_function_call& n) = 0;
     virtual void process(source_range location, node_cast_expression& n) = 0;
+    virtual void process(source_range location, node_discard_expression& n) = 0;
+    virtual void process(source_range location, node_return_expression& n) = 0;
     virtual void process(source_range location, node_expression& n) = 0;
     virtual void process(source_range location, node_if_expression& n) = 0;
     virtual void process(source_range location, node_while_expression& n) = 0;

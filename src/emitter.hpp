@@ -27,6 +27,8 @@ public:
     void emit(const node_record_initialisation& record_init);
     void emit(const node_field_deref& field_deref);
     void emit(const node_cast_expression& root);
+    void emit(const node_discard_expression& root);
+    void emit(const node_return_expression& root);
     void emit(const node_expression& root);
     void emit(const node_var_reference& variable);
     void emit(const node_pointer_deref& ptr_deref);

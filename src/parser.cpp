@@ -201,6 +201,27 @@ void dump_node(const context& ctx, const node_cast_expression& n, size_t indent)
     dump_ast(ctx, *n.expression, indent + 4);
 }
 
+void dump_node(const context& ctx, const node_discard_expression& n, size_t indent)
+{
+    std::string ind = std::string(indent, ' ');
+    std::cout << ind << "Discard:\n";
+    dump_ast(ctx, *n.expression, indent + 4);
+}
+
+void dump_node(const context& ctx, const node_return_expression& n, size_t indent)
+{
+    std::string ind = std::string(indent, ' ');
+    std::cout << ind << "Return:\n";
+    if (n.expression)
+    {
+        dump_ast(ctx, *n.expression, indent + 4);
+    }
+    else
+    {
+        std::cout << ind << "  <void>\n";
+    }
+}
+
 void dump_node(const context& ctx, const node_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
@@ -1412,20 +1433,17 @@ void parser::parse_body(std::vector<std::unique_ptr<ast_node>>& body)
         {
             capy_lexer->expect_symbol(token_symbol::sym_semicolon);
 
-            // If the previous expression wasn't the last one in the body, then it
-            // will have left a value on the stack and will make the WASM validation
-            // unhappy. So we have to "convert" the type of the last expression to 'void'
-            // so the emitter can insert a 'drop' instruction
+            // Keep explicit statement-vs-expression information without abusing
+            // a cast-to-void wrapper.
             auto previous_expression = std::move(body.back());
             body.pop_back();
 
-            auto drop_wrapper = make_located<node_cast_expression>(
+            auto discard_wrapper = make_located<node_discard_expression>(
                 previous_expression->location.start,
                 previous_expression->location.end,
-                std::move(previous_expression),
-                parse_context.intern_primitive(primitive_type::Void)
+                std::move(previous_expression)
             );
-            body.emplace_back(std::make_unique<ast_node>(std::move(drop_wrapper)));
+            body.emplace_back(std::make_unique<ast_node>(std::move(discard_wrapper)));
         }
     }
 
