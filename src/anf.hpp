@@ -75,6 +75,12 @@ struct anf_binary_expression
     anf_atom right;
 };
 
+struct anf_cast_expression
+{
+    anf_atom value;
+    type_id target_type = ILLEGAL_TYPE;
+};
+
 struct anf_call_expression
 {
     std::string function_name;
@@ -94,6 +100,7 @@ struct anf_record_get_expression
 using anf_let_value = std::variant<
     anf_atom,
     anf_binary_expression,
+    anf_cast_expression,
     anf_call_expression,
     anf_record_get_expression
 >;

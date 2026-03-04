@@ -127,6 +127,11 @@ static void dump_anf_let_value(const context& ctx, const anf_let_value& value, s
                 dump_anf_atom(ctx, v.left, indent + 2);
                 dump_anf_atom(ctx, v.right, indent + 2);
             }
+            else if constexpr (std::is_same_v<T, anf_cast_expression>)
+            {
+                std::cout << ind << "cast to " << ctx.repr(v.target_type) << "\n";
+                dump_anf_atom(ctx, v.value, indent + 2);
+            }
             else if constexpr (std::is_same_v<T, anf_call_expression>)
             {
                 std::cout << ind << "call " << v.function_name;
@@ -700,6 +705,21 @@ std::optional<anf_let_value> anf_generator::lower_let_value(const ast_node& node
                         .operation = maybe_op.value(),
                         .left = std::move(left.value()),
                         .right = std::move(right.value()),
+                    }
+                };
+            }
+            else if constexpr (std::is_same_v<T, node_cast_expression>)
+            {
+                auto value = lower_atomized(*n.expression, block);
+                if (!value.has_value())
+                {
+                    return std::nullopt;
+                }
+
+                return anf_let_value{
+                    anf_cast_expression{
+                        .value = std::move(value.value()),
+                        .target_type = n.cast_type,
                     }
                 };
             }
