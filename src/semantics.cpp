@@ -378,10 +378,6 @@ void semantic_analyser::process(source_range location, node_global_definition& n
 {
 }
 
-void semantic_analyser::process(source_range location, node_function_head& n)
-{
-}
-
 void semantic_analyser::process(source_range location, node_function_definition& n)
 {
     auto declared_return_type = parse_context.function_return_type(n.function_head->signature.function_type);

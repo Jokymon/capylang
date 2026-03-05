@@ -246,8 +246,6 @@ void emitter::emit(const node_import_definition& import_def)
     // TODO: we should actually use the alias name here if it is defined
     auto& import_func = cur_mod->create_function(import_def.function_head->name.c_str(), from_type_kind(parse_context, parse_context.function_return_type(import_def.function_head->signature.function_type).value()), args);
     import_func.import_from(import_def.ns_name.c_str(), import_def.function_head->name.c_str());
-
-    emit(*import_def.function_head);
 }
 
 void emitter::emit(const node_global_definition& global_def)
@@ -275,11 +273,6 @@ void emitter::emit(const node_global_definition& global_def)
     cur_mod->create_global(global_symbol.name.c_str(), wasm_type::i32, mutability, global_def.init_value);
 }
 
-void emitter::emit(const node_function_head& function_head)
-{
-    emit_function_signature(function_head.name, function_head.signature);
-}
-
 void emitter::emit(const node_function_definition& func_def)
 {
     arguments_type args;
@@ -300,8 +293,6 @@ void emitter::emit(const node_function_definition& func_def)
         cur_mod->export_as(function_name.c_str(), func);
     }
     cur_block = &func.body();
-
-    emit(*func_def.function_head);
 
     for (const auto& [identifier, symbol_id] : func_def.function_scope->symbol_table)
     {
@@ -629,10 +620,6 @@ void emitter::emit(const node_pointer_deref& ptr_deref)
         auto ptr_var_id = std::get<node_var_reference>(ptr_deref.pointer_expression->value).symbol_ref;
         cur_block->local_get(parse_context.symbol_at(ptr_var_id).name.c_str());
     }
-}
-
-void emitter::emit_function_signature(const std::string& function_name, const function_signature& signature)
-{
 }
 
 uint32_t emitter::allocate_data(const std::string& data)

@@ -36,7 +36,6 @@ void ast_visitor::visit_nodes(node_module& module)
 
 void ast_visitor::visit_nodes(node_import_definition& import_def)
 {
-    process(source_range{}, *import_def.function_head);
 }
 
 void ast_visitor::visit_nodes(node_function_definition& func_def)

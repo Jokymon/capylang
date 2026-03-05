@@ -31,7 +31,6 @@ private:
     void process(source_range location, node_while_expression& n) override;
     void process(source_range location, node_let_expression& n) override;
     void process(source_range location, node_global_definition& n) override;
-    void process(source_range location, node_function_head& n) override;
     void process(source_range location, node_function_definition& n) override;
     void process(source_range location, node_cast_expression& n) override;
     void process(source_range location, node_discard_expression& n) override;

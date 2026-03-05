@@ -17,7 +17,6 @@ public:
 
     void emit(const node_import_definition& import_def);
     void emit(const node_global_definition& global_def);
-    void emit(const node_function_head& function_head);
     void emit(const node_function_definition& func_def);
     void emit(const node_record_definition& record_def);
     void emit(const node_if_expression& if_expr);
@@ -38,7 +37,6 @@ public:
     void emit(const node_number& number);
 
 private:
-    void emit_function_signature(const std::string& function_name, const function_signature& signature);
     uint32_t allocate_data(const std::string& data);
 
     context& parse_context;

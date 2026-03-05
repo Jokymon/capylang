@@ -19,7 +19,6 @@ void normalization::process(source_range, node_var_reference&) {}
 void normalization::process(source_range, node_record_definition&) {}
 void normalization::process(source_range, node_field_deref&) {}
 void normalization::process(source_range, node_global_definition&) {}
-void normalization::process(source_range, node_function_head&) {}
 void normalization::process(source_range, node_import_definition&) {}
 
 void normalization::process(source_range, node_pointer_deref& n)

@@ -184,12 +184,6 @@ void type_inference::process(source_range location, node_global_definition& n)
     (void)n;
 }
 
-void type_inference::process(source_range location, node_function_head& n)
-{
-    (void)location;
-    (void)n;
-}
-
 void type_inference::process(source_range location, node_function_definition& n)
 {
     (void)location;
