@@ -10,8 +10,7 @@ record iovec {
 fn print(value: u32)
 {
     // allocate memory for the number output
-    let s: *u8 = heap_ptr as *u8;
-    heap_ptr = heap_ptr + 12u32;
+    let s: *u8 = cabi_realloc(0, 0, 4, 12) as *u8;
 
     let mut remainder: u32 = value;
 
