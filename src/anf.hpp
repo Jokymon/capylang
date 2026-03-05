@@ -5,6 +5,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -147,6 +148,7 @@ struct anf_if_statement
 
 struct anf_while_statement
 {
+    std::unique_ptr<anf_block> condition_setup;
     anf_atom condition;
     std::unique_ptr<anf_block> body;
 };
@@ -222,6 +224,7 @@ private:
     std::optional<anf_atom> lower_atomized(const ast_node& node, anf_block& block);
     std::optional<anf_let_value> lower_let_value(const ast_node& node, anf_block& block);
     std::optional<anf_atom> lower_condition(const ast_node& node, anf_block& block);
+    std::optional<std::pair<std::unique_ptr<anf_block>, anf_atom>> lower_while_condition(const ast_node& node);
     std::optional<size_t> record_field_index(type_id record_type_id, const std::string& field_name) const;
 
     anf_binding binding_from_symbol(symbol_id symbol_ref, const std::string& fallback_name, type_id explicit_type = ILLEGAL_TYPE) const;

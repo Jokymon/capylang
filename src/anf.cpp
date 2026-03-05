@@ -220,6 +220,8 @@ static void dump_anf_statement(const context& ctx, const anf_statement& stmt, si
             else if constexpr (std::is_same_v<T, anf_while_statement>)
             {
                 std::cout << ind << "while\n";
+                std::cout << ind << "  condition setup\n";
+                dump_anf_block(ctx, *s.condition_setup, indent + 4);
                 std::cout << ind << "  condition\n";
                 dump_anf_atom(ctx, s.condition, indent + 4);
                 std::cout << ind << "  body\n";
@@ -536,7 +538,7 @@ bool anf_generator::lower_statement(const ast_node& node, anf_block& block)
             }
             else if constexpr (std::is_same_v<T, node_while_expression>)
             {
-                auto cond = lower_condition(*n.condition, block);
+                auto cond = lower_while_condition(*n.condition);
                 if (!cond.has_value())
                 {
                     return false;
@@ -546,7 +548,8 @@ bool anf_generator::lower_statement(const ast_node& node, anf_block& block)
                 lower_block(n.while_code, *body);
 
                 block.statements.push_back(anf_while_statement{
-                    .condition = std::move(cond.value()),
+                    .condition_setup = std::move(cond.value().first),
+                    .condition = std::move(cond.value().second),
                     .body = std::move(body),
                 });
                 return true;
@@ -780,6 +783,21 @@ std::optional<anf_let_value> anf_generator::lower_let_value(const ast_node& node
 std::optional<anf_atom> anf_generator::lower_condition(const ast_node& node, anf_block& block)
 {
     return lower_atomized(node, block);
+}
+
+std::optional<std::pair<std::unique_ptr<anf_block>, anf_atom>> anf_generator::lower_while_condition(const ast_node& node)
+{
+    auto setup = std::make_unique<anf_block>();
+    auto condition = lower_condition(node, *setup);
+    if (!condition.has_value())
+    {
+        return std::nullopt;
+    }
+
+    return std::pair<std::unique_ptr<anf_block>, anf_atom>{
+        std::move(setup),
+        std::move(condition.value()),
+    };
 }
 
 anf_binding anf_generator::binding_from_symbol(symbol_id symbol_ref, const std::string& fallback_name, type_id explicit_type) const
