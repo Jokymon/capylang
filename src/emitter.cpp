@@ -1,4 +1,5 @@
 #include "emitter.hpp"
+#include "lower_cabi.hpp"
 #include "wasm_ir.hpp"
 #include "semantics.hpp"
 #include <algorithm>
@@ -171,6 +172,7 @@ std::optional<size_t> record_field_offset(context& ctx, type_id idx, const std::
 
 emitter::emitter(context& ctx)
 : parse_context(ctx)
+, lowering(new lower_cabi(ctx))
 {
     cur_data = new wasm_data_section(100);
     allocate_data(std::string("\x42\x00\x00\x00\x10\x00\x00\x00\x10\x20\x30\x40Test", 16));
@@ -278,14 +280,7 @@ void emitter::emit(const node_function_definition& func_def)
     arguments_type args;
     auto function_name = func_def.function_head->name;
 
-    auto function_type_entry = parse_context.types[func_def.function_head->signature.function_type];
-    auto func_type = std::get<function_type>(std::get<type_kind>(function_type_entry));
-
-    const auto& parameter_names = func_def.function_head->signature.parameters;
-    for (auto [param_name, param_typ] : std::views::zip(parameter_names, func_type.parameter_types))
-    {
-        args.push_back({param_name, from_type_kind(parse_context, param_typ)});
-    }
+    lowering->lower_function_arguments(*func_def.function_head, args);
 
     auto& func = cur_mod->create_function(function_name.c_str(), from_type_kind(parse_context, parse_context.function_return_type(func_def.function_head->signature.function_type).value()), args);
     if (func_def.has_attribute("export"))

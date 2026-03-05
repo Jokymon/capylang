@@ -11,6 +11,7 @@ add_executable(${PROJECT_NAME}
     src/diagnostics.cpp
     src/normalization.cpp
     src/lexer.cpp
+    src/lower_cabi.cpp
     src/emitter.cpp
     src/parser.cpp
     src/semantics.cpp

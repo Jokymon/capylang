@@ -1,4 +1,5 @@
 #include "parser.hpp"
+#include "lowering_strategy.hpp"
 #include <ostream>
 
 class wasm_block;
@@ -40,6 +41,7 @@ private:
     uint32_t allocate_data(const std::string& data);
 
     context& parse_context;
+    std::unique_ptr<lowering_strategy> lowering;
 
     node_module* current_module;
 
