@@ -14,17 +14,20 @@
  * Extend the basic memory management
  * Make sure pointer types are correctly dereferenced; special checks for u8, u16, since we dereference u32 normally
  * design and implement a concept of symbol visibility
- * automatic number conversion for "trivial" cases
  * 'address of'-operator and where it should be supported; do we really want to go the path of C, where a local
    variable always needs to be addressable? Maybe we can just not take an address of every variable, maybe that is
    just a property of some data types
  * In some cases the parser seems to get stuck in an endless loop trying to look for some token that never appears
- * Add an option to main to just dump the sequence of tokens
+ * Add an option to the compiler to just dump the sequence of tokens
  * Add --help option to the compiler
  * Add intrinsics
- * Setup CI for automatic testing with every push 
- * Improve runtime environment(s); currently the run script simplifies the compile process but it is still suboptimal;
-   it's not possible for example to choose between the WAT->WASM and the direct WASM approach
+
+### Implement an (H)IR
+
+Currently the code contains some experiments with an ANF-based intermediate representation that was created with the
+help of Codex. However it turned out that this was created without a clear understanding of the needs from the backend
+side and either needs a lot of additions and changes or we should anyways completely rethink the concept for an IR that
+actually fits our needs for efficient WASM-IR generation.
 
 ### Big refactoring
 
