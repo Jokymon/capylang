@@ -9,7 +9,6 @@ public:
 
 protected:
     void visit_nodes(node_module& module);
-    void visit_nodes(node_import_definition& import_def);
     void visit_nodes(node_function_definition& func_def);
     void visit_nodes(node_if_expression& i_expr);
     void visit_nodes(node_while_expression& w_expr);

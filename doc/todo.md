@@ -40,6 +40,7 @@ This refactoring however has multiple steps:
  1. Step by step replace the generic AST node return by more specific returns. Some returns can be very specific, for
     example a `node_module` can only ever be a `node_module`, but for expressions, we could still have some generic
     parent type. This is where we would keep things such as a node type which is not needed for other AST nodes.
+    --> COMPLETED; all non-expression nodes are now handled outside of `ast_node`
  1. Finally or maybe partially interlinked with the previous step, we can get rid of the `located` concept for AST nodes
     as we did with the tokens. This should make the type definitions and the code for accessing the AST node fields
     much easier.
