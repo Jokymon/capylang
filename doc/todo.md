@@ -7,7 +7,6 @@
    --> Wasmtime or other WASM runtimes
 
  * Extend comparisons with gt, lt, gte, lte and logic operators with short circuit eval
- * Early returns
  * add floating point number types
  * Add unicode code point support for characters (so far we only have it in strings)
  * design and add support for vector numeric types
@@ -24,8 +23,6 @@
  * Add --help option to the compiler
  * Add intrinsics
  * Setup CI for automatic testing with every push 
- * Move TODO/decisions/... into dedicated documents and make the README an actual starting point for people interested
-   in the project with getting started, examples etc.
  * Improve runtime environment(s); currently the run script simplifies the compile process but it is still suboptimal;
    it's not possible for example to choose between the WAT->WASM and the direct WASM approach
 

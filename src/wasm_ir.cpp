@@ -222,6 +222,11 @@ void wasm_block::call(const char* function_name)
     instructions.push_back(std::make_unique<wasm_statement>(wasm_op_func(wasm_op::call, wasm_function_ref(function_name))));
 }
 
+void wasm_block::ret()
+{
+    instructions.push_back(std::make_unique<wasm_statement>(wasm_instruction(wasm_op::ret)));
+}
+
 wasm_internal_block::wasm_internal_block(wasm_type return_type, wasm_block* enclosing_block)
 : return_type(return_type)
 {

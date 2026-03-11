@@ -209,6 +209,10 @@ struct node_discard_expression
 struct node_return_expression
 {
     std::unique_ptr<ast_node> expression;
+    // used to distinguish return expressions that come from explicit uses of
+    // keyword 'return' or if it was implicitly created from the last expression
+    // in a function
+    bool is_explicit;
 };
 
 struct node_expression

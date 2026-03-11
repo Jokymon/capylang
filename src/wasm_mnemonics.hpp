@@ -14,6 +14,7 @@ const char INST_DROP = '\x1a';
 const char INST_SELECT = '\x1b';
 
 const char INST_CALL = '\x10';
+const char INST_RET = '\x0f';
 
 const char INST_LOCAL_GET = '\x20';
 const char INST_LOCAL_SET = '\x21';

@@ -302,6 +302,9 @@ void wat_generator::generate(const wasm_instruction& inst, std::ostream& output,
         case wasm_op::drop:
             output << "drop\n";
             break;
+        case wasm_op::ret:
+            output << "return\n";
+            break;
         default:
             break;
     }

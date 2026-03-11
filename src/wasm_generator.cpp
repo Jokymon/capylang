@@ -48,9 +48,10 @@ void encode_leb128(std::ostream& out, uint64_t value)
     {
         uint8_t b = value & 0x7f;
         value >>= 7;
-        if (value) b |= 0x80;
+        if (value)
+            b |= 0x80;
         out.put(b);
-    } while (value!=0);
+    } while (value != 0);
 }
 
 void encode_leb128_signed(std::ostream& out, int64_t value)
@@ -93,7 +94,8 @@ void encode_string(std::ostream& out, const std::string s)
 
 char encode_wasm_type(wasm_type type)
 {
-    switch (type) {
+    switch (type)
+    {
         case wasm_type::i32:
         case wasm_type::u32:
             return '\x7F';
@@ -150,7 +152,8 @@ void encode_func_type(std::ostream& output, const wasm_function& function)
 
 bool is_wasm_type_signed(wasm_type typ)
 {
-    switch (typ) {
+    switch (typ)
+    {
         case wasm_type::none:
             return false;
         case wasm_type::i8:
@@ -178,7 +181,8 @@ enum wasm_size_e
 
 wasm_size_e wasm_type_size(wasm_type typ)
 {
-    switch (typ) {
+    switch (typ)
+    {
         case wasm_type::none:
         case wasm_type::u32:
         case wasm_type::i32:
@@ -199,7 +203,7 @@ wasm_size_e wasm_type_size(wasm_type typ)
 
 uint32_t resolve_block_label(const wasm_block& block, const wasm_branch_label& label, uint32_t nesting_level)
 {
-    if (label==block.label())
+    if (label == block.label())
     {
         return nesting_level;
     }
@@ -207,10 +211,10 @@ uint32_t resolve_block_label(const wasm_block& block, const wasm_branch_label& l
     {
         return std::numeric_limits<uint32_t>::max();
     }
-    return resolve_block_label(*block.enclosing_block, label, nesting_level+1);
+    return resolve_block_label(*block.enclosing_block, label, nesting_level + 1);
 }
 
-void wasm_generator::generate(const wasm_module& module, std::ostream &output)
+void wasm_generator::generate(const wasm_module& module, std::ostream& output)
 {
     output.write(MAGIC, 4);
     output.write(VERSION, 4);
@@ -225,7 +229,7 @@ void wasm_generator::generate(const wasm_module& module, std::ostream &output)
     generate_data(module, output);
 }
 
-void wasm_generator::generate_types(const wasm_module& module, std::ostream &output)
+void wasm_generator::generate_types(const wasm_module& module, std::ostream& output)
 {
     output.put(SECTION_TYPE);
 
@@ -259,14 +263,16 @@ void wasm_generator::generate_types(const wasm_module& module, std::ostream &out
     output.write(content.str().c_str(), content.str().size());
 }
 
-void wasm_generator::generate_imports(const wasm_module& module, std::ostream &output)
+void wasm_generator::generate_imports(const wasm_module& module, std::ostream& output)
 {
     output.put(SECTION_IMPORT);
 
-    size_t import_count = std::count_if(module.functions.begin(), module.functions.end(),
-        [](const auto& func) {
-            return func.is_imported();
-        });
+    size_t import_count = std::count_if(
+        module.functions.begin(),
+        module.functions.end(),
+        [](const auto& func)
+        { return func.is_imported(); }
+    );
 
     std::ostringstream content(std::ios::binary);
     encode_leb128(content, import_count);
@@ -288,14 +294,12 @@ void wasm_generator::generate_imports(const wasm_module& module, std::ostream &o
     output.write(content.str().c_str(), content.str().size());
 }
 
-void wasm_generator::generate_functions(const wasm_module& module, std::ostream &output)
+void wasm_generator::generate_functions(const wasm_module& module, std::ostream& output)
 {
     output.put(SECTION_FUNCTION);
 
-    size_t internal_count = std::count_if(module.functions.begin(), module.functions.end(),
-        [](const auto& func_pair) {
-            return !func_pair.is_imported();
-        });
+    size_t internal_count = std::count_if(module.functions.begin(), module.functions.end(), [](const auto& func_pair)
+                                          { return !func_pair.is_imported(); });
 
     std::ostringstream content(std::ios::binary);
     encode_leb128(content, internal_count);
@@ -313,7 +317,7 @@ void wasm_generator::generate_functions(const wasm_module& module, std::ostream 
     output.write(content.str().c_str(), content.str().size());
 }
 
-void wasm_generator::generate_memories(const wasm_module& module, std::ostream &output)
+void wasm_generator::generate_memories(const wasm_module& module, std::ostream& output)
 {
     output.put(SECTION_MEMORY);
 
@@ -329,7 +333,7 @@ void wasm_generator::generate_memories(const wasm_module& module, std::ostream &
     output.write(content.str().c_str(), content.str().size());
 }
 
-void wasm_generator::generate_globals(const wasm_module& module, std::ostream &output)
+void wasm_generator::generate_globals(const wasm_module& module, std::ostream& output)
 {
     output.put(SECTION_GLOBAL);
 
@@ -338,7 +342,7 @@ void wasm_generator::generate_globals(const wasm_module& module, std::ostream &o
     for (const auto& g : module.globals)
     {
         content.put(encode_wasm_type(g.typ));
-        if (g.access==wasm_module::access_type::mut)
+        if (g.access == wasm_module::access_type::mut)
             content.put(MUTABILITY_MUT);
         else
             content.put(MUTABILITY_IMMUT);
@@ -352,7 +356,7 @@ void wasm_generator::generate_globals(const wasm_module& module, std::ostream &o
     output.write(content.str().c_str(), content.str().size());
 }
 
-void wasm_generator::generate_exports(const wasm_module& module, std::ostream &output)
+void wasm_generator::generate_exports(const wasm_module& module, std::ostream& output)
 {
     output.put(SECTION_EXPORT);
 
@@ -369,14 +373,12 @@ void wasm_generator::generate_exports(const wasm_module& module, std::ostream &o
     output.write(content.str().c_str(), content.str().size());
 }
 
-void wasm_generator::generate_code(const wasm_module& module, std::ostream &output)
+void wasm_generator::generate_code(const wasm_module& module, std::ostream& output)
 {
     output.put(SECTION_CODE);
 
-    size_t internal_count = std::count_if(module.functions.begin(), module.functions.end(),
-        [](const auto& func_pair) {
-            return !func_pair.is_imported();
-        });
+    size_t internal_count = std::count_if(module.functions.begin(), module.functions.end(), [](const auto& func_pair)
+                                          { return !func_pair.is_imported(); });
 
     std::ostringstream content(std::ios::binary);
     encode_leb128(content, internal_count);
@@ -405,15 +407,15 @@ void wasm_generator::generate_code(const wasm_module& module, std::ostream &outp
     output.write(content.str().c_str(), content.str().size());
 }
 
-void wasm_generator::generate_data(const wasm_module& module, std::ostream &output)
+void wasm_generator::generate_data(const wasm_module& module, std::ostream& output)
 {
     output.put(SECTION_DATA);
 
     std::ostringstream content(std::ios::binary);
     encode_leb128(content, module.data_sections.size());
-    for (const auto& data: module.data_sections)
+    for (const auto& data : module.data_sections)
     {
-        encode_leb128(content, 0);  // active data section in memory 0
+        encode_leb128(content, 0); // active data section in memory 0
 
         content.put(INST_I32_CONST);
         encode_leb128_signed(content, data.init_offset);
@@ -431,7 +433,8 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
 {
     for (const auto& inst : block.instructions)
     {
-        std::visit([&](const auto &t){
+        std::visit([&](const auto& t)
+                   {
             using T = std::decay_t<decltype(t)>;
 
             if constexpr (std::is_same_v<T, wasm_instruction>) {
@@ -439,6 +442,8 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
                     case wasm_op::drop:
                         output.put(INST_DROP);
                         break;
+                    case wasm_op::ret:
+                        output.put(INST_RET);
                     default:
                         break;
                 }
@@ -623,8 +628,8 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
                 output.put(0x40);
                 generate_block(module, function, t, output);
                 output.put(INST_TERMINATOR);
-            }
-        }, *inst);
+            } },
+                   *inst);
     }
 }
 

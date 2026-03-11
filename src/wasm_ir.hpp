@@ -70,6 +70,7 @@ enum class wasm_op
     br,
     br_if,
     call,
+    ret,
 
     typ_const
 };
@@ -224,6 +225,7 @@ public:
     void br(wasm_branch_label branch_label);
     void br_if(wasm_branch_label branch_label);
     void call(const char* function_name);
+    void ret();
 
     wasm_branch_label block_label;
     wasm_block* enclosing_block = nullptr;

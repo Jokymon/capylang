@@ -100,6 +100,7 @@ void normalization::process(source_range, node_function_definition& n)
     n.code.back() = std::make_unique<ast_node>(ast_node{
         .value = node_return_expression{
             .expression = std::move(tail),
+            .is_explicit = false,
         },
         .location = tail_location,
     });

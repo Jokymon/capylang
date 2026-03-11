@@ -182,6 +182,49 @@ fn _start() {
     assert exit_code == 8
 
 
+@pytest.mark.good
+def test_functions_can_be_exited_early():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+global mut g: u32=10u32;
+
+fn f() {
+    let a: u32 = 20;
+    return;
+    g = a;
+}
+
+@export
+fn _start() {
+    f();
+
+    proc_exit(g)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 10
+
+
+@pytest.mark.good
+def test_returned_value_in_functions_is_used():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn f() -> u32 {
+    return 5u32 + 8u32;
+    42u32
+}
+
+@export
+fn _start() {
+    proc_exit(f())
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 13
+
+
 # ----------------------------------------
 # semantic errors
 def test_then_and_else_branch_need_identical_types():

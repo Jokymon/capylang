@@ -488,6 +488,10 @@ void emitter::emit(const node_return_expression& root)
     {
         emit(*root.expression);
     }
+    if (root.is_explicit)
+    {
+        cur_block->ret();
+    }
 }
 
 void emitter::emit(const node_expression& root)

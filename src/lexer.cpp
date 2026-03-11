@@ -77,6 +77,8 @@ std::string token_symbol::to_string() const
             return "mut";
         case sym_kw_record:
             return "record";
+        case sym_kw_return:
+            return "return";
         case sym_kw_while:
             return "while";
         case sym_arrow:
@@ -592,6 +594,10 @@ token lexer::parse_identifier_or_keyword()
     else if (id_name == "record")
     {
         return token_symbol{start_position, look_ahead_position, token_symbol::sym_kw_record};
+    }
+    else if (id_name == "return")
+    {
+        return token_symbol{start_position, look_ahead_position, token_symbol::sym_kw_return};
     }
     else if (id_name == "as")
     {

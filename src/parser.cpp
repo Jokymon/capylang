@@ -794,6 +794,28 @@ ast_node parser::parse_expression(int min_precedence)
     {
         return parse_let_expression();
     }
+    else if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_return))
+    {
+        // eat the 'return' keyword
+        auto start = capy_lexer->expect<token_symbol>().location;
+        source_position end;
+        std::unique_ptr<ast_node> returned_expression = nullptr;
+        if (!capy_lexer->ahead_is_sym(token_symbol::sym_semicolon))
+        {
+            returned_expression = std::make_unique<ast_node>(parse_expression());
+            end = returned_expression->location.end;
+        }
+        else
+        {
+            end = capy_lexer->current_source_position();
+        }
+        return make_located<node_return_expression>(
+            start.start,
+            end,
+            std::move(returned_expression),
+            true
+        );
+    }
     else
     {
         lhs = parse_primary();
