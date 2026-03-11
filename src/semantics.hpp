@@ -41,4 +41,6 @@ private:
 
     context& parse_context;
     diagnostic_bag diagnostics_;
+
+    node_function_head* current_func_head;
 };

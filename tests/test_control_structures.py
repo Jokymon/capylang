@@ -298,3 +298,35 @@ fn _start() {
 
     assert exit_code == 1
     assert "'then' and 'else' branches have mismatching types 'u32' and 's32'" in normalized
+
+
+@pytest.mark.parse_error
+def test_returns_with_mismatched_types_is_wrong():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn f(value: bool) -> u32 {
+    if (value) {
+        return 10u32;
+    }
+    else {
+        return 5s32;
+    }
+    // TODO: currently we still need to explicitly create a returned value in
+    // the last line of the function, we are not yet clever enough to figure out
+    // that all control paths in the if already exit the function and we always
+    // have a return value
+    0u32
+}
+
+@export
+fn _start() {
+    proc_exit(f(false))
+}"""
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
+
+    assert exit_code == 1
+    assert (
+        tools.normalize_filename_from_output(stderr)
+        == "filename:9:16: Returned expression has type 's32' but function expects 'u32'\n"
+    )

@@ -105,6 +105,7 @@ semantic_analyser::semantic_analyser(context& ctx)
 : ast_visitor()
 , diagnostic_emitter(diagnostic_phase::semantics)
 , parse_context(ctx)
+, current_func_head(nullptr)
 {
 }
 
@@ -391,7 +392,9 @@ void semantic_analyser::process(source_range location, node_function_definition&
         return;
     }
 
+    current_func_head = n.function_head.get();
     visit_nodes(n);
+    current_func_head = nullptr;
 
     type_id actual_return_type = parse_context.intern_primitive(primitive_type::Void);
     source_range error_location;
@@ -425,6 +428,25 @@ void semantic_analyser::process(source_range location, node_discard_expression& 
 void semantic_analyser::process(source_range location, node_return_expression& n)
 {
     visit_nodes(n);
+
+    source_position error_position = location.end;
+    type_id return_expression_type = parse_context.intern_primitive(primitive_type::Void);
+    if (n.expression)
+    {
+        return_expression_type = assigned_node_type(*n.expression, parse_context);
+        error_position = n.expression->location.start;
+    }
+
+    auto declared_return_type = parse_context.function_return_type(current_func_head->signature.function_type);
+
+    if (declared_return_type.value() != return_expression_type)
+    {
+        append_error_at(
+            error_position,
+            "Returned expression has type '" + parse_context.repr(return_expression_type) + "' but function expects '" +
+                parse_context.repr(declared_return_type.value()) + "'"
+        );
+    }
 }
 
 void semantic_analyser::process(source_range location, node_expression& n)
