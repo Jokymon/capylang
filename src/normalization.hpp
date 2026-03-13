@@ -1,5 +1,5 @@
 #pragma once
-#include "ast_visitor.hpp"
+#include "ast.hpp"
 #include "parser.hpp"
 
 class normalization : public ast_visitor

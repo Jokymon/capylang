@@ -1,5 +1,5 @@
 #pragma once
-#include "ast_visitor.hpp"
+#include "ast.hpp"
 #include "diagnostics.hpp"
 #include "parser.hpp"
 
