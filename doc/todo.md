@@ -32,6 +32,7 @@
  * I saw that let expressions with init can be terminated without a ; and still be correctly parsed. Are we now in JS
    territory? Is this really what we want?
  * Unknown/illegal tokens create an endless loop for the parser
+ * Turn explicit import structure for functions into an attribute for regular functions
 
 ### Implement an (H)IR
 
