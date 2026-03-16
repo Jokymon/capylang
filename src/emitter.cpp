@@ -381,16 +381,7 @@ void emitter::emit(const node_let_expression& let_expression)
     }
 
     emit(*let_expression.init_expression);
-    const auto& symbol = parse_context.symbol_at(let_expression.symbol_ref);
-    if (parse_context.is_primitive_type(symbol.symbol_type, primitive_type::String))
-    {
-        cur_block->local_set((symbol.name + "_ptr").c_str());
-        cur_block->local_set((symbol.name + "_size").c_str());
-    }
-    else
-    {
-        cur_block->local_set(symbol.name.c_str());
-    }
+    lowering->lower_variable_ref_write(let_expression.symbol_ref, *cur_block);
 }
 
 void emitter::emit(const node_record_initialisation& record_init)
@@ -558,8 +549,8 @@ void emitter::emit(const node_expression& root)
 void emitter::emit(const node_string_literal& literal)
 {
     uint32_t ptr = current_module->string_literals[literal.table_index].start_address;
-    cur_block->const_val(wasm_type::i32, literal.size);
     cur_block->const_val(wasm_type::i32, ptr);
+    cur_block->const_val(wasm_type::i32, literal.size);
 }
 
 void emitter::emit(const node_char_literal& literal)
@@ -583,15 +574,10 @@ void emitter::emit(const node_var_reference& variable)
     // handle the storing of the value differently
     if (variable.context == assign_context::rhs)
     {
-        const auto& symbol = parse_context.symbol_at(variable.symbol_ref);
-        if (symbol.kind == symbol_kind::global_var)
-        {
-            cur_block->global_get(symbol.name.c_str());
-        }
-        else
-        {
-            cur_block->local_get(symbol.name.c_str());
-        }
+        // TODO: the decision for LHS/RHS should eventually move into an IR step
+        // which resolves these into a Load(Place) for LHS and a
+        // Store(Place, value) for RHS.
+        lowering->lower_variable_ref_read(variable.symbol_ref, *cur_block);
     }
 }
 

@@ -82,3 +82,48 @@ void lower_cabi::lower_function_arguments(const node_function_head& func_head, a
         );
     }
 }
+
+void lower_cabi::lower_variable_ref_read(symbol_id symbol_ref, wasm_block& output_block)
+{
+    const auto& symbol = parse_context.symbol_at(symbol_ref);
+
+    if (parse_context.is_primitive_type(symbol.symbol_type, primitive_type::String))
+    {
+        if (symbol.kind == symbol_kind::global_var)
+        {
+            output_block.global_get((symbol.name + "_ptr").c_str());
+            output_block.global_get((symbol.name + "_size").c_str());
+        }
+        else
+        {
+            output_block.local_get((symbol.name + "_ptr").c_str());
+            output_block.local_get((symbol.name + "_size").c_str());
+        }
+    }
+    else
+    {
+        if (symbol.kind == symbol_kind::global_var)
+        {
+            output_block.global_get(symbol.name.c_str());
+        }
+        else
+        {
+            output_block.local_get(symbol.name.c_str());
+        }
+    }
+}
+
+void lower_cabi::lower_variable_ref_write(symbol_id symbol_ref, wasm_block& output_block)
+{
+    const auto& symbol = parse_context.symbol_at(symbol_ref);
+
+    if (parse_context.is_primitive_type(symbol.symbol_type, primitive_type::String))
+    {
+        output_block.local_set((symbol.name + "_size").c_str());
+        output_block.local_set((symbol.name + "_ptr").c_str());
+    }
+    else
+    {
+        output_block.local_set(symbol.name.c_str());
+    }
+}

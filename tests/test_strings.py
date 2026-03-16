@@ -157,6 +157,25 @@ fn _start() {
     assert exit_code == 3
 
 
+@pytest.mark.good
+def test_strings_can_be_passed_as_arguments():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn len(s: string) -> u32
+{
+    s.size
+}
+
+@export
+fn _start() {
+    proc_exit(len("hello"))
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 5
+
+
 # -------------------------------------------------------
 # compile errors
 @pytest.mark.parse_error

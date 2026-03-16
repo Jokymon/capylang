@@ -7,6 +7,18 @@ record iovec {
     len: u32,
 };
 
+fn print_s(s: string)
+{
+    let mut res: *u32 = 96 as *u32;
+
+    let v: iovec = iovec{
+        buf = s.ptr as *u32,
+        len = s.size as u32,
+    };
+
+    fd_write(1u32, v as *u32, 1u32, res);   
+}
+
 fn print(value: u32)
 {
     // allocate memory for the number output
@@ -37,15 +49,10 @@ fn _start() {
     let mut res: *u32 = 96 as *u32;
 
     let s: string = "Hello \\strings 😀\u{932}\u{4dc} b\n";
-
-    let v: iovec = iovec{
-        buf = s.ptr as *u32,
-        len = s.size as u32 + 1u32,
-    };
-
-    fd_write(1u32, v as *u32, 1u32, res);
+    print_s(s);
 
     print(1234u32);
+    print_s("\n");
 
     // let count: *u32 = 0 as *u32;
     // let size: *u32 = 0 as *u32;
