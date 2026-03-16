@@ -423,9 +423,9 @@ global mut heap_ptr: u32 = 1024u32;
 
 fn cabi_realloc(originalPtr: u32, originalSize: u32, alignment: u32, newSize: u32) -> u32
 {
-    let old_heap: u32 = heap_ptr;
-    heap_ptr = heap_ptr + newSize;
-    old_heap
+    let alloc_address: u32 = heap_ptr + (alignment - (heap_ptr%alignment));
+    heap_ptr = alloc_address + newSize;
+    alloc_address
 }
 )";
     std::istringstream lib_stream{library_code};
