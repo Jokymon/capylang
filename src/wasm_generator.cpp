@@ -283,7 +283,7 @@ void wasm_generator::generate_imports(const wasm_module& module, std::ostream& o
             continue;
 
         encode_string(content, func.ns);
-        encode_string(content, func.name);
+        encode_string(content, func.import_name);
 
         content.put(EXTERNAL_TYPE_FUNC);
         size_t index = intern_func_type(func);

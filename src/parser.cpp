@@ -587,6 +587,16 @@ node_import_definition parser::parse_import_definition()
         }
         auto alias_token = capy_lexer->expect<token_identifier>();
         alias_name = alias_token.name;
+
+        auto function_alias_symbol_id = parse_context.create_symbol(symbol{
+            .name = alias_token.name,
+            .symbol_type = function_head.signature.function_type,
+            .signature = function_head.signature,
+            .kind = symbol_kind::function,
+            .mutab = false,
+            .is_assigned = true,
+        });
+        current_scope->symbol_table[alias_token.name] = function_alias_symbol_id;
     }
 
     if (!capy_lexer->ahead_is_sym(token_symbol::sym_semicolon))

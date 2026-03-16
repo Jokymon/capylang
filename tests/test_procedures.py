@@ -149,7 +149,8 @@ fn _start() {
 
 # ------------------------------------------------------------------
 # import specific tests
-@pytest.mark.skip(reason="There is a bug in proper alias handling")
+#@pytest.mark.skip(reason="There is a bug in proper alias handling")
+@pytest.mark.good
 def test_import_alias_name_can_be_used():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as pe;

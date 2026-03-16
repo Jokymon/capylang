@@ -245,9 +245,16 @@ void emitter::emit(const node_import_definition& import_def)
     {
         args.push_back({param_name, from_type_kind(parse_context, param_typ)});
     }
-    // TODO: we should actually use the alias name here if it is defined
-    auto& import_func = cur_mod->create_function(import_def.function_head->name.c_str(), from_type_kind(parse_context, parse_context.function_return_type(import_def.function_head->signature.function_type).value()), args);
-    import_func.import_from(import_def.ns_name.c_str(), import_def.function_head->name.c_str());
+
+    std::string imported_function_name = import_def.function_head->name;
+    std::string internal_function_name = imported_function_name;
+
+    if (import_def.alias.has_value())
+    {
+        internal_function_name = import_def.alias.value();
+    }
+    auto& import_func = cur_mod->create_function(internal_function_name.c_str(), from_type_kind(parse_context, parse_context.function_return_type(import_def.function_head->signature.function_type).value()), args);
+    import_func.import_from(import_def.ns_name.c_str(), imported_function_name.c_str());
 }
 
 void emitter::emit(const node_global_definition& global_def)

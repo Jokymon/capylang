@@ -77,7 +77,7 @@ fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:2:32: Expecting a function name\nfilename:6:5: Function 'proc_exit' is not defined\n"
+        == "filename:2:32: Expecting a function name\n"
     )
 
 
