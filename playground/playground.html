@@ -2,44 +2,80 @@
 <html>
 
 <head>
+    <!-- Basic idea according to examples from https://github.com/easywasm/wasi -->
+    <script type="importmap">
+        {
+            "imports": {
+                "@easywasm/wasi": "./playground/easywasm_wasi.js",
+                "web-zen-dev": "./playground/web-devfs.js"
+            }
+        }
+    </script>
     <script type="module">
-        import { TinyWASI } from "./playground/TinyWASI.js";
+        import { WasiPreview1 } from '@easywasm/wasi';
+        import { framebuffer } from 'web-zen-dev';
 
+        const d = new TextDecoder();
         let consoleWindow;
+        let canvas;
 
-        let tinywasi = new TinyWASI();
-        tinywasi.consoleWrite = (text) => {
-            consoleWindow.innerHTML += text.replace("\n", "<br />");
-        };
+        //-------------------------------------------------------------
 
-        let imports = {
-            ...tinywasi.imports
-        };
-        imports.wasi_snapshot_preview1.proc_exit = function (exitCode) {
+        const wasi_snapshot_preview1 = new WasiPreview1();
+        wasi_snapshot_preview1.stdout = s => {
+            let t = d.decode(s);
+            consoleWindow.innerHTML += t.replace("\n", "<br />");
+        }
+
+        const {
+            instance: { exports }
+        } = await WebAssembly.instantiateStreaming(fetch('example.wasm'), {
+                wasi_snapshot_preview1
+        });
+
+        //-------------------------------------------------------------
+
+        function runApplication() {
+            let res = wasi_snapshot_preview1.start(exports);
+
             const exitCodeEl = document.getElementById("exitCode");
-            exitCodeEl.value = exitCode;
+            exitCodeEl.value = res;
             exitCodeEl.classList.add('flash');
             setTimeout(() => {
                 exitCodeEl.classList.remove('flash');
             }, 500);
-            console.log("appplication exit code: " + exitCode);
-        };
-
-        let response = await fetch('./example.wasm');
-        let source = new Uint8Array(await response.arrayBuffer());
-        const { module, instance } = await WebAssembly.instantiate(source, imports);
-
-        tinywasi.initialize(instance);
-
-        function runApplication() {
-            instance.exports._start();
+            console.log("appplication exit code: " + res);
         }
+
+        function clearConsole() {
+            consoleWindow.innerHTML = "";
+        }
+
+        //-------------------------------------------------------------
 
         function attachGui() {
             const btn = document.getElementById('runButton');
             btn.addEventListener('click', runApplication);
 
+            const btnClear = document.getElementById('clearConsole');
+            btnClear.addEventListener('click', clearConsole);
+
             consoleWindow = document.getElementById('consoleOutput');
+            canvas = document.getElementById('fb');
+
+            const fb = framebuffer({ canvas });
+            const screen = new Uint8Array(canvas.width * canvas.height * 4);
+            function fillFb() {
+                for (let i = 0; i < screen.byteLength; i += 4) {
+                    screen[i] = Math.random() * 255
+                    screen[i + 1] = Math.random() * 255
+                    screen[i + 2] = Math.random() * 255
+                    screen[i + 3] = 255
+                }
+                fb.write({ device: { driver: {  } } }, screen);
+                //requestAnimationFrame(fillFb);
+            }
+            fillFb();
         }
 
         if (document.readyState === 'loading') {
@@ -54,6 +90,10 @@
         }
         #exitCodeLbl {
             margin-left: 3em;
+        }
+
+        div:has(#clearConsole) {
+            margin-top: 1em;
         }
 
         fieldset {
@@ -86,11 +126,16 @@
     <button id="runButton">Run application</button>
     <label id="exitCodeLbl">Exit code:<input id="exitCode"></input></label>
 
+    <div>
+        <button id="clearConsole">Clear Console</button>
+    </div>
     <fieldset>
         <legend>Console output of the application</legend>
         <div id="consoleOutput">
         </div>
     </fieldset>
+
+    <canvas id="fb"></canvas>
 </body>
 
 </html>
