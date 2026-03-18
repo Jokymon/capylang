@@ -229,3 +229,31 @@ fn _start() {
         tools.normalize_filename_from_output(stderr)
         == "filename:10:16: Record field 'field1' not initialised\n"
     )
+
+
+@pytest.mark.parse_error
+def test_failure_missing_and_unknown_fields_in_initialisation():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+record s {
+    field1: u32,
+    field2: u32,
+};
+
+@export
+fn _start() {
+    let v: s = s{
+        field1=12u32,
+        extra=18u32,
+    };
+    proc_exit(v.field1)
+}
+"""
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
+
+    assert exit_code == 1
+    assert (
+        tools.normalize_filename_from_output(stderr)
+        == "filename:11:16: Record field 'field2' not initialised\nfilename:13:9: Unknown record field 'extra'\n"
+    )

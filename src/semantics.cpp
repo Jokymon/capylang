@@ -1,6 +1,7 @@
 #include "semantics.hpp"
 #include <assert.h>
 #include <iostream>
+#include <unordered_set>
 
 type_id assigned_node_type(const ast_node& node, context& ctx)
 {
@@ -197,18 +198,24 @@ void semantic_analyser::process(source_range location, node_record_initialisatio
 {
     auto t = std::get<type_kind>(parse_context.types[n.type_spec]);
     const record_type& r = std::get<record_type>(t);
+
+    std::unordered_set<std::string> expected_fields;
+    expected_fields.reserve(r.fields.size());
     for (const auto& field : r.fields)
     {
-        bool is_initialised = false;
-        for (const auto& init : n.initialisations)
-        {
-            if (field.first == init.field_name)
-            {
-                is_initialised = true;
-                break;
-            }
-        }
-        if (!is_initialised)
+        expected_fields.insert(field.first);
+    }
+
+    std::unordered_set<std::string> initialised_fields;
+    initialised_fields.reserve(n.initialisations.size());
+    for (const auto& init : n.initialisations)
+    {
+        initialised_fields.insert(init.field_name);
+    }
+
+    for (const auto& field : r.fields)
+    {
+        if (!initialised_fields.contains(field.first))
         {
             append_error_at(
                 location.start,
@@ -221,16 +228,7 @@ void semantic_analyser::process(source_range location, node_record_initialisatio
 
     for (const auto& init : n.initialisations)
     {
-        bool is_actual_field = false;
-        for (const auto& field : r.fields)
-        {
-            if (field.first == init.field_name)
-            {
-                is_actual_field = true;
-                break;
-            }
-        }
-        if (!is_actual_field)
+        if (!expected_fields.contains(init.field_name))
         {
             append_error_at(
                 init.location,
