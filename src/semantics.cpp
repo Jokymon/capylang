@@ -246,8 +246,7 @@ void semantic_analyser::process(source_range location, node_field_deref& n)
             location.start,
             "Dereferencing non-record variable or field '" + n.repr_obj() + "'"
         );
-        // TODO: if we already know that its not a record type, then
-        // we can also skip the check for a valid field name
+        return;
     }
 
     if (parse_context.is_primitive_type(n.object_type, primitive_type::String))

@@ -96,7 +96,7 @@ fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:7:15: Dereferencing non-record variable or field 'v'\nfilename:7:15: Unknown record field 'field1'\nfilename:7:5: Function 'proc_exit' expects signature (u32); called with signature (!unassigned)\n"
+        == "filename:7:15: Dereferencing non-record variable or field 'v'\nfilename:7:5: Function 'proc_exit' expects signature (u32); called with signature (!unassigned)\n"
     )
 
 
@@ -149,7 +149,7 @@ fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:12:16: Dereferencing non-record variable or field 'w'\nfilename:12:16: Unknown record field 'a'\n"
+        == "filename:12:16: Dereferencing non-record variable or field 'w'\n"
     )
 
 
