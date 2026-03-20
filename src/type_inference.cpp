@@ -151,6 +151,24 @@ void type_inference::process(source_range location, node_expression& n)
 {
     (void)location;
     visit_nodes(n);
+
+    switch (n.operation)
+    {
+        case operator_type::op_plus:
+        case operator_type::op_minus:
+        case operator_type::op_division:
+        case operator_type::op_multiply:
+        case operator_type::op_modulus:
+            parse_context.constraints.emplace_back(
+                equal_constraint{
+                    assigned_node_type(*n.left, parse_context),
+                    assigned_node_type(*n.right, parse_context)
+                }
+            );
+            break;
+        default:
+            break;
+    }
 }
 
 void type_inference::process(source_range location, node_if_expression& n)
