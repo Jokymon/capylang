@@ -7,6 +7,7 @@
    --> Wasmtime or other WASM runtimes
 
  * Extend comparisons with gt, lt, gte, lte and logic operators with short circuit eval
+ * add 64-bit version of numbers
  * add floating point number types
  * Add unicode code point support for characters (so far we only have it in strings)
  * design and add support for vector numeric types
@@ -21,6 +22,8 @@
  * Add an option to the compiler to just dump the sequence of tokens
  * Add --help option to the compiler
  * Add intrinsics
+ * Error messages from diagnostics bag don't seem to contain the file name; Also the "Returned value of type ... doesn't
+   match the declared return type ..." message seems to always be reported on line 1 column 1. 
 
 ### Implement an (H)IR
 
