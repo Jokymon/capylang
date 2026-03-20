@@ -1311,15 +1311,7 @@ ast_node parser::parse_primary()
     }
     else if (capy_lexer->ahead_is<token_string_literal>())
     {
-        auto literal = capy_lexer->expect<token_string_literal>();
-        auto literal_location = literal.location;
-        auto literal_index = collect_literal(literal.str);
-        return make_located<node_string_literal>(
-            literal_location.start,
-            literal_location.end,
-            literal_index,
-            literal.str.size()
-        );
+        return parse_string();
     }
     else if (capy_lexer->ahead_is<token_char_literal>())
     {
@@ -1451,6 +1443,19 @@ ast_node parser::parse_number()
         lhs_location.end,
         lhs.number,
         number_type.value()
+    );
+}
+
+ast_node parser::parse_string()
+{
+    auto literal = capy_lexer->expect<token_string_literal>();
+    auto literal_location = literal.location;
+    auto literal_index = collect_literal(literal.str);
+    return make_located<node_string_literal>(
+        literal_location.start,
+        literal_location.end,
+        literal_index,
+        literal.str.size()
     );
 }
 

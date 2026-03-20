@@ -277,6 +277,7 @@ private:
     ast_node parse_primary();
     type_id parse_type_reference();
     ast_node parse_number();
+    ast_node parse_string();
 
     void parse_body(std::vector<std::unique_ptr<ast_node>>& body);
 
