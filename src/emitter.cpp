@@ -517,6 +517,18 @@ void emitter::emit(const node_expression& root)
         case op_notequals:
             cur_block->ne(wasm_type::i32);
             break;
+        case op_lessthan:
+            cur_block->lt(wasm_type::i32);
+            break;
+        case op_lessthan_equal:
+            cur_block->lte(wasm_type::i32);
+            break;
+        case op_greaterthan:
+            cur_block->gt(wasm_type::i32);
+            break;
+        case op_greaterthan_equal:
+            cur_block->gte(wasm_type::i32);
+            break;
         case op_assignment:
             if (std::holds_alternative<node_pointer_deref>(root.left->value))
             {

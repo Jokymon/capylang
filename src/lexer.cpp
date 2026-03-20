@@ -97,6 +97,14 @@ std::string token_symbol::to_string() const
             return "==";
         case sym_equal:
             return "=";
+        case sym_lt:
+            return "<";
+        case sym_lte:
+            return "<=";
+        case sym_gt:
+            return ">";
+        case sym_gte:
+            return ">=";
         case sym_noteq:
             return "!=";
         case sym_minus:
@@ -139,6 +147,10 @@ int get_precedence(operator_type op_type)
             return 3;
         case op_equals:
         case op_notequals:
+        case op_lessthan:
+        case op_lessthan_equal:
+        case op_greaterthan:
+        case op_greaterthan_equal:
             return 2;
         case op_assignment:
             return 1;
@@ -167,6 +179,14 @@ operator_type op_from_symbol(const token_symbol& symbol)
             return op_equals;
         case token_symbol::sym_noteq:
             return op_notequals;
+        case token_symbol::sym_lt:
+            return op_lessthan;
+        case token_symbol::sym_lte:
+            return op_lessthan_equal;
+        case token_symbol::sym_gt:
+            return op_greaterthan;
+        case token_symbol::sym_gte:
+            return op_greaterthan_equal;
         case token_symbol::sym_kw_as:
             return op_conversion;
         default:
@@ -225,6 +245,14 @@ std::string repr_op(operator_type op)
             return "==";
         case op_notequals:
             return "!=";
+        case op_lessthan:
+            return "<";
+        case op_lessthan_equal:
+            return "<=";
+        case op_greaterthan:
+            return ">";
+        case op_greaterthan_equal:
+            return ">=";
         case op_conversion:
             return "as";
     }
@@ -305,6 +333,10 @@ bool lexer::ahead_is_operator()
                     case token_symbol::sym_percent:
                     case token_symbol::sym_equal:
                     case token_symbol::sym_eqeq:
+                    case token_symbol::sym_lt:
+                    case token_symbol::sym_lte:
+                    case token_symbol::sym_gt:
+                    case token_symbol::sym_gte:
                     case token_symbol::sym_noteq:
                     case token_symbol::sym_kw_as:
                         return true;
@@ -490,6 +522,28 @@ token lexer::parse_token()
             return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_eqeq};
         }
         return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_equal};
+    }
+    else if (ch == '<')
+    {
+        auto start_position = look_ahead_position;
+        get_char();
+        if (input_.peek() == '=')
+        {
+            get_char();
+            return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_lte};
+        }
+        return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_lt};
+    }
+    else if (ch == '>')
+    {
+        auto start_position = look_ahead_position;
+        get_char();
+        if (input_.peek() == '=')
+        {
+            get_char();
+            return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_gte};
+        }
+        return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_gt};
     }
     else if (ch == '@')
     {

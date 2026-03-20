@@ -207,6 +207,26 @@ void wasm_block::eqz(wasm_type type)
     instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type(wasm_op::eqz, type)));
 }
 
+void wasm_block::lt(wasm_type type)
+{
+    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type_sign(wasm_op::ilt, type)));
+}
+
+void wasm_block::lte(wasm_type type)
+{
+    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type_sign(wasm_op::ilte, type)));
+}
+
+void wasm_block::gt(wasm_type type)
+{
+    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type_sign(wasm_op::igt, type)));
+}
+
+void wasm_block::gte(wasm_type type)
+{
+    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type_sign(wasm_op::igte, type)));
+}
+
 void wasm_block::br(wasm_branch_label branch_label)
 {
     instructions.push_back(std::make_unique<wasm_statement>(wasm_op_label(wasm_op::br, branch_label)));

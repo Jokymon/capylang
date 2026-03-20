@@ -382,6 +382,18 @@ void wat_generator::generate(const wasm_op_type_sign& inst, std::ostream& output
         case wasm_op::irem:
             output << ".rem_";
             break;
+        case wasm_op::ilt:
+            output << ".lt_";
+            break;
+        case wasm_op::ilte:
+            output << ".le_";
+            break;
+        case wasm_op::igt:
+            output << ".gt_";
+            break;
+        case wasm_op::igte:
+            output << ".ge_";
+            break;
         default:
             break;
     }

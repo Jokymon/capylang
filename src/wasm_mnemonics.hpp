@@ -35,6 +35,14 @@ const char INST_F64_CONST = '\x44';
 const char INST_I32_EQZ = '\x45';
 const char INST_I32_EQ = '\x46';
 const char INST_I32_NE = '\x47';
+const char INST_I32_LT_S = '\x48';
+const char INST_I32_LT_U = '\x49';
+const char INST_I32_GT_S = '\x4a';
+const char INST_I32_GT_U = '\x4b';
+const char INST_I32_LE_S = '\x4c';
+const char INST_I32_LE_U = '\x4d';
+const char INST_I32_GE_S = '\x4e';
+const char INST_I32_GE_U = '\x4f';
 
 const char INST_I32_CLZ = '\x67';
 const char INST_I32_CTZ = '\x68';

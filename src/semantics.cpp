@@ -482,7 +482,9 @@ void semantic_analyser::process(source_range location, node_expression& n)
             );
         }
     }
-    else if ((n.operation == op_equals) || (n.operation == op_notequals))
+    else if ((n.operation == op_equals) || (n.operation == op_notequals) || (n.operation == op_lessthan) ||
+             (n.operation == op_lessthan_equal) || (n.operation == op_greaterthan) ||
+             (n.operation == op_greaterthan_equal))
     {
         n.assigned_type = parse_context.intern_primitive(primitive_type::Boolean);
     }

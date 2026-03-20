@@ -66,6 +66,10 @@ enum class wasm_op
     eq,
     ne,
     eqz,
+    ilt,
+    ilte,
+    igt,
+    igte,
 
     br,
     br_if,
@@ -222,6 +226,10 @@ public:
     void eq(wasm_type type);
     void ne(wasm_type type);
     void eqz(wasm_type type);
+    void lt(wasm_type type);
+    void lte(wasm_type type);
+    void gt(wasm_type type);
+    void gte(wasm_type type);
     void br(wasm_branch_label branch_label);
     void br_if(wasm_branch_label branch_label);
     void call(const char* function_name);

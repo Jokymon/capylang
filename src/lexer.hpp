@@ -67,6 +67,10 @@ struct token_symbol : public located_token
         sym_dquote,
         sym_eqeq,
         sym_equal,
+        sym_gt,
+        sym_gte,
+        sym_lt,
+        sym_lte,
         sym_minus,
         sym_noteq,
         sym_percent,
@@ -98,6 +102,10 @@ enum operator_type
 
     op_equals,
     op_notequals,
+    op_lessthan,
+    op_lessthan_equal,
+    op_greaterthan,
+    op_greaterthan_equal,
 
     op_conversion,
 };

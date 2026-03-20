@@ -78,6 +78,81 @@ def test_binary_multiplication():
     assert exit_code == 15
 
 
+@pytest.mark.good
+def test_less_than_works_for_u32():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let b: bool = 5u32 < 7u32;
+    proc_exit(5u32 + b as u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 6
+
+
+@pytest.mark.good
+def test_less_than_or_equal_works_for_u32():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let b: bool = 5u32 <= 5u32;
+    proc_exit(5u32 + b as u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 6
+
+
+@pytest.mark.good
+def test_less_than_works_for_s32():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let b: bool = -10s32 < -5s32;
+    proc_exit(5u32 + b as u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 6
+
+
+@pytest.mark.good
+def test_greater_than_works_for_u32():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let b: bool = 37u32 > 10u32;
+    proc_exit(5u32 + b as u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 6
+
+
+@pytest.mark.good
+def test_greater_than_works_for_s32():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let b: bool = -10s32 > -44s32;
+    proc_exit(5u32 + b as u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 6
+
+
 def test_multiple_operations():
     code = """proc_exit(5u32+ 2u32+3u32)"""
     code = tools.expression_to_full_program(code)

@@ -523,6 +523,30 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
                         else
                             output.put(INST_I32_REM_U);
                         break;
+                    case wasm_op::ilt:
+                        if (is_wasm_type_signed(t.value_type))
+                            output.put(INST_I32_LT_S);
+                        else
+                            output.put(INST_I32_LT_U);
+                        break;
+                    case wasm_op::ilte:
+                        if (is_wasm_type_signed(t.value_type))
+                            output.put(INST_I32_LE_S);
+                        else
+                            output.put(INST_I32_LE_U);
+                        break;
+                    case wasm_op::igt:
+                        if (is_wasm_type_signed(t.value_type))
+                            output.put(INST_I32_GT_S);
+                        else
+                            output.put(INST_I32_GT_U);
+                        break;
+                    case wasm_op::igte:
+                        if (is_wasm_type_signed(t.value_type))
+                            output.put(INST_I32_GE_S);
+                        else
+                            output.put(INST_I32_GE_U);
+                        break;
                     default:
                         break;
                 }
