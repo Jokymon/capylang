@@ -154,10 +154,11 @@ std::optional<size_t> record_field_offset(context& ctx, type_id idx, const std::
     }
 
     const auto& type_spec = ctx.types[idx];
-    const record_type& r = std::get<record_type>(std::get<type_kind>(type_spec));
+    auto* r = get_type_from_node<record_type>(type_spec);
+    assert(r != nullptr && "Compiler error");
 
     size_t offset = 0;
-    for (const auto& field_definition : r.fields)
+    for (const auto& field_definition : r->fields)
     {
         if (field_definition.first == field_name)
         {
@@ -238,10 +239,11 @@ void emitter::emit(const node_import_definition& import_def)
     auto function_name = import_def.function_head->name;
 
     auto function_type_entry = parse_context.types[import_def.function_head->signature.function_type];
-    auto func_type = std::get<function_type>(std::get<type_kind>(function_type_entry));
+    auto* func_type = get_type_from_node<function_type>(function_type_entry);
+    assert(func_type != nullptr && "Compiler error");
 
     const auto& parameter_names = import_def.function_head->signature.parameters;
-    for (auto [param_name, param_typ] : std::views::zip(parameter_names, func_type.parameter_types))
+    for (auto [param_name, param_typ] : std::views::zip(parameter_names, func_type->parameter_types))
     {
         args.push_back({param_name, from_type_kind(parse_context, param_typ)});
     }
@@ -401,14 +403,11 @@ void emitter::emit(const node_record_initialisation& record_init)
     cur_block->call("cabi_realloc");
     cur_block->local_set("_rec_ptr");
 
-    // TODO: semantic check should make sure, that the type_spec really is a record
     const auto& type_spec = parse_context.types[record_init.type_spec];
-    auto& rec_type = std::get<record_type>(std::get<type_kind>(type_spec));
+    auto* rec_type = get_type_from_node<record_type>(type_spec);
 
     size_t offset = 0;
-    // TODO: make the inverse check if any field init tries to init a field that isn't
-    // in the definition
-    for (const auto& field : rec_type.fields)
+    for (const auto& field : rec_type->fields)
     {
         // get the address for the field to initialise
         cur_block->local_get("_rec_ptr");
@@ -425,7 +424,6 @@ void emitter::emit(const node_record_initialisation& record_init)
                 break;
             }
         }
-        // TODO: Make sure that every field of the type definition is initialised
 
         // save the value in the record at the current offset
         cur_block->store(wasm_type::i32, offset);

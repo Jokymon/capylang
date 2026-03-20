@@ -697,10 +697,11 @@ node_function_definition parser::parse_function_definition()
     current_scope = func_scope.get();
 
     auto function_type_entry = parse_context.types[function_head.signature.function_type];
-    auto func_type = std::get<function_type>(std::get<type_kind>(function_type_entry));
+    auto* func_type = get_type_from_node<function_type>(function_type_entry);
+    assert(func_type != nullptr && "Compiler error");
 
     const auto& parameter_names = function_head.signature.parameters;
-    for (auto [param_name, param_typ] : std::views::zip(parameter_names, func_type.parameter_types))
+    for (auto [param_name, param_typ] : std::views::zip(parameter_names, func_type->parameter_types))
     {
         auto param_symbol_id = parse_context.create_symbol(symbol{
             .name = param_name,

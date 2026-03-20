@@ -833,10 +833,10 @@ std::optional<size_t> anf_generator::record_field_index(type_id record_type_id, 
     }
 
     const auto& entry = parse_context.types[resolved];
-    const auto& rec = std::get<record_type>(std::get<type_kind>(entry));
-    for (size_t i = 0; i < rec.fields.size(); ++i)
+    const auto* rec = get_type_from_node<record_type>(entry);
+    for (size_t i = 0; i < rec->fields.size(); ++i)
     {
-        if (rec.fields[i].first == field_name)
+        if (rec->fields[i].first == field_name)
         {
             return i;
         }

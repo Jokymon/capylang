@@ -200,6 +200,16 @@ using type_constraint = std::variant<
 // types in one parsing pass
 using type_node = std::variant<type_kind, type_var>;
 
+template <class T>
+const T* get_type_from_node(const type_node& node)
+{
+    const auto* kind = std::get_if<type_kind>(&node);
+    if (!kind)
+        return nullptr;
+
+    return std::get_if<T>(kind);
+}
+
 enum class symbol_kind
 {
     error,

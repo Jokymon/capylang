@@ -184,9 +184,9 @@ void semantic_analyser::process(source_range location, node_pointer_deref& n)
     }
     else
     {
-        auto t = std::get<type_kind>(parse_context.types[expression_type]);
-        auto ptr_type = std::get<pointer_type>(t);
-        n.assigned_type = ptr_type.to;
+        auto* ptr_type = get_type_from_node<pointer_type>(parse_context.types[expression_type]);
+        assert(ptr_type != nullptr && "Compiler error, in semantics check, the type of a pointer ref should be a pointer");
+        n.assigned_type = ptr_type->to;
     }
 }
 
@@ -196,12 +196,12 @@ void semantic_analyser::process(source_range location, node_record_definition& n
 
 void semantic_analyser::process(source_range location, node_record_initialisation& n)
 {
-    auto t = std::get<type_kind>(parse_context.types[n.type_spec]);
-    const record_type& r = std::get<record_type>(t);
+    auto* r = get_type_from_node<record_type>(parse_context.types[n.type_spec]);
+    assert(r != nullptr && "Compiler error, semantics check should be on a record initialisation");
 
     std::unordered_set<std::string> expected_fields;
-    expected_fields.reserve(r.fields.size());
-    for (const auto& field : r.fields)
+    expected_fields.reserve(r->fields.size());
+    for (const auto& field : r->fields)
     {
         expected_fields.insert(field.first);
     }
@@ -213,7 +213,7 @@ void semantic_analyser::process(source_range location, node_record_initialisatio
         initialised_fields.insert(init.field_name);
     }
 
-    for (const auto& field : r.fields)
+    for (const auto& field : r->fields)
     {
         if (!initialised_fields.contains(field.first))
         {
@@ -291,13 +291,13 @@ void semantic_analyser::process(source_range location, node_function_call& n)
     }
 
     auto declared_type = parse_context.types[symbol.signature.function_type];
-    auto declared_function_type = std::get<function_type>(std::get<type_kind>(declared_type));
+    auto* declared_function_type = get_type_from_node<function_type>(declared_type);
 
-    if (!actual_func_type.is_call_signature_eq(declared_function_type))
+    if (!actual_func_type.is_call_signature_eq(*declared_function_type))
     {
         append_error_at(
             location.start,
-            "Function '" + symbol.name + "' expects signature " + declared_function_type.repr_call_sig(parse_context) + "; called with signature " + actual_func_type.repr_call_sig(parse_context)
+            "Function '" + symbol.name + "' expects signature " + declared_function_type->repr_call_sig(parse_context) + "; called with signature " + actual_func_type.repr_call_sig(parse_context)
         );
     }
 }

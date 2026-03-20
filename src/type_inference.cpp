@@ -119,11 +119,11 @@ void type_inference::process(source_range location, node_function_call& n)
     }
 
     auto declared_type = parse_context.types[called_symbol.signature.function_type];
-    auto declared_function_type = std::get<function_type>(std::get<type_kind>(declared_type));
+    auto* declared_function_type = get_type_from_node<function_type>(declared_type);
 
     visit_nodes(n);
 
-    for (auto [actual_value, declared_param] : std::views::zip(n.parameter, declared_function_type.parameter_types))
+    for (auto [actual_value, declared_param] : std::views::zip(n.parameter, declared_function_type->parameter_types))
     {
         parse_context.constraints.emplace_back(equal_constraint{assigned_node_type(*actual_value, parse_context), declared_param});
     }

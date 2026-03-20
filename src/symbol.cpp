@@ -111,11 +111,8 @@ bool context::is_record_type(type_id type_idx)
 bool context::is_pointer_type(type_id type_idx)
 {
     auto t = types[type_idx];
-    if (!std::holds_alternative<type_kind>(t))
-        return false;
-
-    auto kind = std::get<type_kind>(t);
-    return std::holds_alternative<pointer_type>(kind);
+    auto* p = get_type_from_node<pointer_type>(t);
+    return p != nullptr;
 }
 
 bool context::is_type_var(type_id type_idx)
@@ -230,28 +227,21 @@ std::optional<type_id> context::record_field_type(type_id record_type_idx, const
 std::optional<type_id> context::function_return_type(type_id function_type_idx)
 {
     auto t = types[function_type_idx];
-    if (!std::holds_alternative<type_kind>(t))
+    auto* f = get_type_from_node<function_type>(t);
+
+    if (f == nullptr)
         return std::nullopt;
 
-    auto kind = std::get<type_kind>(t);
-    if (std::holds_alternative<function_type>(kind))
-    {
-        const function_type& f = std::get<function_type>(kind);
-        return f.return_type;
-    }
-
-    return std::nullopt;
+    return f->return_type;
 }
+
 std::optional<primitive_type> context::primitive_type_of(type_id type_idx) const
 {
     auto t = types[type_idx];
-    if (!std::holds_alternative<type_kind>(t))
-        return std::nullopt;
-
-    auto kind = std::get<type_kind>(t);
-    if (std::holds_alternative<primitive_type>(kind))
+    auto* p = get_type_from_node<primitive_type>(t);
+    if (p != nullptr)
     {
-        return std::get<primitive_type>(kind);
+        return *p;
     }
     return std::nullopt;
 }
