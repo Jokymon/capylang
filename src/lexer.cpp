@@ -55,6 +55,14 @@ void encode_utf8_raw_unchecked(uint32_t code, std::string& dst)
     dst += last1;
 }
 
+bool is_digit_of_base(int ch, int base)
+{
+    if (base == 10)
+        return std::isdigit(ch);
+    else
+        return std::isxdigit(ch);
+}
+
 std::string token_symbol::to_string() const
 {
     switch (sym_type)
@@ -590,10 +598,20 @@ token lexer::parse_token()
 token lexer::parse_number()
 {
     auto start_position = look_ahead_position;
+    int base = 10;
     std::string num;
-    while (std::isdigit(input_.peek()))
+
+    while (is_digit_of_base(input_.peek(), base) || ((input_.peek() == 'x')))
     {
-        num += get_char();
+        int digit = get_char();
+        if (digit == 'x')
+        {
+            base = 16;
+        }
+        else
+        {
+            num += digit;
+        }
     }
 
     std::string suffix;
@@ -605,7 +623,9 @@ token lexer::parse_number()
         suffix += get_char();
     }
 
-    return token_integer{start_position, look_ahead_position, std::stoll(num), suffix};
+    return token_integer{
+        start_position, look_ahead_position, std::stoll(num, nullptr, base), suffix
+    };
 }
 
 token lexer::parse_identifier_or_keyword()

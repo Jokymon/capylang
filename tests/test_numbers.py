@@ -18,6 +18,21 @@ fn _start() {
 
 
 @pytest.mark.good
+def test_hexadecimal_numbers_are_allowed():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let n: u32 = 0x2bu32;
+    proc_exit(n)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 43
+
+
+@pytest.mark.good
 def test_negative_numbers_are_correclty_encoded():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
