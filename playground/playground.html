@@ -15,9 +15,30 @@
         import { WasiPreview1 } from '@easywasm/wasi';
         import { framebuffer } from 'web-zen-dev';
 
+        const loadedModuleUrl = 'drawing.wasm';
         const d = new TextDecoder();
         let consoleWindow;
         let canvas;
+        let fb;
+        let screen;
+
+        //-------------------------------------------------------------
+        // module 'canvas' to use for drawing on the canvas from inside
+        // the WASM module
+
+        function set_pixel(x, y, rgba) {
+            let r = (rgba >> 24) & 0xff;
+            let g = (rgba >> 16) & 0xff;
+            let b = (rgba >> 8) & 0xff;
+            let a = rgba & 0xff;
+
+            screen[x*4 + y*(canvas.width*4)] = r;
+            screen[x*4 + y*(canvas.width*4) + 1] = g;
+            screen[x*4 + y*(canvas.width*4) + 2] = b;
+            screen[x*4 + y*(canvas.width*4) + 3] = a;
+
+            fb.write({ device: { driver: {  } } }, screen);
+        }
 
         //-------------------------------------------------------------
 
@@ -29,8 +50,9 @@
 
         const {
             instance: { exports }
-        } = await WebAssembly.instantiateStreaming(fetch('example.wasm'), {
-                wasi_snapshot_preview1
+        } = await WebAssembly.instantiateStreaming(fetch(loadedModuleUrl), {
+                wasi_snapshot_preview1,
+                canvas: { set_pixel }
         });
 
         //-------------------------------------------------------------
@@ -61,21 +83,10 @@
             btnClear.addEventListener('click', clearConsole);
 
             consoleWindow = document.getElementById('consoleOutput');
-            canvas = document.getElementById('fb');
 
-            const fb = framebuffer({ canvas });
-            const screen = new Uint8Array(canvas.width * canvas.height * 4);
-            function fillFb() {
-                for (let i = 0; i < screen.byteLength; i += 4) {
-                    screen[i] = Math.random() * 255
-                    screen[i + 1] = Math.random() * 255
-                    screen[i + 2] = Math.random() * 255
-                    screen[i + 3] = 255
-                }
-                fb.write({ device: { driver: {  } } }, screen);
-                //requestAnimationFrame(fillFb);
-            }
-            fillFb();
+            canvas = document.getElementById('fb');
+            fb = framebuffer({ canvas });
+            screen = new Uint8Array(canvas.width * canvas.height * 4);
         }
 
         if (document.readyState === 'loading') {

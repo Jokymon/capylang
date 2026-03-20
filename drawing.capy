@@ -1,0 +1,13 @@
+import canvas::set_pixel(x: u32, y: u32, rgba: u32) as set_pixel;
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start()
+{
+    let mut i: u32 = 0;
+    while i<30 {
+        set_pixel(i, i, 0xff0000ff);
+        i = i+1u32;
+    }
+    proc_exit(0u32);
+}

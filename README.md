@@ -113,6 +113,16 @@ uv run playground/playground.py
 
 Then open the web page with the given URL. The use should be self explanatory ;-)
 
+### Drawing API
+
+The playground provides a drawing API towards the WebAssembly module. All the
+functions are provided through the `canvas` module. The following functions are
+implemented so far:
+
+ * `set_pixel(x: u32, y: u32, rgba: u32) -> void`; for setting the color of a
+   pixel on the coordinates `x` and `y`. The color is given as a hexadecimal
+   RGBA code.
+
 ## Contributing
 
 Contributions are welcome and will be considered. However this is a carefully

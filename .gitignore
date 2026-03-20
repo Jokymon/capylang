@@ -18,6 +18,8 @@ wheels/
 # Example generated code
 example.wat
 example.wasm
+drawing.wat
+drawing.wasm
 
 # extracted code examples
 corpus/
