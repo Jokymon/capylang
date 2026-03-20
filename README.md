@@ -100,6 +100,19 @@ They can also be run with a WebAssembly runtime, for example by running
 wasmtime run build/capylang-unit-tests.wasm
 ```
 
+## Playground
+
+The directory `playground` contains a simple web application and a Python-based
+script for a simple webserver to run the generated example in the browser. 
+Currently the web application only runs the web assembly module called
+`example.wasm` in the root directory. To start the server just run
+
+```bash
+uv run playground/playground.py
+```
+
+Then open the web page with the given URL. The use should be self explanatory ;-)
+
 ## Contributing
 
 Contributions are welcome and will be considered. However this is a carefully
