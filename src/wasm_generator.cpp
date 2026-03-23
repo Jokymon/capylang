@@ -364,9 +364,9 @@ void wasm_generator::generate_exports(const wasm_module& module, std::ostream& o
     encode_leb128(content, module.exports.size());
     for (const auto& exp : module.exports)
     {
-        encode_string(content, exp.get().export_name);
-        content.put(encode_extern_index(exp.get().export_type));
-        encode_leb128(content, exp.get().index);
+        encode_string(content, exp.export_name);
+        content.put(encode_extern_index(exp.export_type));
+        encode_leb128(content, exp.index);
     }
 
     encode_leb128(output, content.str().size());

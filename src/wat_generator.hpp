@@ -25,5 +25,5 @@ private:
     void generate(const wasm_op_label&, std::ostream& output, size_t indent);
     void generate(const wasm_op_func&, std::ostream& output, size_t indent);
 
-    void generate_export(const exportable& exp, std::ostream& output, size_t indent);
+    void generate_export(const wasm_export& exp, std::ostream& output, size_t indent);
 };

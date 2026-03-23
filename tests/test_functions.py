@@ -106,6 +106,32 @@ fn _start() {
     assert exit_code == 4
 
 
+def test_multiple_function_exports_remain_functions_in_wat():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn create_frame() -> u32 {
+    42u32
+}
+
+fn helper1() -> u32 { 1u32 }
+fn helper2() -> u32 { 2u32 }
+fn helper3() -> u32 { 3u32 }
+fn helper4() -> u32 { 4u32 }
+
+@export
+fn _start() {
+    proc_exit(create_frame())
+}
+"""
+    wat = tools.compile_to_wat(tools.get_doc_str())
+
+    assert '(export "create_frame" (func $create_frame))' in wat
+    assert '(export "_start" (func $_start))' in wat
+    assert '(export ""' not in wat
+
+
 # ----------------------------------------
 # syntactic errors
 @pytest.mark.parse_error

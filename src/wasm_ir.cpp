@@ -266,11 +266,6 @@ exportable::exportable(index_type index, wasm_extern_index export_type)
 {
 }
 
-void exportable::export_as(const char* export_name)
-{
-    this->export_name = export_name;
-}
-
 wasm_function::wasm_function(index_type index, const std::string& name, wasm_type return_type, arguments_type arguments)
 : exportable(index, wasm_extern_index::funcidx)
 , return_type(return_type)
@@ -360,7 +355,6 @@ void wasm_module::create_global(const char* name, wasm_type g_type, wasm_module:
 wasm_function& wasm_module::create_function(const char* name, wasm_type return_type, arguments_type arguments)
 {
     size_t function_index = functions.size();
-    std::string sname(name);
     functions.emplace_back(wasm_function{function_index, name, return_type, arguments});
     functions_map[std::string(name)] = function_index;
     return functions.back();
@@ -373,6 +367,10 @@ void wasm_module::append_data_section(wasm_data_section& data)
 
 void wasm_module::export_as(const char* export_name, exportable& object)
 {
-    object.export_as(export_name);
-    exports.push_back(object);
+    exports.push_back({
+        .export_name = export_name,
+        .name = object.name,
+        .index = object.index,
+        .export_type = object.export_type,
+    });
 }

@@ -1,5 +1,4 @@
 #pragma once
-#include <functional>
 #include <map>
 #include <ostream>
 #include <string>
@@ -260,17 +259,16 @@ struct exportable
 public:
     explicit exportable(index_type index, wasm_extern_index export_type);
 
-    // TODO: this creates a false impression that we can just call
-    // export_as on the exportable. But we still need to add the
-    // element to the exports list in the module and would therefore
-    // better call export_as() directly on the module without ever
-    // calling this function. --> This API should be improved
-    void export_as(const char* export_name);
-
     std::string name;
     index_type index;
+    wasm_extern_index export_type;
+};
 
+struct wasm_export
+{
     std::string export_name;
+    std::string name;
+    index_type index;
     wasm_extern_index export_type;
 };
 
@@ -350,7 +348,7 @@ struct wasm_module
     std::vector<wasm_data_section> data_sections;
     std::vector<global_sym> globals;
     std::map<std::string, size_t> globals_map;
-    std::vector<std::reference_wrapper<exportable>> exports;
+    std::vector<wasm_export> exports;
     std::vector<wasm_function> functions;
     std::map<std::string, size_t> functions_map;
 };

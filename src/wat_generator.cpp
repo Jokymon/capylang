@@ -134,7 +134,7 @@ void wat_generator::generate(const wasm_module& module, std::ostream& output)
     }
     for (const auto& exp : module.exports)
     {
-        generate_export(exp.get(), output, 2);
+        generate_export(exp, output, 2);
     }
     for (const auto& func : module.functions)
     {
@@ -486,7 +486,7 @@ void wat_generator::generate(const wasm_op_func& inst, std::ostream& output, siz
     output << inst.function.name() << "\n";
 }
 
-void wat_generator::generate_export(const exportable& exp, std::ostream& output, size_t indent)
+void wat_generator::generate_export(const wasm_export& exp, std::ostream& output, size_t indent)
 {
     std::string ind(indent, ' ');
     output << ind << "(export \"" << exp.export_name << "\" (";

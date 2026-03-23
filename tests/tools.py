@@ -94,6 +94,29 @@ def compile_test_code(source_code) -> tuple[int, str]:
     return exit_code, stderr
 
 
+def compile_to_wat(source_code) -> str:
+    """Compiles the given source_code to WAT and returns the generated text."""
+    source_file = tempfile.NamedTemporaryFile(mode="w", encoding="utf-8",
+                                              delete=False)
+    source_file.write(source_code)
+    source_file.close()
+
+    source_file_path = pathlib.Path(source_file.name)
+    wat_file_path = source_file_path.with_suffix(".wat")
+
+    exit_code, stderr = run_compile_error(source_file_path, wat_file_path)
+    if exit_code != 0:
+        raise ValueError("Compilation unexpectedly failed:\n" + stderr)
+
+    wat = wat_file_path.read_text(encoding="utf-8")
+
+    os.remove(source_file.name)
+    if os.path.exists(wat_file_path):
+        os.remove(wat_file_path)
+
+    return wat
+
+
 def expression_to_full_program(code):
     procedure_wrapper = """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
