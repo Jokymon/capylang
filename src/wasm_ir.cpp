@@ -105,16 +105,24 @@ wasm_branch_label wasm_block::label() const
 
 wasm_block& wasm_block::block(wasm_type return_type)
 {
-    auto block = std::make_unique<wasm_statement>(wasm_internal_block{return_type, this});
-    wasm_block& new_block = std::get<wasm_internal_block>(*block);
+    auto block = std::make_unique<wasm_statement>(
+        wasm_block{
+            wasm_block::t_block, return_type, wasm_branch_label(), this
+        }
+    );
+    wasm_block& new_block = std::get<wasm_block>(*block);
     instructions.push_back(std::move(block));
     return new_block;
 }
 
 wasm_block& wasm_block::loop(wasm_type return_type)
 {
-    auto block = std::make_unique<wasm_statement>(wasm_loop_block{return_type, this});
-    wasm_block& new_block = std::get<wasm_loop_block>(*block);
+    auto block = std::make_unique<wasm_statement>(
+        wasm_block{
+            wasm_block::t_loop, return_type, wasm_branch_label(), this
+        }
+    );
+    wasm_block& new_block = std::get<wasm_block>(*block);
     instructions.push_back(std::move(block));
     return new_block;
 }
@@ -245,18 +253,6 @@ void wasm_block::call(const char* function_name)
 void wasm_block::ret()
 {
     instructions.push_back(std::make_unique<wasm_statement>(wasm_instruction(wasm_op::ret)));
-}
-
-wasm_internal_block::wasm_internal_block(wasm_type return_type, wasm_block* enclosing_block)
-: return_type(return_type)
-{
-    this->enclosing_block = enclosing_block;
-}
-
-wasm_loop_block::wasm_loop_block(wasm_type return_type, wasm_block* enclosing_block)
-: return_type(return_type)
-{
-    this->enclosing_block = enclosing_block;
 }
 
 exportable::exportable(index_type index, wasm_extern_index export_type)

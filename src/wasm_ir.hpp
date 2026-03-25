@@ -106,8 +106,6 @@ private:
 struct wasm_instruction;
 struct wasm_block;
 struct wasm_if_block;
-struct wasm_loop_block;
-struct wasm_internal_block;
 struct wasm_op_index;
 struct wasm_op_type;
 struct wasm_op_type_sign;
@@ -119,8 +117,6 @@ using wasm_statement = std::variant<
     wasm_instruction,
     wasm_block,
     wasm_if_block,
-    wasm_loop_block,
-    wasm_internal_block,
     wasm_op_index,
     wasm_op_type,
     wasm_op_type_sign,
@@ -202,6 +198,14 @@ struct wasm_if_block
 struct wasm_block
 {
 public:
+    enum wasm_block_type
+    {
+        t_plain, // used for function bodies and then/else-blocks
+        t_block, // used for typed non-loop blocks
+        t_loop   // used for typed loop-blocks
+    };
+
+public:
     size_t inst_count() const;
     wasm_branch_label label() const;
 
@@ -234,24 +238,13 @@ public:
     void call(const char* function_name);
     void ret();
 
+    wasm_block_type block_type;
+    wasm_type return_type;
+
     wasm_branch_label block_label;
     wasm_block* enclosing_block = nullptr;
 
     std::vector<std::unique_ptr<wasm_statement>> instructions;
-};
-
-struct wasm_internal_block : public wasm_block
-{
-    explicit wasm_internal_block(wasm_type return_type, wasm_block* enclosing_block);
-
-    wasm_type return_type;
-};
-
-struct wasm_loop_block : public wasm_block
-{
-    explicit wasm_loop_block(wasm_type return_type, wasm_block* enclosing_block);
-
-    wasm_type return_type;
 };
 
 struct exportable

@@ -431,229 +431,259 @@ void wasm_generator::generate_data(const wasm_module& module, std::ostream& outp
 
 void wasm_generator::generate_block(const wasm_module& module, const wasm_function& function, const wasm_block& block, std::ostream& output)
 {
+    switch (block.block_type)
+    {
+        case wasm_block::t_plain:
+            break;
+        case wasm_block::t_block:
+            output.put(INST_BLOCK);
+            output.put(0x40);
+            break;
+        case wasm_block::t_loop:
+            output.put(INST_LOOP);
+            output.put(0x40);
+            break;
+    }
+
     for (const auto& inst : block.instructions)
     {
         std::visit([&](const auto& t)
                    {
-            using T = std::decay_t<decltype(t)>;
+                       using T = std::decay_t<decltype(t)>;
 
-            if constexpr (std::is_same_v<T, wasm_instruction>) {
-                switch (t.op) {
-                    case wasm_op::drop:
-                        output.put(INST_DROP);
-                        break;
-                    case wasm_op::ret:
-                        output.put(INST_RET);
-                    default:
-                        break;
-                }
-            }
-            else if constexpr (std::is_same_v<T, wasm_op_type>) {
-                switch (t.op) {
-                    // TODO: differentiate based on type
-                    case wasm_op::iadd:
-                        output.put(INST_I32_ADD);
-                        break;
-                    case wasm_op::isub:
-                        output.put(INST_I32_SUB);
-                        break;
-                    case wasm_op::imul:
-                        output.put(INST_I32_MUL);
-                        break;
-                    case wasm_op::eq:
-                        output.put(INST_I32_EQ);
-                        break;
-                    case wasm_op::ne:
-                        output.put(INST_I32_NE);
-                        break;
-                    case wasm_op::eqz:
-                        output.put(INST_I32_EQZ);
-                        break;
-                    default:
-                        break;
-                }
-            }
-            else if constexpr (std::is_same_v<T, wasm_op_index>) {
-                size_t index = 0;
-                switch (t.op) {
-                    case wasm_op::local_get:
-                        output.put(INST_LOCAL_GET);
-                        break;
-                    case wasm_op::local_set:
-                        output.put(INST_LOCAL_SET);
-                        break;
-                    case wasm_op::local_tee:
-                        output.put(INST_LOCAL_TEE);
-                        break;
-                    case wasm_op::global_get:
-                        output.put(INST_GLOBAL_GET);
-                        break;
-                    case wasm_op::global_set:
-                        output.put(INST_GLOBAL_SET);
-                        break;
-                    default:
-                        break;
-                }
-                switch (t.op) {
-                    case wasm_op::local_get:
-                    case wasm_op::local_set:
-                    case wasm_op::local_tee:
-                        index = function.locals_map.at(t.name);
-                        break;
-                    case wasm_op::global_get:
-                    case wasm_op::global_set:
-                        index = module.globals_map.at(t.name);
-                        break;
-                    default:
-                        break;
-                }
-                encode_leb128(output, index);
-            }
-            else if constexpr (std::is_same_v<T, wasm_op_type_sign>) {
-                switch (t.op) {
-                    case wasm_op::idiv:
-                        if (is_wasm_type_signed(t.value_type))
-                            output.put(INST_I32_DIV_S);
-                        else
-                            output.put(INST_I32_DIV_U);
-                        break;
-                    case wasm_op::irem:
-                        if (is_wasm_type_signed(t.value_type))
-                            output.put(INST_I32_REM_S);
-                        else
-                            output.put(INST_I32_REM_U);
-                        break;
-                    case wasm_op::ilt:
-                        if (is_wasm_type_signed(t.value_type))
-                            output.put(INST_I32_LT_S);
-                        else
-                            output.put(INST_I32_LT_U);
-                        break;
-                    case wasm_op::ilte:
-                        if (is_wasm_type_signed(t.value_type))
-                            output.put(INST_I32_LE_S);
-                        else
-                            output.put(INST_I32_LE_U);
-                        break;
-                    case wasm_op::igt:
-                        if (is_wasm_type_signed(t.value_type))
-                            output.put(INST_I32_GT_S);
-                        else
-                            output.put(INST_I32_GT_U);
-                        break;
-                    case wasm_op::igte:
-                        if (is_wasm_type_signed(t.value_type))
-                            output.put(INST_I32_GE_S);
-                        else
-                            output.put(INST_I32_GE_U);
-                        break;
-                    default:
-                        break;
-                }
-            }
-            else if constexpr (std::is_same_v<T, wasm_op_type_value>) {
-                // TODO: differentiate by type of the operation
-                output.put(INST_I32_CONST);
-                encode_i32_const_immediate(output, t.value);
-            }
-            else if constexpr (std::is_same_v<T, wasm_op_align_offset>) {
+                       if constexpr (std::is_same_v<T, wasm_instruction>)
+                       {
+                           switch (t.op)
+                           {
+                               case wasm_op::drop:
+                                   output.put(INST_DROP);
+                                   break;
+                               case wasm_op::ret:
+                                   output.put(INST_RET);
+                               default:
+                                   break;
+                           }
+                       }
+                       else if constexpr (std::is_same_v<T, wasm_op_type>)
+                       {
+                           switch (t.op)
+                           {
+                               // TODO: differentiate based on type
+                               case wasm_op::iadd:
+                                   output.put(INST_I32_ADD);
+                                   break;
+                               case wasm_op::isub:
+                                   output.put(INST_I32_SUB);
+                                   break;
+                               case wasm_op::imul:
+                                   output.put(INST_I32_MUL);
+                                   break;
+                               case wasm_op::eq:
+                                   output.put(INST_I32_EQ);
+                                   break;
+                               case wasm_op::ne:
+                                   output.put(INST_I32_NE);
+                                   break;
+                               case wasm_op::eqz:
+                                   output.put(INST_I32_EQZ);
+                                   break;
+                               default:
+                                   break;
+                           }
+                       }
+                       else if constexpr (std::is_same_v<T, wasm_op_index>)
+                       {
+                           size_t index = 0;
+                           switch (t.op)
+                           {
+                               case wasm_op::local_get:
+                                   output.put(INST_LOCAL_GET);
+                                   break;
+                               case wasm_op::local_set:
+                                   output.put(INST_LOCAL_SET);
+                                   break;
+                               case wasm_op::local_tee:
+                                   output.put(INST_LOCAL_TEE);
+                                   break;
+                               case wasm_op::global_get:
+                                   output.put(INST_GLOBAL_GET);
+                                   break;
+                               case wasm_op::global_set:
+                                   output.put(INST_GLOBAL_SET);
+                                   break;
+                               default:
+                                   break;
+                           }
+                           switch (t.op)
+                           {
+                               case wasm_op::local_get:
+                               case wasm_op::local_set:
+                               case wasm_op::local_tee:
+                                   index = function.locals_map.at(t.name);
+                                   break;
+                               case wasm_op::global_get:
+                               case wasm_op::global_set:
+                                   index = module.globals_map.at(t.name);
+                                   break;
+                               default:
+                                   break;
+                           }
+                           encode_leb128(output, index);
+                       }
+                       else if constexpr (std::is_same_v<T, wasm_op_type_sign>)
+                       {
+                           switch (t.op)
+                           {
+                               case wasm_op::idiv:
+                                   if (is_wasm_type_signed(t.value_type))
+                                       output.put(INST_I32_DIV_S);
+                                   else
+                                       output.put(INST_I32_DIV_U);
+                                   break;
+                               case wasm_op::irem:
+                                   if (is_wasm_type_signed(t.value_type))
+                                       output.put(INST_I32_REM_S);
+                                   else
+                                       output.put(INST_I32_REM_U);
+                                   break;
+                               case wasm_op::ilt:
+                                   if (is_wasm_type_signed(t.value_type))
+                                       output.put(INST_I32_LT_S);
+                                   else
+                                       output.put(INST_I32_LT_U);
+                                   break;
+                               case wasm_op::ilte:
+                                   if (is_wasm_type_signed(t.value_type))
+                                       output.put(INST_I32_LE_S);
+                                   else
+                                       output.put(INST_I32_LE_U);
+                                   break;
+                               case wasm_op::igt:
+                                   if (is_wasm_type_signed(t.value_type))
+                                       output.put(INST_I32_GT_S);
+                                   else
+                                       output.put(INST_I32_GT_U);
+                                   break;
+                               case wasm_op::igte:
+                                   if (is_wasm_type_signed(t.value_type))
+                                       output.put(INST_I32_GE_S);
+                                   else
+                                       output.put(INST_I32_GE_U);
+                                   break;
+                               default:
+                                   break;
+                           }
+                       }
+                       else if constexpr (std::is_same_v<T, wasm_op_type_value>)
+                       {
+                           // TODO: differentiate by type of the operation
+                           output.put(INST_I32_CONST);
+                           encode_i32_const_immediate(output, t.value);
+                       }
+                       else if constexpr (std::is_same_v<T, wasm_op_align_offset>)
+                       {
 
-                switch (t.op) {
-                    case wasm_op::load:
-                        switch (wasm_type_size(t.value_type))
-                        {
-                            case wasm_size_e::Size8:
-                                if (is_wasm_type_signed(t.value_type))
-                                {
-                                    output.put(INST_I32_LOAD8_S);
-                                }
-                                else
-                                {
-                                    output.put(INST_I32_LOAD8_U);
-                                }
-                                break;
-                            default:
-                                output.put(INST_I32_LOAD);
-                                break;
-                        }
-                        encode_leb128(output, t.alignment);
-                        encode_leb128(output, t.offset);
-                        break;
-                    case wasm_op::store:
-                        switch (wasm_type_size(t.value_type))
-                        {
-                            case wasm_size_e::Size8:
-                                output.put(INST_I32_STORE8);
-                                break;
-                            default:
-                                output.put(INST_I32_STORE);
-                                break;
-                        }
-                        encode_leb128(output, t.alignment);
-                        encode_leb128(output, t.offset);
-                        break;
-                    default:
-                        break;
-                }
-            }
-            else if constexpr (std::is_same_v<T, wasm_op_label>) {
-                uint32_t block_label = resolve_block_label(block, t.label, 0);
-                assert(block_label!=std::numeric_limits<uint32_t>::max() || "Can't resolve block label in jump instruction");
+                           switch (t.op)
+                           {
+                               case wasm_op::load:
+                                   switch (wasm_type_size(t.value_type))
+                                   {
+                                       case wasm_size_e::Size8:
+                                           if (is_wasm_type_signed(t.value_type))
+                                           {
+                                               output.put(INST_I32_LOAD8_S);
+                                           }
+                                           else
+                                           {
+                                               output.put(INST_I32_LOAD8_U);
+                                           }
+                                           break;
+                                       default:
+                                           output.put(INST_I32_LOAD);
+                                           break;
+                                   }
+                                   encode_leb128(output, t.alignment);
+                                   encode_leb128(output, t.offset);
+                                   break;
+                               case wasm_op::store:
+                                   switch (wasm_type_size(t.value_type))
+                                   {
+                                       case wasm_size_e::Size8:
+                                           output.put(INST_I32_STORE8);
+                                           break;
+                                       default:
+                                           output.put(INST_I32_STORE);
+                                           break;
+                                   }
+                                   encode_leb128(output, t.alignment);
+                                   encode_leb128(output, t.offset);
+                                   break;
+                               default:
+                                   break;
+                           }
+                       }
+                       else if constexpr (std::is_same_v<T, wasm_op_label>)
+                       {
+                           uint32_t block_label = resolve_block_label(block, t.label, 0);
+                           assert(block_label != std::numeric_limits<uint32_t>::max() || "Can't resolve block label in jump instruction");
 
-                switch (t.op) {
-                    case wasm_op::br:
-                        output.put(INST_BR);
-                        break;
-                    case wasm_op::br_if:
-                        output.put(INST_BR_IF);
-                        break;
-                    default:
-                        break;
-                }
-        
-                encode_leb128(output, block_label);
-            }
-            else if constexpr (std::is_same_v<T, wasm_op_func>) {
-                output.put(INST_CALL);
-                size_t function_index = module.functions_map.at(t.function.name());
-                encode_leb128(output, function_index);
-            }
-            else if constexpr (std::is_same_v<T, wasm_internal_block>) {
-                output.put(INST_BLOCK);
-                output.put(0x40);
-                generate_block(module, function, t, output);
-                output.put(INST_TERMINATOR);
-            }
-            else if constexpr (std::is_same_v<T, wasm_if_block>)
-            {
-                output.put(INST_IF);
-                if (t.return_type != wasm_type::none)
-                {
-                    output.put(encode_wasm_type(t.return_type));
-                }
-                else
-                {
-                    output.put(0x40); // block type 'void'
-                }
+                           switch (t.op)
+                           {
+                               case wasm_op::br:
+                                   output.put(INST_BR);
+                                   break;
+                               case wasm_op::br_if:
+                                   output.put(INST_BR_IF);
+                                   break;
+                               default:
+                                   break;
+                           }
 
-                generate_block(module, function, *(t.then_block), output);
+                           encode_leb128(output, block_label);
+                       }
+                       else if constexpr (std::is_same_v<T, wasm_op_func>)
+                       {
+                           output.put(INST_CALL);
+                           size_t function_index = module.functions_map.at(t.function.name());
+                           encode_leb128(output, function_index);
+                       }
+                       else if constexpr (std::is_same_v<T, wasm_if_block>)
+                       {
+                           output.put(INST_IF);
+                           if (t.return_type != wasm_type::none)
+                           {
+                               output.put(encode_wasm_type(t.return_type));
+                           }
+                           else
+                           {
+                               output.put(0x40); // block type 'void'
+                           }
 
-                if (t.else_block)
-                {
-                    output.put(INST_ELSE);
-                    generate_block(module, function, *(t.else_block), output);
-                }
+                           generate_block(module, function, *(t.then_block), output);
 
-                output.put(INST_TERMINATOR);
-            }
-            else if constexpr (std::is_same_v<T, wasm_loop_block>)
-            {
-                output.put(INST_LOOP);
-                output.put(0x40);
-                generate_block(module, function, t, output);
-                output.put(INST_TERMINATOR);
-            } },
+                           if (t.else_block)
+                           {
+                               output.put(INST_ELSE);
+                               generate_block(module, function, *(t.else_block), output);
+                           }
+
+                           output.put(INST_TERMINATOR);
+                       }
+                       else if constexpr (std::is_same_v<T, wasm_block>)
+                       {
+                        generate_block(module, function, t, output);
+                       } },
                    *inst);
+    }
+
+    switch (block.block_type)
+    {
+        case wasm_block::t_plain:
+            break;
+        case wasm_block::t_block:
+        case wasm_block::t_loop:
+            output.put(INST_TERMINATOR);
+            break;
     }
 }
 

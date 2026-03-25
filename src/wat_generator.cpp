@@ -234,6 +234,19 @@ void wat_generator::generate(const wasm_memory& memory, std::ostream& output, si
 
 void wat_generator::generate(const wasm_block& block, std::ostream& output, size_t indent)
 {
+    std::string ind(indent, ' ');
+    switch (block.block_type)
+    {
+        case wasm_block::t_plain:
+            break;
+        case wasm_block::t_block:
+            output << ind << "block $" << block.block_label.repr() << "\n";
+            break;
+        case wasm_block::t_loop:
+            output << ind << "loop $" << block.block_label.repr() << "\n";
+            break;
+    }
+
     for (const auto& inst : block.instructions)
     {
         std::visit(
@@ -243,6 +256,16 @@ void wat_generator::generate(const wasm_block& block, std::ostream& output, size
             },
             *inst
         );
+    }
+
+    switch (block.block_type)
+    {
+        case wasm_block::t_plain:
+            break;
+        case wasm_block::t_block:
+        case wasm_block::t_loop:
+            output << ind << "end\n";
+            break;
     }
 }
 
@@ -264,26 +287,6 @@ void wat_generator::generate(const wasm_if_block& block, std::ostream& output, s
         output << ind << "else\n";
         generate(*block.else_block, output, indent + 2);
     }
-    output << ind << "end\n";
-}
-
-void wat_generator::generate(const wasm_loop_block& block, std::ostream& output, size_t indent)
-{
-    std::string ind(indent, ' ');
-    output << ind << "loop $" << block.block_label.repr() << "\n";
-
-    generate((wasm_block&)block, output, indent + 2);
-
-    output << ind << "end\n";
-}
-
-void wat_generator::generate(const wasm_internal_block& block, std::ostream& output, size_t indent)
-{
-    std::string ind(indent, ' ');
-    output << ind << "block $" << block.block_label.repr() << "\n";
-
-    generate((wasm_block&)block, output, indent + 2);
-
     output << ind << "end\n";
 }
 
