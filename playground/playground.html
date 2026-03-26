@@ -40,6 +40,10 @@
             fb.write({ device: { driver: {  } } }, screen);
         }
 
+        function canvas_width() {
+            return canvas.width;
+        }
+
         //-------------------------------------------------------------
 
         const wasi_snapshot_preview1 = new WasiPreview1();
@@ -52,21 +56,25 @@
             instance: { exports }
         } = await WebAssembly.instantiateStreaming(fetch(loadedModuleUrl), {
                 wasi_snapshot_preview1,
-                canvas: { set_pixel }
+                canvas: { set_pixel, width: canvas_width }
         });
 
         //-------------------------------------------------------------
 
         function runApplication() {
-            let res = wasi_snapshot_preview1.start(exports);
+            let frame_base = exports.create_frame();
+            const view = new Uint8Array(exports.memory.buffer, frame_base, canvas.width*canvas.height*4);
+            fb.write({ device: { driver: {  } } }, view);
 
-            const exitCodeEl = document.getElementById("exitCode");
-            exitCodeEl.value = res;
-            exitCodeEl.classList.add('flash');
-            setTimeout(() => {
-                exitCodeEl.classList.remove('flash');
-            }, 500);
-            console.log("appplication exit code: " + res);
+            //let res = wasi_snapshot_preview1.start(exports);
+
+            // const exitCodeEl = document.getElementById("exitCode");
+            // exitCodeEl.value = res;
+            // exitCodeEl.classList.add('flash');
+            // setTimeout(() => {
+            //     exitCodeEl.classList.remove('flash');
+            // }, 500);
+            // console.log("appplication exit code: " + res);
         }
 
         function clearConsole() {
@@ -119,6 +127,10 @@
             overflow: auto;
             width: 100%;
             min-height: 100px;
+        }
+
+        canvas {
+            border: 1px solid black;
         }
 
         .flash {

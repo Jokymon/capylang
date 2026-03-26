@@ -1,13 +1,92 @@
-import canvas::set_pixel(x: u32, y: u32, rgba: u32) as set_pixel;
+import canvas::width() -> u32 as canvas_width;
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+import wasi_snapshot_preview1::fd_write(fd: u32, io: *u32, count: u32, res: *u32) -> u32 as fd_write;
+
+global mut canvas_base: u32 = 2048u32;
+
+fn abs(v: s32) -> s32
+{
+    // TODO: this is a first instance where an intrinsic would be helpful since
+    // WASM actualy has an 'abs'-instruction
+    if v<0 { 0-v } else { v }
+}
+
+fn put_pixel(x: u32, y: u32, abgr: u32)
+{
+    let mut p: *u32 = canvas_base as *u32;
+
+    p = p + (4*x) as *u32;
+    p = p + (canvas_width()*4*y) as *u32;
+    *p = abgr;
+}
+
+fn draw_line(x0: u32, y0: u32, x1: u32, y1: u32, abgr: u32)
+{
+    let mut dx: s32;
+    let mut sx: s32;
+    let mut dy: s32;
+    let mut sy: s32;
+    let mut err: s32;
+    let mut e2: s32;
+
+    let mut x: s32 = x0 as s32;
+    let mut y: s32 = y0 as s32;
+
+    dx = abs(x1 as s32 - x0 as s32);
+    sx = if x0 < x1 { 1s32 } else { -1s32 };
+    dy = abs(y1 as s32 - y0 as s32);
+    sy = if y0 < y1 { 1s32 } else { -1s32 };
+    err = if dx > dy { dx as s32 } else { (0-dy) as s32 };
+    err = err / 2s32;
+
+    while (true) {
+        put_pixel(x as u32, y as u32, abgr);
+
+    //     if (x0 == x1 && y0 == y1) {
+    //         break;
+    //     };
+        if (x as u32==x1) {
+            if (y as u32==y1) {
+                break;
+            }
+        }
+
+        e2 = err + err;
+
+        if (e2 > 0s32-dx) {
+            err = err - dy;
+            x = x + sx;
+        }
+
+        if (e2 < dy) {
+            err = err + dx;
+            y = y + sy;
+        }
+    }
+}
+
+@export
+fn create_frame() -> *u32
+{
+    let mut i: u32 = 0;
+
+    while i<30 {
+        put_pixel(i, i, 0xff0000ff);
+
+        i = i + 1;
+    }
+    draw_line(10, 67, 100, 3, 0xff00ff00);
+
+    canvas_base as *u32
+}
 
 @export
 fn _start()
 {
-    let mut i: u32 = 0;
-    while i<30 {
-        set_pixel(i, i, 0xff0000ff);
-        i = i + 1;
-    }
+    // let mut i: u32 = 0;
+    // while i<30 {
+    //     set_pixel(i, i, 0xff0000ff);
+    //     i = i + 1;
+    // }
     proc_exit(0u32);
 }
