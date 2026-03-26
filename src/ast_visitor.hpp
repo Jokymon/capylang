@@ -34,6 +34,7 @@ protected:
     virtual void process(source_range location, node_cast_expression& n) = 0;
     virtual void process(source_range location, node_discard_expression& n) = 0;
     virtual void process(source_range location, node_return_expression& n) = 0;
+    virtual void process(source_range location, node_break_statement& n) = 0;
     virtual void process(source_range location, node_expression& n) = 0;
     virtual void process(source_range location, node_if_expression& n) = 0;
     virtual void process(source_range location, node_while_expression& n) = 0;

@@ -69,6 +69,8 @@ std::string token_symbol::to_string() const
     {
         case sym_kw_as:
             return "as";
+        case sym_kw_break:
+            return "break";
         case sym_kw_else:
             return "else";
         case sym_kw_fn:
@@ -637,7 +639,11 @@ token lexer::parse_identifier_or_keyword()
         id_name += get_char();
     }
 
-    if (id_name == "else")
+    if (id_name == "break")
+    {
+        return token_symbol{start_position, look_ahead_position, token_symbol::sym_kw_break};
+    }
+    else if (id_name == "else")
     {
         return token_symbol{start_position, look_ahead_position, token_symbol::sym_kw_else};
     }

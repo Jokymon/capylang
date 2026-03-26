@@ -490,6 +490,30 @@ void emitter::emit(const node_return_expression& root)
     }
 }
 
+void emitter::emit(const node_break_statement&)
+{
+    // find the nearest loop block (currently just assuming that this will be
+    // a proper loop like a 'while') and use that block as branch target
+    wasm_block* b = cur_block;
+    while (b->block_type != wasm_block::t_loop && b->enclosing_block != nullptr)
+    {
+        b = b->enclosing_block;
+    }
+    if (b->block_type == wasm_block::t_loop)
+    {
+        // TODO: This feels a little hacky; we assume that a loop is always
+        // enclosed in a plain 'block' because it is constructed from a while
+        // loop. This however may not always be the case in the future and we
+        // should instead make sure, we really target the right block for
+        // branch instead of heuristically guessing it.
+        cur_block->br(b->enclosing_block->label());
+    }
+    else
+    {
+        assert(false && "Trying to break from inside non-loop block; this should already have been caught by semantic check");
+    }
+}
+
 void emitter::emit(const node_expression& root)
 {
     emit(*root.left);

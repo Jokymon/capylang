@@ -46,10 +46,11 @@ struct node_function_definition;
 struct node_cast_expression;
 struct node_discard_expression;
 struct node_return_expression;
+struct node_break_statement;
 struct node_expression;
 struct node_module;
 
-using ast_node_raw = std::variant<node_number, node_char_literal, node_bool_const, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_if_expression, node_while_expression, node_record_definition, node_record_initialisation, node_field_deref, node_function_call, node_cast_expression, node_discard_expression, node_return_expression, node_expression>;
+using ast_node_raw = std::variant<node_number, node_char_literal, node_bool_const, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_if_expression, node_while_expression, node_record_definition, node_record_initialisation, node_field_deref, node_function_call, node_cast_expression, node_discard_expression, node_return_expression, node_break_statement, node_expression>;
 using ast_node = located<ast_node_raw>;
 
 void dump_module(const context& ctx, const node_module& module, size_t indent = 0);
@@ -213,6 +214,10 @@ struct node_return_expression
     // keyword 'return' or if it was implicitly created from the last expression
     // in a function
     bool is_explicit;
+};
+
+struct node_break_statement
+{
 };
 
 struct node_expression

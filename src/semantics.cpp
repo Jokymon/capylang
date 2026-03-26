@@ -446,6 +446,10 @@ void semantic_analyser::process(source_range location, node_return_expression& n
     }
 }
 
+void semantic_analyser::process(source_range location, node_break_statement&)
+{
+}
+
 void semantic_analyser::process(source_range location, node_expression& n)
 {
     visit_nodes(n);

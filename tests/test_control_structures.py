@@ -142,6 +142,29 @@ fn _start() {
 
 
 @pytest.mark.good
+def test_break_in_a_while_loop_works():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let mut value: u32 = 0u32;
+
+    while value < 30 {
+        if value==12 {
+            break;
+        }
+        value = value + 1;
+    }
+
+    proc_exit(value)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 12
+
+
+@pytest.mark.good
 def test_assignment_on_last_line_in_while_works():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;

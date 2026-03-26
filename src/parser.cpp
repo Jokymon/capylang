@@ -222,6 +222,12 @@ void dump_node(const context& ctx, const node_return_expression& n, size_t inden
     }
 }
 
+void dump_node(const context& ctx, const node_break_statement&, size_t indent)
+{
+    std::string ind = std::string(indent, ' ');
+    std::cout << ind << "Break\n";
+}
+
 void dump_node(const context& ctx, const node_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
@@ -825,6 +831,14 @@ ast_node parser::parse_expression(int min_precedence)
             end,
             std::move(returned_expression),
             true
+        );
+    }
+    else if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_break))
+    {
+        auto brk_statement = capy_lexer->expect<token_symbol>();
+        return make_located<node_break_statement>(
+            brk_statement.location.start,
+            brk_statement.location.end
         );
     }
     else
