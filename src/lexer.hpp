@@ -111,6 +111,8 @@ enum operator_type
     op_conversion,
 };
 
+const int PRECEDENCE_UNARY_MINUS = 5;
+
 int get_precedence(operator_type op_type);
 operator_type op_from_symbol(const token_symbol& symbol);
 

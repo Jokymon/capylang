@@ -13,6 +13,7 @@ protected:
     void visit_nodes(node_if_expression& i_expr);
     void visit_nodes(node_while_expression& w_expr);
     void visit_nodes(node_let_expression& l_expr);
+    void visit_nodes(node_negation& expr);
     void visit_nodes(node_expression& expr);
     void visit_nodes(node_cast_expression& expr);
     void visit_nodes(node_discard_expression& expr);
@@ -35,6 +36,7 @@ protected:
     virtual void process(source_range location, node_discard_expression& n) = 0;
     virtual void process(source_range location, node_return_expression& n) = 0;
     virtual void process(source_range location, node_break_statement& n) = 0;
+    virtual void process(source_range location, node_negation& n) = 0;
     virtual void process(source_range location, node_expression& n) = 0;
     virtual void process(source_range location, node_if_expression& n) = 0;
     virtual void process(source_range location, node_while_expression& n) = 0;

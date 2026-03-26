@@ -1,5 +1,4 @@
 #include "parser.hpp"
-#include <array>
 #include <assert.h>
 #include <format>
 #include <iostream>
@@ -228,6 +227,15 @@ void dump_node(const context& ctx, const node_break_statement&, size_t indent)
     std::cout << ind << "Break\n";
 }
 
+void dump_node(const context& ctx, const node_negation& n, size_t indent)
+{
+    std::string ind = std::string(indent, ' ');
+
+    std::cout << ind << "Negation; type: " << ctx.repr(n.assigned_type) << "\n";
+
+    dump_ast(ctx, *n.expr, indent + 4);
+}
+
 void dump_node(const context& ctx, const node_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
@@ -351,23 +359,6 @@ bool node_function_definition::has_attribute(const std::string& attr_name) const
     }
     return false;
 }
-
-struct number_range_rule
-{
-    primitive_type primitive;
-    long long min_value;
-    long long max_value;
-    const char* label;
-};
-
-constexpr std::array<number_range_rule, 6> NUMBER_RANGE_RULES{{
-    {primitive_type::U8, 0, std::numeric_limits<uint8_t>::max(), "u8"},
-    {primitive_type::U16, 0, std::numeric_limits<uint16_t>::max(), "u16"},
-    {primitive_type::U32, 0, std::numeric_limits<uint32_t>::max(), "u32"},
-    {primitive_type::S8, std::numeric_limits<int8_t>::min(), std::numeric_limits<int8_t>::max(), "s8"},
-    {primitive_type::S16, std::numeric_limits<int16_t>::min(), std::numeric_limits<int16_t>::max(), "s16"},
-    {primitive_type::S32, std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::max(), "s32"},
-}};
 
 parser::parser(std::shared_ptr<lexer> l, context& ctx)
 : diagnostic_emitter(diagnostic_phase::parser)
@@ -1252,8 +1243,7 @@ ast_node parser::parse_primary()
         // record initialisation and 'if' expressions can look very similar but we
         // can clearly distinguish them on a semantic level. When the identifier
         // before the opening '{' is a type, then this must be a record initialisation
-        else if (current_scope->lookup_type(id.name).has_value() &&
-                 capy_lexer->ahead_is_sym(token_symbol::sym_curly_open))
+        else if (current_scope->lookup_type(id.name).has_value() && capy_lexer->ahead_is_sym(token_symbol::sym_curly_open))
         {
             return parse_record_initialisation(id_range, id.name);
         }
@@ -1319,7 +1309,28 @@ ast_node parser::parse_primary()
             assign_context::rhs
         );
     }
-    else if (capy_lexer->ahead_is<token_integer>() || capy_lexer->ahead_is_sym(token_symbol::sym_minus))
+    else if (capy_lexer->ahead_is_sym(token_symbol::sym_minus))
+    {
+        auto op_token = capy_lexer->expect<token_symbol>();
+        auto expr = parse_expression(PRECEDENCE_UNARY_MINUS);
+
+        auto* number = std::get_if<node_number>(&expr.value);
+        if (number != nullptr)
+        {
+            number->number = -number->number;
+            return expr;
+        }
+        else
+        {
+            return make_located<node_negation>(
+                op_token.location.start,
+                expr.location.end,
+                std::make_unique<ast_node>(std::move(expr)),
+                parse_context.create_type_var()
+            );
+        }
+    }
+    else if (capy_lexer->ahead_is<token_integer>())
     {
         return parse_number();
     }
@@ -1397,19 +1408,7 @@ type_id parser::parse_type_reference()
 
 ast_node parser::parse_number()
 {
-    bool is_negative = false;
-    if (capy_lexer->ahead_is_sym(token_symbol::sym_minus))
-    {
-        is_negative = true;
-        capy_lexer->expect<token_symbol>();
-    }
-
     auto lhs = capy_lexer->expect<token_integer>();
-    auto lhs_location = lhs.location;
-    if (is_negative)
-    {
-        lhs.number = -lhs.number;
-    }
 
     std::optional<type_id> number_type;
     if (lhs.type_suffix == "")
@@ -1426,35 +1425,15 @@ ast_node parser::parse_number()
         append_error("Number has an illegal suffix");
         return make_located<node_number>(
             capy_lexer->current_source_position(),
-            lhs_location.end,
+            lhs.location.end,
             0,
             parse_context.intern_primitive(primitive_type::U32)
         );
     }
 
-    auto primitive = parse_context.primitive_type_of(number_type.value());
-    if (primitive.has_value())
-    {
-        for (const auto& rule : NUMBER_RANGE_RULES)
-        {
-            if (rule.primitive != primitive.value())
-            {
-                continue;
-            }
-            if ((lhs.number < rule.min_value) || (lhs.number > rule.max_value))
-            {
-                append_error_at(
-                    lhs_location.start,
-                    std::format("Numeric literal '{}' exceeds valid range for {} ({}..{})", lhs.number, rule.label, rule.min_value, rule.max_value)
-                );
-            }
-            break;
-        }
-    }
-
     return make_located<node_number>(
-        lhs_location.start,
-        lhs_location.end,
+        lhs.location.start,
+        lhs.location.end,
         lhs.number,
         number_type.value()
     );

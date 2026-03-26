@@ -75,6 +75,11 @@ void ast_visitor::visit_nodes(node_let_expression& l_expr)
     }
 }
 
+void ast_visitor::visit_nodes(node_negation& expr)
+{
+    visit(*expr.expr);
+}
+
 void ast_visitor::visit_nodes(node_expression& expr)
 {
     if (expr.operation == op_assignment)

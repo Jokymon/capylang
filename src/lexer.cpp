@@ -147,7 +147,9 @@ int get_precedence(operator_type op_type)
     switch (op_type)
     {
         case op_conversion:
-            return 5;
+            return 6;
+        // unary minus precedence according to
+        // PRECEDENCE_UNARY_MINUS
         case op_multiply:
         case op_division:
         case op_modulus:

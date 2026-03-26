@@ -70,6 +70,38 @@ fn _start() {
     assert exit_code == 4
 
 
+@pytest.mark.good
+def test_unary_negating_variables():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let mut a: s32 = 20;
+    a = -a;
+    proc_exit((25s32 + a) as u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 5
+
+
+@pytest.mark.good
+def test_unary_negating_expressions():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let mut a: s32 = -40s32;
+    let b: s32 = -(a + 10);
+    proc_exit(b as u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 30
+
+
 def test_binary_multiplication():
     code = """proc_exit(3u32 * 5u32)"""
     code = tools.expression_to_full_program(code)

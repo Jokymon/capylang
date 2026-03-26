@@ -46,6 +46,11 @@ void normalization::process(source_range, node_discard_expression& n)
     visit_nodes(n);
 }
 
+void normalization::process(source_range location, node_negation& n)
+{
+    visit_nodes(n);
+}
+
 void normalization::process(source_range, node_return_expression& n)
 {
     visit_nodes(n);

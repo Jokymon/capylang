@@ -489,6 +489,12 @@ void emitter::emit(const node_return_expression& root)
         cur_block->ret();
     }
 }
+void emitter::emit(const node_negation& root)
+{
+    cur_block->const_val(wasm_type::i32, 0);
+    emit(*root.expr);
+    cur_block->sub(wasm_type::i32);
+}
 
 void emitter::emit(const node_break_statement&)
 {

@@ -1,7 +1,25 @@
 #include "semantics.hpp"
+#include <array>
 #include <assert.h>
 #include <iostream>
 #include <unordered_set>
+
+struct number_range_rule
+{
+    primitive_type primitive;
+    long long min_value;
+    long long max_value;
+    const char* label;
+};
+
+constexpr std::array<number_range_rule, 6> NUMBER_RANGE_RULES{{
+    {primitive_type::U8, 0, std::numeric_limits<uint8_t>::max(), "u8"},
+    {primitive_type::U16, 0, std::numeric_limits<uint16_t>::max(), "u16"},
+    {primitive_type::U32, 0, std::numeric_limits<uint32_t>::max(), "u32"},
+    {primitive_type::S8, std::numeric_limits<int8_t>::min(), std::numeric_limits<int8_t>::max(), "s8"},
+    {primitive_type::S16, std::numeric_limits<int16_t>::min(), std::numeric_limits<int16_t>::max(), "s16"},
+    {primitive_type::S32, std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::max(), "s32"},
+}};
 
 type_id assigned_node_type(const ast_node& node, context& ctx)
 {
@@ -89,6 +107,10 @@ type_id assigned_node_type(const ast_node& node, context& ctx)
             {
                 return ctx.intern_primitive(primitive_type::Void);
             }
+            else if constexpr (std::is_same_v<T, node_negation>)
+            {
+                return ctx.resolved_type(n.assigned_type);
+            }
             else if constexpr (std::is_same_v<T, node_expression>)
             {
                 return ctx.resolved_type(n.assigned_type);
@@ -128,6 +150,25 @@ void semantic_analyser::semantic_analysis(node_module& module)
 
 void semantic_analyser::process(source_range location, node_number& n)
 {
+    auto primitive = parse_context.primitive_type_of(n.assigned_type);
+    if (primitive.has_value())
+    {
+        for (const auto& rule : NUMBER_RANGE_RULES)
+        {
+            if (rule.primitive != primitive.value())
+            {
+                continue;
+            }
+            if ((n.number < rule.min_value) || (n.number > rule.max_value))
+            {
+                append_error_at(
+                    location.start,
+                    std::format("Numeric literal '{}' exceeds valid range for {} ({}..{})", n.number, rule.label, rule.min_value, rule.max_value)
+                );
+            }
+            break;
+        }
+    }
 }
 
 void semantic_analyser::process(source_range location, node_char_literal& n)
@@ -450,6 +491,12 @@ void semantic_analyser::process(source_range location, node_break_statement&)
 {
 }
 
+void semantic_analyser::process(source_range location, node_negation& n)
+{
+    visit_nodes(n);
+    n.assigned_type = assigned_node_type(*n.expr, parse_context);
+}
+
 void semantic_analyser::process(source_range location, node_expression& n)
 {
     visit_nodes(n);
@@ -486,9 +533,7 @@ void semantic_analyser::process(source_range location, node_expression& n)
             );
         }
     }
-    else if ((n.operation == op_equals) || (n.operation == op_notequals) || (n.operation == op_lessthan) ||
-             (n.operation == op_lessthan_equal) || (n.operation == op_greaterthan) ||
-             (n.operation == op_greaterthan_equal))
+    else if ((n.operation == op_equals) || (n.operation == op_notequals) || (n.operation == op_lessthan) || (n.operation == op_lessthan_equal) || (n.operation == op_greaterthan) || (n.operation == op_greaterthan_equal))
     {
         n.assigned_type = parse_context.intern_primitive(primitive_type::Boolean);
     }
