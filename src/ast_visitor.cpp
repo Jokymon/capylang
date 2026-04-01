@@ -2,6 +2,7 @@
 
 ast_visitor::ast_visitor()
 : current_context{assign_context::rhs}
+, while_nesting_level(0)
 {
 }
 
@@ -61,10 +62,12 @@ void ast_visitor::visit_nodes(node_while_expression& w_expr)
 {
     visit(*w_expr.condition);
 
+    while_nesting_level++;
     for (const auto& expression : w_expr.while_code)
     {
         visit(*expression);
     }
+    while_nesting_level--;
 }
 
 void ast_visitor::visit_nodes(node_let_expression& l_expr)

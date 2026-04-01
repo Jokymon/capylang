@@ -489,6 +489,13 @@ void semantic_analyser::process(source_range location, node_return_expression& n
 
 void semantic_analyser::process(source_range location, node_break_statement&)
 {
+    if (while_nesting_level == 0)
+    {
+        append_error_at(
+            location.start,
+            "'break' is not allowed outside 'while' loops"
+        );
+    }
 }
 
 void semantic_analyser::process(source_range location, node_negation& n)

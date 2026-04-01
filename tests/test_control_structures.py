@@ -324,6 +324,27 @@ fn _start() {
 
 
 @pytest.mark.parse_error
+def test_break_outside_while_is_reported():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let result: u32 = 10u32;
+    break;
+    proc_exit(result)
+}
+"""
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
+
+    assert exit_code == 1
+    assert (
+        tools.normalize_filename_from_output(stderr)
+        == "filename:7:5: 'break' is not allowed outside 'while' loops\n"
+    )
+
+
+@pytest.mark.parse_error
 def test_returns_with_mismatched_types_is_wrong():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;

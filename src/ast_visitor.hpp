@@ -47,4 +47,5 @@ protected:
     virtual void process(source_range location, node_module& n) = 0;
 
     assign_context current_context;
+    size_t while_nesting_level;
 };
