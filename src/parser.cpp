@@ -792,7 +792,8 @@ ast_node parser::parse_expression(int min_precedence)
     }
     else if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_if))
     {
-        return parse_if_expression();
+        lhs = parse_if_expression();
+        start = lhs.location;
     }
     else if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_while))
     {

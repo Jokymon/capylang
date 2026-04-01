@@ -120,6 +120,26 @@ fn _start() {
 
 
 @pytest.mark.good
+def test_if_expressions_can_be_part_of_an_expression():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let condition: bool = true;
+    let result: u32 = if condition {
+        10u32
+    } else {
+        12u32
+    } * 3u32;
+    proc_exit(result)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 30
+
+
+@pytest.mark.good
 def test_while_loop():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
