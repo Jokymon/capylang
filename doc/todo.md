@@ -20,9 +20,18 @@
  * In some cases the parser seems to get stuck in an endless loop trying to look for some token that never appears
  * Add an option to the compiler to just dump the sequence of tokens
  * Add --help option to the compiler
- * Add intrinsics
- * Error messages from diagnostics bag don't seem to contain the file name; Also the "Returned value of type ... doesn't
-   match the declared return type ..." message seems to always be reported on line 1 column 1. 
+ * Add intrinsics, for example:
+    * abs(), sqrt(), ceil(), floor(), trunc(), min(), max()
+    * memory instructions, size(), grow(), copy(), fill()
+ * types in if/then/else branches should also be infered if possible; for example when return type is known and both
+   paths create an untyped number
+ * Check for `source_position{"", 0, 0}` in the source. These are wrongly reported error locations
+ * Add logic unary !
+ * Allow the "const"-part of instructions for global initialisation
+ * Update the README section about the canvas access to the playground API
+ * I saw that let expressions with init can be terminated without a ; and still be correctly parsed. Are we now in JS
+   territory? Is this really what we want?
+ * Unknown/illegal tokens create an endless loop for the parser
 
 ### Implement an (H)IR
 
