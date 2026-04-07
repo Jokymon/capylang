@@ -61,6 +61,8 @@ enum class wasm_op
     imul,
     idiv,
     irem,
+    iand,
+    ior,
 
     eq,
     ne,
@@ -220,9 +222,11 @@ public:
     void const_val(wasm_type type, int64_t value);
     void drop();
     void add(wasm_type type);
+    void and_instr(wasm_type type);
     void div(wasm_type type);
     void mod(wasm_type type);
     void mul(wasm_type type);
+    void or_instr(wasm_type type);
     void sub(wasm_type type);
     void load(wasm_type type, size_t offset = 0);
     void store(wasm_type type, size_t offset = 0);

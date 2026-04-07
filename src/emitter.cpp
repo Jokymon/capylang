@@ -541,6 +541,12 @@ void emitter::emit(const node_expression& root)
         case op_modulus:
             cur_block->mod(wasm_type::i32);
             break;
+        case op_and:
+            cur_block->and_instr(wasm_type::i32);
+            break;
+        case op_or:
+            cur_block->or_instr(wasm_type::i32);
+            break;
         case op_equals:
             cur_block->eq(wasm_type::i32);
             break;

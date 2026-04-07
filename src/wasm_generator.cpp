@@ -478,6 +478,12 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
                                case wasm_op::imul:
                                    output.put(INST_I32_MUL);
                                    break;
+                               case wasm_op::iand:
+                                   output.put(INST_I32_AND);
+                                   break;
+                               case wasm_op::ior:
+                                   output.put(INST_I32_OR);
+                                   break;
                                case wasm_op::eq:
                                    output.put(INST_I32_EQ);
                                    break;

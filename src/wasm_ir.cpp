@@ -170,6 +170,11 @@ void wasm_block::add(wasm_type type)
     instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type(wasm_op::iadd, type)));
 }
 
+void wasm_block::and_instr(wasm_type type)
+{
+    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type(wasm_op::iand, type)));
+}
+
 void wasm_block::div(wasm_type type)
 {
     instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type_sign(wasm_op::idiv, type)));
@@ -183,6 +188,11 @@ void wasm_block::mod(wasm_type type)
 void wasm_block::mul(wasm_type type)
 {
     instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type(wasm_op::imul, type)));
+}
+
+void wasm_block::or_instr(wasm_type type)
+{
+    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type(wasm_op::ior, type)));
 }
 
 void wasm_block::sub(wasm_type type)

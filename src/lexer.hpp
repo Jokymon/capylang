@@ -60,14 +60,18 @@ struct token_symbol : public located_token
         sym_kw_return,
         sym_kw_while,
 
+        // general rule: name the symbols according to what they look and not
+        // what they represent in the language
         sym_arrow,
         sym_at,
+        sym_barbar,
         sym_colon,
         sym_comma,
         sym_dcolon,
         sym_dquote,
         sym_eqeq,
         sym_equal,
+        sym_etet,
         sym_gt,
         sym_gte,
         sym_lt,
@@ -108,10 +112,13 @@ enum operator_type
     op_greaterthan,
     op_greaterthan_equal,
 
+    op_and,
+    op_or,
+
     op_conversion,
 };
 
-const int PRECEDENCE_UNARY_MINUS = 5;
+const int PRECEDENCE_UNARY_MINUS = 6;
 
 int get_precedence(operator_type op_type);
 operator_type op_from_symbol(const token_symbol& symbol);

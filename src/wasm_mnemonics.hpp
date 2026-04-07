@@ -54,3 +54,5 @@ const char INST_I32_DIV_S = '\x6d';
 const char INST_I32_DIV_U = '\x6e';
 const char INST_I32_REM_S = '\x6f';
 const char INST_I32_REM_U = '\x70';
+const char INST_I32_AND = '\x71';
+const char INST_I32_OR = '\x72';

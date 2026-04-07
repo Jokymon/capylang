@@ -41,13 +41,8 @@ fn draw_line(x0: u32, y0: u32, x1: u32, y1: u32, abgr: u32)
     while (true) {
         put_pixel(x as u32, y as u32, abgr);
 
-    //     if (x0 == x1 && y0 == y1) {
-    //         break;
-    //     };
-        if (x as u32==x1) {
-            if (y as u32==y1) {
-                break;
-            }
+        if (x as u32==x1 && y as u32==y1) {
+            break;
         }
 
         e2 = err + err;

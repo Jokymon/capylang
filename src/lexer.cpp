@@ -95,6 +95,8 @@ std::string token_symbol::to_string() const
             return "->";
         case sym_at:
             return "@";
+        case sym_barbar:
+            return "||";
         case sym_colon:
             return ":";
         case sym_comma:
@@ -107,6 +109,8 @@ std::string token_symbol::to_string() const
             return "==";
         case sym_equal:
             return "=";
+        case sym_etet:
+            return "&&";
         case sym_lt:
             return "<";
         case sym_lte:
@@ -147,22 +151,25 @@ int get_precedence(operator_type op_type)
     switch (op_type)
     {
         case op_conversion:
-            return 6;
+            return 7;
         // unary minus precedence according to
         // PRECEDENCE_UNARY_MINUS
         case op_multiply:
         case op_division:
         case op_modulus:
-            return 4;
+            return 5;
         case op_minus:
         case op_plus:
-            return 3;
+            return 4;
         case op_equals:
         case op_notequals:
         case op_lessthan:
         case op_lessthan_equal:
         case op_greaterthan:
         case op_greaterthan_equal:
+            return 3;
+        case op_and:
+        case op_or:
             return 2;
         case op_assignment:
             return 1;
@@ -199,6 +206,10 @@ operator_type op_from_symbol(const token_symbol& symbol)
             return op_greaterthan;
         case token_symbol::sym_gte:
             return op_greaterthan_equal;
+        case token_symbol::sym_barbar:
+            return op_or;
+        case token_symbol::sym_etet:
+            return op_and;
         case token_symbol::sym_kw_as:
             return op_conversion;
         default:
@@ -265,6 +276,10 @@ std::string repr_op(operator_type op)
             return ">";
         case op_greaterthan_equal:
             return ">=";
+        case op_and:
+            return "&&";
+        case op_or:
+            return "||";
         case op_conversion:
             return "as";
     }
@@ -350,6 +365,8 @@ bool lexer::ahead_is_operator()
                     case token_symbol::sym_gt:
                     case token_symbol::sym_gte:
                     case token_symbol::sym_noteq:
+                    case token_symbol::sym_barbar:
+                    case token_symbol::sym_etet:
                     case token_symbol::sym_kw_as:
                         return true;
                     default:
@@ -556,6 +573,20 @@ token lexer::parse_token()
             return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_gte};
         }
         return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_gt};
+    }
+    else if ((ch == '&') && (peek_ahead() == '&'))
+    {
+        auto start_position = look_ahead_position;
+        get_char();
+        get_char();
+        return token_symbol{start_position, look_ahead_position, token_symbol::sym_etet};
+    }
+    else if ((ch == '|') && (peek_ahead() == '|'))
+    {
+        auto start_position = look_ahead_position;
+        get_char();
+        get_char();
+        return token_symbol{start_position, look_ahead_position, token_symbol::sym_barbar};
     }
     else if (ch == '@')
     {
