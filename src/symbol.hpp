@@ -121,18 +121,15 @@ struct type_kind_eq
                 using typ_x = std::decay_t<decltype(x)>;
                 using typ_y = std::decay_t<decltype(y)>;
 
-                if constexpr (std::is_same_v<typ_x, primitive_type> &&
-                              std::is_same_v<typ_y, primitive_type>)
+                if constexpr (std::is_same_v<typ_x, primitive_type> && std::is_same_v<typ_y, primitive_type>)
                 {
                     return x == y;
                 }
-                else if constexpr (std::is_same_v<typ_x, pointer_type> &&
-                                   std::is_same_v<typ_y, pointer_type>)
+                else if constexpr (std::is_same_v<typ_x, pointer_type> && std::is_same_v<typ_y, pointer_type>)
                 {
                     return x.to == y.to;
                 }
-                else if constexpr (std::is_same_v<typ_x, record_type> &&
-                                   std::is_same_v<typ_y, record_type>)
+                else if constexpr (std::is_same_v<typ_x, record_type> && std::is_same_v<typ_y, record_type>)
                 {
                     if (x.fields.size() != y.fields.size())
                     {
@@ -147,8 +144,7 @@ struct type_kind_eq
                     }
                     return true;
                 }
-                else if constexpr (std::is_same_v<typ_x, function_type> &&
-                                   std::is_same_v<typ_y, function_type>)
+                else if constexpr (std::is_same_v<typ_x, function_type> && std::is_same_v<typ_y, function_type>)
                 {
                     if (x.return_type != y.return_type)
                     {
@@ -233,6 +229,7 @@ struct symbol
     symbol_kind kind;
     bool mutab;
     bool is_assigned;
+    bool is_intrinsic;
 };
 
 struct context

@@ -377,7 +377,16 @@ void emitter::emit(const node_function_call& func_call)
     {
         emit(*param);
     }
-    cur_block->call(func_call.function_name.c_str());
+
+    const auto& func_symbol = parse_context.symbol_at(func_call.symbol_ref);
+    if (func_symbol.is_intrinsic)
+    {
+        cur_block->memory_size();
+    }
+    else
+    {
+        cur_block->call(func_call.function_name.c_str());
+    }
 }
 
 void emitter::emit(const node_let_expression& let_expression)

@@ -373,6 +373,7 @@ parser::parser(std::shared_ptr<lexer> l, context& ctx)
         .kind = symbol_kind::error,
         .mutab = false,
         .is_assigned = true,
+        .is_intrinsic = false,
     });
 }
 
@@ -403,6 +404,24 @@ void parser::append_error(const std::string& error_message)
     append_error_at(current_pos, error_message);
 }
 
+void parser::populate_intrinsics()
+{
+    function_type mem_size_type;
+    mem_size_type.return_type = parse_context.intern_primitive(primitive_type::U32);
+    function_signature mem_size_sig;
+    mem_size_sig.function_type = parse_context.intern(mem_size_type);
+    current_scope->symbol_table["memory_size"] =
+        parse_context.create_symbol(symbol{
+            .name = "memory_size",
+            .symbol_type = mem_size_sig.function_type,
+            .signature = mem_size_sig,
+            .kind = symbol_kind::function,
+            .mutab = false,
+            .is_assigned = true,
+            .is_intrinsic = true,
+        });
+}
+
 node_module parser::parse_module()
 {
     auto capy_module = node_module{
@@ -414,6 +433,7 @@ node_module parser::parse_module()
 
     capy_module.module_scope = std::make_unique<scope>();
     current_scope = capy_module.module_scope.get();
+    populate_intrinsics();
 
     std::string library_code = R"(
 global mut heap_ptr: u32 = 1024u32;
@@ -592,6 +612,7 @@ node_import_definition parser::parse_import_definition()
             .kind = symbol_kind::function,
             .mutab = false,
             .is_assigned = true,
+            .is_intrinsic = false,
         });
         current_scope->symbol_table[alias_token.name] = function_alias_symbol_id;
     }
@@ -643,6 +664,7 @@ node_global_definition parser::parse_global()
         .kind = symbol_kind::global_var,
         .mutab = is_mutable,
         .is_assigned = false,
+        .is_intrinsic = false,
     };
     auto global_symbol_id = parse_context.create_symbol(std::move(global_symbol));
     current_scope->symbol_table[variable_name.name] = global_symbol_id;
@@ -706,6 +728,7 @@ node_function_definition parser::parse_function_definition()
             .kind = symbol_kind::argument,
             .mutab = false,
             .is_assigned = true, // function parameters are 'assigned' from the function call
+            .is_intrinsic = false,
         });
         current_scope->symbol_table[param_name] = param_symbol_id;
     }
@@ -745,6 +768,7 @@ node_function_head parser::parse_function_head()
         .kind = symbol_kind::function,
         .mutab = false,
         .is_assigned = true,
+        .is_intrinsic = false,
     });
     current_scope->symbol_table[function_name.name] = function_symbol_id;
 
@@ -1039,6 +1063,7 @@ ast_node parser::parse_let_expression()
         .kind = symbol_kind::local_var,
         .mutab = is_mutable,
         .is_assigned = false,
+        .is_intrinsic = false,
     };
     auto local_symbol_id = parse_context.create_symbol(std::move(new_symbol));
     current_scope->symbol_table[variable_name.name] = local_symbol_id;

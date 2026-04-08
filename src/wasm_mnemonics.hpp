@@ -28,6 +28,8 @@ const char INST_I32_LOAD8_U = '\x2d';
 const char INST_I32_STORE = '\x36';
 const char INST_I32_STORE8 = '\x3a';
 
+const char INST_MEMORY_SIZE = '\x3f';
+
 const char INST_I32_CONST = '\x41';
 const char INST_I64_CONST = '\x42';
 const char INST_F32_CONST = '\x43';

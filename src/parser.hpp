@@ -269,6 +269,8 @@ private:
 
     void append_error(const std::string& error_message);
 
+    void populate_intrinsics();
+
     node_module parse_module();
     void parse_module_body();
     void parse_attribute();

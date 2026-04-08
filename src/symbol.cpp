@@ -49,6 +49,7 @@ context::context()
         .kind = symbol_kind::error,
         .mutab = false,
         .is_assigned = true,
+        .is_intrinsic = false,
     });
 }
 

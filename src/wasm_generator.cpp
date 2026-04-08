@@ -460,6 +460,11 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
                                    break;
                                case wasm_op::ret:
                                    output.put(INST_RET);
+                                   break;
+                               case wasm_op::memory_size:
+                                   output.put(INST_MEMORY_SIZE);
+                                   encode_leb128(output, 0);  // memory index is hardcoded for the moment
+                                   break;
                                default:
                                    break;
                            }

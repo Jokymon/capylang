@@ -77,6 +77,8 @@ enum class wasm_op
     call,
     ret,
 
+    memory_size,
+
     typ_const
 };
 
@@ -241,6 +243,7 @@ public:
     void br_if(wasm_branch_label branch_label);
     void call(const char* function_name);
     void ret();
+    void memory_size();
 
     wasm_block_type block_type;
     wasm_type return_type;
