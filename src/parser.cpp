@@ -121,6 +121,23 @@ void parser::populate_intrinsics()
             .is_assigned = true,
             .is_intrinsic = true,
         });
+
+    function_type mem_grow_type;
+    mem_grow_type.parameter_types.push_back(parse_context.intern_primitive(primitive_type::U32));
+    mem_grow_type.return_type = parse_context.intern_primitive(primitive_type::S32);
+    function_signature mem_grow_sig;
+    mem_grow_sig.parameters.push_back("additional_blocks");
+    mem_grow_sig.function_type = parse_context.intern(mem_grow_type);
+    current_scope->symbol_table["memory_grow"] =
+        parse_context.create_symbol(symbol{
+            .name = "memory_grow",
+            .symbol_type = mem_grow_sig.function_type,
+            .signature = mem_grow_sig,
+            .kind = symbol_kind::function,
+            .mutab = false,
+            .is_assigned = true,
+            .is_intrinsic = true,
+        });
 }
 
 node_module parser::parse_module()

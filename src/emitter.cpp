@@ -381,7 +381,18 @@ void emitter::emit(const node_function_call& func_call)
     const auto& func_symbol = parse_context.symbol_at(func_call.symbol_ref);
     if (func_symbol.is_intrinsic)
     {
-        cur_block->memory_size();
+        if (func_symbol.name == "memory_size")
+        {
+            cur_block->memory_size();
+        }
+        else if (func_symbol.name == "memory_grow")
+        {
+            cur_block->memory_grow();
+        }
+        else
+        {
+            assert(false && "Unknown intrinsic");
+        }
     }
     else
     {

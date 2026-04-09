@@ -29,6 +29,7 @@ const char INST_I32_STORE = '\x36';
 const char INST_I32_STORE8 = '\x3a';
 
 const char INST_MEMORY_SIZE = '\x3f';
+const char INST_MEMORY_GROW = '\x40';
 
 const char INST_I32_CONST = '\x41';
 const char INST_I64_CONST = '\x42';

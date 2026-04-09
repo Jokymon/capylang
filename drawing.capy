@@ -62,6 +62,8 @@ fn draw_line(x0: u32, y0: u32, x1: u32, y1: u32, abgr: u32)
 @export
 fn create_frame() -> *u32
 {
+    memory_grow(4);
+
     let mut i: u32 = 0;
 
     while i<30 {

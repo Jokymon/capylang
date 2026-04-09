@@ -270,6 +270,11 @@ void wasm_block::memory_size()
     instructions.push_back(std::make_unique<wasm_statement>(wasm_instruction(wasm_op::memory_size)));
 }
 
+void wasm_block::memory_grow()
+{
+    instructions.push_back(std::make_unique<wasm_statement>(wasm_instruction(wasm_op::memory_grow)));
+}
+
 exportable::exportable(index_type index, wasm_extern_index export_type)
 : name()
 , index(index)

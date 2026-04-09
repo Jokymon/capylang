@@ -78,6 +78,7 @@ enum class wasm_op
     ret,
 
     memory_size,
+    memory_grow,
 
     typ_const
 };
@@ -244,6 +245,7 @@ public:
     void call(const char* function_name);
     void ret();
     void memory_size();
+    void memory_grow();
 
     wasm_block_type block_type;
     wasm_type return_type;
