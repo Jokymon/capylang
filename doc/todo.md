@@ -1,11 +1,9 @@
 ## TODO
  * formalizing the grammar
    --> derive syntax highlighters and a language server
- * document or even automate the setup of the development tools
-   --> WASI SDK + Sysroot
-   --> Wasm tools
-   --> Wasmtime or other WASM runtimes
-
+    * Challenge: TextMate grammar for VSCode works on lines and has to produce scopes,
+     which might require a little more hand-crafting. Maybe some parts even need
+     tweaking beyond what a generator could do.
  * add 64-bit version of numbers
  * add floating point number types
  * Add unicode code point support for characters (so far we only have it in strings)
@@ -44,6 +42,11 @@
    `std::embed` but also features for example available in Rust; the motivation is to add fonts and images in little
    game demos; instead of custom sections, we might have to consider data section (active or passive) since custom
    sections are not accessible directly from inside WASM code
+ * Add error handling and message output for lexer
+ * Extend argument parser with "Usage: ...." and more detailed help text
+ * Add some library/module/package concept which allows for better management of functions and types in terms of reuse;
+   One challenge here is, how capy-source files and WASM modules are mappend and where and if WASM module linking already
+   has to be considered or if we can start working with simple nested lexers/parsers.
 
 ### Implement an (H)IR
 
