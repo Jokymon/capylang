@@ -26,6 +26,14 @@ const char SECTION_DATA = '\x0B';
 const char SECTION_DATA_COUNT = '\x0C';
 const char SECTION_TAG = '\x0D';
 
+const char NAME_SUBSECTION_MODULE_NAME = '\x00';
+const char NAME_SUBSECTION_FUNCTION_NAMES = '\x01';
+const char NAME_SUBSECTION_LOCAL_NAMES = '\x02';
+const char NAME_SUBSECTION_TYPE_NAMES = '\x04';
+const char NAME_SUBSECTION_GLOBAL_NAMES = '\x07'; // extended name section proposal
+const char NAME_SUBSECTION_FIELD_NAMES = '\x0a';
+const char NAME_SUBSECTION_TAG_NAMES = '\x0b';
+
 const char COMP_TYPE_FUNC = '\x60';
 
 const char EXTERNAL_TYPE_FUNC = '\x00';
@@ -227,6 +235,7 @@ void wasm_generator::generate(const wasm_module& module, std::ostream& output)
     generate_exports(module, output);
     generate_code(module, output);
     generate_data(module, output);
+    generate_names(module, output);
 }
 
 void wasm_generator::generate_types(const wasm_module& module, std::ostream& output)
@@ -424,6 +433,70 @@ void wasm_generator::generate_data(const wasm_module& module, std::ostream& outp
         encode_leb128(content, data.data_buffer.size());
         content << data.data_buffer;
     }
+
+    encode_leb128(output, content.str().size());
+    output.write(content.str().c_str(), content.str().size());
+}
+
+void wasm_generator::generate_names(const wasm_module& module, std::ostream& output)
+{
+    output.put(SECTION_CUSTOM);
+
+    std::ostringstream content(std::ios::binary);
+    encode_string(content, "name");
+
+    // Add function names: name map
+    std::ostringstream subsection1(std::ios::binary);
+    encode_leb128(subsection1, module.functions.size());
+    for (size_t index = 0; index < module.functions.size(); ++index)
+    {
+        encode_leb128(subsection1, index);
+        encode_string(subsection1, module.functions[index].name);
+    }
+
+    content.put(NAME_SUBSECTION_FUNCTION_NAMES);
+    encode_leb128(content, subsection1.str().size());
+    content.write(subsection1.str().c_str(), subsection1.str().size());
+
+    // Add parameter/local names: indirect name map
+    std::ostringstream subsection2(std::ios::binary);
+    encode_leb128(subsection2, module.functions.size());
+    for (size_t index = 0; index < module.functions.size(); ++index)
+    {
+        encode_leb128(subsection2, index);
+
+        const wasm_function& func{module.functions[index]};
+        // number of arguments and locals of this function
+        encode_leb128(subsection2, func.arguments.size() + func.locals.size());
+        size_t local_index = 0;
+        for (const auto& param : func.arguments)
+        {
+            encode_leb128(subsection2, local_index++);
+            encode_string(subsection2, param.name);
+        }
+        for (const auto& param : func.locals)
+        {
+            encode_leb128(subsection2, local_index++);
+            encode_string(subsection2, param.name);
+        }
+    }
+
+    content.put(NAME_SUBSECTION_LOCAL_NAMES);
+    encode_leb128(content, subsection2.str().size());
+    content.write(subsection2.str().c_str(), subsection2.str().size());
+
+    // Add global names
+    std::ostringstream subsection7(std::ios::binary);
+    encode_leb128(subsection7, module.globals.size());
+    for (size_t index = 0; index < module.globals.size(); ++index)
+    {
+        encode_leb128(subsection7, index);
+        encode_string(subsection7, module.globals[index].name);
+    }
+
+    content.put(NAME_SUBSECTION_GLOBAL_NAMES);
+    encode_leb128(content, subsection7.str().size());
+    content.write(subsection7.str().c_str(), subsection7.str().size());
 
     encode_leb128(output, content.str().size());
     output.write(content.str().c_str(), content.str().size());
