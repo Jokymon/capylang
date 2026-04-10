@@ -26,22 +26,12 @@
         // module 'canvas' to use for drawing on the canvas from inside
         // the WASM module
 
-        function set_pixel(x, y, rgba) {
-            let r = (rgba >> 24) & 0xff;
-            let g = (rgba >> 16) & 0xff;
-            let b = (rgba >> 8) & 0xff;
-            let a = rgba & 0xff;
-
-            screen[x*4 + y*(canvas.width*4)] = r;
-            screen[x*4 + y*(canvas.width*4) + 1] = g;
-            screen[x*4 + y*(canvas.width*4) + 2] = b;
-            screen[x*4 + y*(canvas.width*4) + 3] = a;
-
-            fb.write({ device: { driver: {  } } }, screen);
-        }
-
         function canvas_width() {
             return canvas.width;
+        }
+
+        function canvas_height() {
+            return canvas.height;
         }
 
         //-------------------------------------------------------------
@@ -56,7 +46,7 @@
             instance: { exports }
         } = await WebAssembly.instantiateStreaming(fetch(loadedModuleUrl), {
                 wasi_snapshot_preview1,
-                canvas: { set_pixel, width: canvas_width }
+                canvas: { width: canvas_width, height: canvas_height }
         });
 
         //-------------------------------------------------------------

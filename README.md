@@ -119,9 +119,19 @@ The playground provides a drawing API towards the WebAssembly module. All the
 functions are provided through the `canvas` module. The following functions are
 implemented so far:
 
- * `set_pixel(x: u32, y: u32, rgba: u32) -> void`; for setting the color of a
-   pixel on the coordinates `x` and `y`. The color is given as a hexadecimal
-   RGBA code.
+ * `width() -> u32`; for getting the width of the canvas.
+ * `height() -> u32`; for getting the height of the canvas.
+
+The playground itself also expects exported functions in the loaded WASM module.
+So far these are:
+
+ * `create_frame() -> u32`; This function is called by the playground to request
+   a new "frame". The WASM module should reserve an area in an exported linear
+   memory which it can use to draw on. Each pixel takes 4 bytes to represent.
+   The 4 bytes represent the colors R, G, B, followed by the alpha channel in
+   the last byte. The R-value is stored in the lowest address, followed by the
+   next byte representing the G-value etc. etc.
+   The returned value shall be the pointer to the start address of this area.
 
 ## Contributing
 
