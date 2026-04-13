@@ -160,6 +160,13 @@ fn cabi_realloc(originalPtr: u32, originalSize: u32, alignment: u32, newSize: u3
 {
     let alloc_address: u32 = heap_ptr + (alignment - (heap_ptr%alignment));
     heap_ptr = alloc_address + newSize;
+
+    // determine the amount of required pages for the new heap size
+    let needed_pages = (heap_ptr / 65536u32) + 1u32;
+    if (needed_pages > memory_size()) {
+        memory_grow(needed_pages - memory_size());
+    }
+
     alloc_address
 }
 )";
