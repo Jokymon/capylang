@@ -125,6 +125,9 @@ implemented so far:
 The playground itself also expects exported functions in the loaded WASM module.
 So far these are:
 
+ * `init()`; This function is called by the playground once at the start of the
+   application and can be used to initialise global variables, allocate required
+   memory and set any other initial values as needed.
  * `create_frame() -> u32`; This function is called by the playground to request
    a new "frame". The WASM module should reserve an area in an exported linear
    memory which it can use to draw on. Each pixel takes 4 bytes to represent.

@@ -60,11 +60,11 @@
             });
 
             exports = instance.exports;
-            console.log(exports);
 
-            if ("create_frame" in exports)
+            if (("create_frame" in exports) && ("init" in exports))
             {
                 // This seems to be a drawing-API based application
+                exports.init();
                 let frame_base = exports.create_frame();
                 const view = new Uint8Array(exports.memory.buffer, frame_base, canvas.width*canvas.height*4);
                 fb.write({ device: { driver: {  } } }, view);

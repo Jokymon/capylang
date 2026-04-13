@@ -1,8 +1,9 @@
 import canvas::width() -> u32 as canvas_width;
+import canvas::height() -> u32 as canvas_height;
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 import wasi_snapshot_preview1::fd_write(fd: u32, io: *u32, count: u32, res: *u32) -> u32 as fd_write;
 
-global mut canvas_base: u32 = 2048u32;
+global mut canvas_base: *u32 = 0;
 
 // WASM has an `abs` opcode but that only supports float and vector operands
 fn abs(v: s32) -> s32
@@ -12,7 +13,7 @@ fn abs(v: s32) -> s32
 
 fn put_pixel(x: u32, y: u32, abgr: u32)
 {
-    let mut p: *u32 = canvas_base as *u32;
+    let mut p: *u32 = canvas_base;
 
     p = p + (4*x) as *u32;
     p = p + (canvas_width()*4*y) as *u32;
@@ -58,11 +59,44 @@ fn draw_line(x0: u32, y0: u32, x1: u32, y1: u32, abgr: u32)
     }
 }
 
+fn draw_rect(x: u32, y: u32, width: u32, height: u32, abgr: u32, fill: bool)
+{
+    let mut p: *u32 = canvas_base;
+
+    p = p + ((4*x) + (canvas_width()*4*y)) as *u32;
+
+    let mut ix: u32 = 0;
+    let mut iy: u32 = 0;
+    let mut p_left: *u32 = p;
+
+    while iy < height {
+        while ix < width {
+            *p = abgr;
+
+            p = p + 4 as *u32;
+            ix = ix + 1;
+        }
+        p_left = p_left + (canvas_width()*4) as *u32;
+        p = p_left;
+
+        ix = 0;
+        iy = iy + 1;
+    }
+}
+
+@export
+fn init()
+{
+    let w: u32 = canvas_width();
+    let h: u32 = canvas_height();
+    canvas_base = cabi_realloc(0, 0, 4, w * h * 4u32);
+    // doesn't work yet:
+    //canvas_base = cabi_realloc(0, 0, 4, canvas_width() * canvas_height() * 4);
+}
+
 @export
 fn create_frame() -> *u32
 {
-    memory_grow(4);
-
     let mut i: u32 = 0;
 
     while i<30 {
@@ -72,5 +106,7 @@ fn create_frame() -> *u32
     }
     draw_line(10, 67, 100, 3, 0xff00ff00);
 
-    canvas_base as *u32
+    draw_rect(50, 110, 50, 20, 0xffff00ff, true);
+
+    canvas_base
 }
