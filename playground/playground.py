@@ -1,7 +1,9 @@
 # Start a very simple web server that shows a web page which loads/runs the
 # WASM file given as the first parameter
 from http.server import HTTPServer, SimpleHTTPRequestHandler
+import json
 import mimetypes
+from pathlib import Path
 
 
 mimetypes.add_type("application/javascript", ".mjs")
@@ -14,6 +16,18 @@ class NoCacheHandler(SimpleHTTPRequestHandler):
             self.send_response(302)
             self.send_header("Location", "/index.html")
             self.end_headers()
+            return
+
+        if self.path == "/api/module":
+            project_root = Path(__file__).resolve().parent.parent
+            modules = sorted(path.name for path in project_root.glob("*.wasm"))
+            payload = json.dumps({"modules": modules}).encode("utf-8")
+
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
             return
 
         return super().do_GET()

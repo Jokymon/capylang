@@ -15,12 +15,17 @@
         import { WasiPreview1 } from '@easywasm/wasi';
         import { framebuffer } from 'web-zen-dev';
 
-        const loadedModuleUrl = 'drawing.wasm';
         const d = new TextDecoder();
         let consoleWindow;
         let canvas;
         let fb;
-        let screen;
+
+        let exports;
+
+        window.initPage = function initPage() {
+            attachGui();
+            populateWasmModules();
+        };
 
         //-------------------------------------------------------------
         // module 'canvas' to use for drawing on the canvas from inside
@@ -42,29 +47,41 @@
             consoleWindow.innerHTML += t.replace("\n", "<br />");
         }
 
-        const {
-            instance: { exports }
-        } = await WebAssembly.instantiateStreaming(fetch(loadedModuleUrl), {
-                wasi_snapshot_preview1,
-                canvas: { width: canvas_width, height: canvas_height }
-        });
-
         //-------------------------------------------------------------
 
-        function runApplication() {
-            let frame_base = exports.create_frame();
-            const view = new Uint8Array(exports.memory.buffer, frame_base, canvas.width*canvas.height*4);
-            fb.write({ device: { driver: {  } } }, view);
+        async function runApplication() {
+            const selectionEl = document.getElementById("appList");
+            const selIndex = selectionEl.options.selectedIndex;
+            const wasmModuleName = selectionEl.options[selIndex].text;
 
-            //let res = wasi_snapshot_preview1.start(exports);
+            const { instance } = await WebAssembly.instantiateStreaming(fetch(wasmModuleName), {
+                    wasi_snapshot_preview1,
+                    canvas: { width: canvas_width, height: canvas_height }
+            });
 
-            // const exitCodeEl = document.getElementById("exitCode");
-            // exitCodeEl.value = res;
-            // exitCodeEl.classList.add('flash');
-            // setTimeout(() => {
-            //     exitCodeEl.classList.remove('flash');
-            // }, 500);
-            // console.log("appplication exit code: " + res);
+            exports = instance.exports;
+            console.log(exports);
+
+            if ("create_frame" in exports)
+            {
+                // This seems to be a drawing-API based application
+                let frame_base = exports.create_frame();
+                const view = new Uint8Array(exports.memory.buffer, frame_base, canvas.width*canvas.height*4);
+                fb.write({ device: { driver: {  } } }, view);
+            }
+            else
+            {
+                // This seems to be a pure WASI-CLI based application
+                let res = wasi_snapshot_preview1.start(exports);
+
+                const exitCodeEl = document.getElementById("exitCode");
+                exitCodeEl.value = res;
+                exitCodeEl.classList.add('flash');
+                setTimeout(() => {
+                    exitCodeEl.classList.remove('flash');
+                }, 500);
+                console.log("appplication exit code: " + res);
+            }
         }
 
         function clearConsole() {
@@ -84,13 +101,24 @@
 
             canvas = document.getElementById('fb');
             fb = framebuffer({ canvas });
-            screen = new Uint8Array(canvas.width * canvas.height * 4);
         }
 
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', attachGui);
-        } else {
-            attachGui();
+        async function populateWasmModules() {
+            const resp = await fetch("/api/module");
+            if (!resp.ok) {
+                throw new Error("Failure while checking available modules");
+            }
+            const data = await resp.json();
+
+            const selectionEl = document.getElementById("appList");
+            for (let i=0; i<selectionEl.options.length; i++) {
+                selectionEl.options.remove(i);
+            }
+            for (const mod of data.modules) {
+                const c = document.createElement("option");
+                c.text = mod;
+                selectionEl.options.add(c);
+            }
         }
     </script>
     <style>
@@ -103,6 +131,9 @@
 
         div:has(#clearConsole) {
             margin-top: 1em;
+        }
+        div:has(#appList) {
+            margin-bottom: 1em;
         }
 
         fieldset {
@@ -133,11 +164,18 @@
     </style>
 </head>
 
-<body>
+<body onload="initPage()">
     <h1>Capy-lang Playground</h1>
-    <label>Arguments:<input id="arguments"></input></label>
-    <button id="runButton">Run application</button>
-    <label id="exitCodeLbl">Exit code:<input id="exitCode"></input></label>
+    <div>
+        <label for="appList">Available applications:</label>
+        <select id="appList"><option>Item 1</option></select>
+    </div>
+
+    <div>
+        <label>Arguments:<input id="arguments"></input></label>
+        <button id="runButton">Run application</button>
+        <label id="exitCodeLbl">Exit code:<input id="exitCode"></input></label>
+    </div>
 
     <div>
         <button id="clearConsole">Clear Console</button>

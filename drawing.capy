@@ -4,10 +4,9 @@ import wasi_snapshot_preview1::fd_write(fd: u32, io: *u32, count: u32, res: *u32
 
 global mut canvas_base: u32 = 2048u32;
 
+// WASM has an `abs` opcode but that only supports float and vector operands
 fn abs(v: s32) -> s32
 {
-    // TODO: this is a first instance where an intrinsic would be helpful since
-    // WASM actualy has an 'abs'-instruction
     if v<0 { -v } else { v }
 }
 
@@ -74,15 +73,4 @@ fn create_frame() -> *u32
     draw_line(10, 67, 100, 3, 0xff00ff00);
 
     canvas_base as *u32
-}
-
-@export
-fn _start()
-{
-    // let mut i: u32 = 0;
-    // while i<30 {
-    //     set_pixel(i, i, 0xff0000ff);
-    //     i = i + 1;
-    // }
-    proc_exit(0u32);
 }
