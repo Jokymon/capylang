@@ -19,6 +19,7 @@
         let consoleWindow;
         let canvas;
         let fb;
+        let animationLoop;      // requestAnimationFrame id
 
         let exports;
 
@@ -49,6 +50,14 @@
 
         //-------------------------------------------------------------
 
+        function blitFrame(timestamp) {
+            let frame_base = exports.create_frame();
+            const view = new Uint8Array(exports.memory.buffer, frame_base, canvas.width*canvas.height*4);
+            fb.write({ device: { driver: {  } } }, view);
+
+            animationLoop = requestAnimationFrame(blitFrame);
+        }
+
         async function runApplication() {
             const selectionEl = document.getElementById("appList");
             const selIndex = selectionEl.options.selectedIndex;
@@ -65,9 +74,9 @@
             {
                 // This seems to be a drawing-API based application
                 exports.init();
-                let frame_base = exports.create_frame();
-                const view = new Uint8Array(exports.memory.buffer, frame_base, canvas.width*canvas.height*4);
-                fb.write({ device: { driver: {  } } }, view);
+                blitFrame(0);
+                document.getElementById('runButton').disabled = true;
+                document.getElementById('stopButton').disabled = false;
             }
             else
             {
@@ -84,6 +93,12 @@
             }
         }
 
+        function stopApplication() {
+            cancelAnimationFrame(animationLoop);
+            document.getElementById('runButton').disabled = false;
+            document.getElementById('stopButton').disabled = true;
+        }
+
         function clearConsole() {
             consoleWindow.innerHTML = "";
         }
@@ -91,8 +106,10 @@
         //-------------------------------------------------------------
 
         function attachGui() {
-            const btn = document.getElementById('runButton');
-            btn.addEventListener('click', runApplication);
+            const btnRun = document.getElementById('runButton');
+            btnRun.addEventListener('click', runApplication);
+            const btnStop = document.getElementById('stopButton');
+            btnStop.addEventListener('click', stopApplication);
 
             const btnClear = document.getElementById('clearConsole');
             btnClear.addEventListener('click', clearConsole);
@@ -174,6 +191,7 @@
     <div>
         <label>Arguments:<input id="arguments"></input></label>
         <button id="runButton">Run application</button>
+        <button id="stopButton" disabled>Stop application</button>
         <label id="exitCodeLbl">Exit code:<input id="exitCode"></input></label>
     </div>
 

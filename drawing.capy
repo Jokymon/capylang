@@ -4,6 +4,7 @@ import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 import wasi_snapshot_preview1::fd_write(fd: u32, io: *u32, count: u32, res: *u32) -> u32 as fd_write;
 
 global mut canvas_base: *u32 = 0;
+global mut shape_x: u32 = 0;
 
 // WASM has an `abs` opcode but that only supports float and vector operands
 fn abs(v: s32) -> s32
@@ -97,6 +98,9 @@ fn init()
 @export
 fn create_frame() -> *u32
 {
+    // clear canvas
+    draw_rect(0, 0, canvas_width(), canvas_height(), 0xffffffff, true);
+
     let mut i: u32 = 0;
 
     while i<30 {
@@ -106,7 +110,10 @@ fn create_frame() -> *u32
     }
     draw_line(10, 67, 100, 3, 0xff00ff00);
 
-    draw_rect(50, 110, 50, 20, 0xffff00ff, true);
+    draw_rect(shape_x, 110, 50, 20, 0xffff00ff, true);
+    if (shape_x < (canvas_width() - 50)) {
+        shape_x = shape_x + 1;
+    }
 
     canvas_base
 }
