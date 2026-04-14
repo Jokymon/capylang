@@ -23,6 +23,8 @@
  * Add intrinsics, for example:
     * abs(), sqrt(), ceil(), floor(), trunc(), min(), max()
     * memory instructions, size(), grow(), copy(), fill()
+ * Decide of basic concept of intrinsics: Maybe it's easier with an attribute @intrinsic to define the signatures
+   rather than having to programmatically create them?
  * types in if/then/else branches should also be infered if possible; for example when return type is known and both
    paths create an untyped number
  * Check for `source_position{"", 0, 0}` in the source. These are wrongly reported error locations
@@ -33,6 +35,11 @@
    territory? Is this really what we want?
  * Unknown/illegal tokens create an endless loop for the parser
  * Turn explicit import structure for functions into an attribute for regular functions
+ * Add support for multiple WASM memories? Should this be explicit somehow?
+ * Extend the playground so that it can it runs `create_frame()` in a loop, uses some kind of `init()` function and
+   also supports event handling
+ * Long-term: extend the playground with a DSP/Audio interface, maybe using the AudioWorkletNode API of the browser.
+   See web-devfs.js for inspiration of an abstraction of this
 
 ### Implement an (H)IR
 

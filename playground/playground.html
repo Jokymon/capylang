@@ -13,12 +13,10 @@
     </script>
     <script type="module">
         import { WasiPreview1 } from '@easywasm/wasi';
-        import { framebuffer } from 'web-zen-dev';
 
         const d = new TextDecoder();
         let consoleWindow;
-        let canvas;
-        let fb;
+        let canvasEl;
         let animationLoop;      // requestAnimationFrame id
 
         let exports;
@@ -33,11 +31,11 @@
         // the WASM module
 
         function canvas_width() {
-            return canvas.width;
+            return canvasEl.width;
         }
 
         function canvas_height() {
-            return canvas.height;
+            return canvasEl.height;
         }
 
         //-------------------------------------------------------------
@@ -52,8 +50,10 @@
 
         function blitFrame(timestamp) {
             let frame_base = exports.create_frame();
-            const view = new Uint8Array(exports.memory.buffer, frame_base, canvas.width*canvas.height*4);
-            fb.write({ device: { driver: {  } } }, view);
+            const view = new Uint8Array(exports.memory.buffer, frame_base, canvasEl.width*canvasEl.height*4);
+            const ctx = canvasEl.getContext('2d');
+            const imageData = new ImageData(new Uint8ClampedArray(view), canvasEl.width, canvasEl.height);
+            ctx.putImageData(imageData, 0, 0);
 
             animationLoop = requestAnimationFrame(blitFrame);
         }
@@ -116,8 +116,7 @@
 
             consoleWindow = document.getElementById('consoleOutput');
 
-            canvas = document.getElementById('fb');
-            fb = framebuffer({ canvas });
+            canvasEl = document.getElementById('fb');
         }
 
         async function populateWasmModules() {
