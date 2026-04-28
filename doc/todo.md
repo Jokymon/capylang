@@ -27,7 +27,6 @@
    rather than having to programmatically create them?
  * types in if/then/else branches should also be infered if possible; for example when return type is known and both
    paths create an untyped number
- * Check for `source_position{"", 0, 0}` in the source. These are wrongly reported error locations
  * Add logic unary !
  * Allow the "const"-part of instructions for global initialisation
  * Update the README section about the canvas access to the playground API
@@ -40,6 +39,11 @@
    also supports event handling
  * Long-term: extend the playground with a DSP/Audio interface, maybe using the AudioWorkletNode API of the browser.
    See web-devfs.js for inspiration of an abstraction of this
+ * Move the string literals into the scopes/symbol tables
+ * Feature to include binary data directly by referencing a file and maybe adding a custom WASM section; think about
+   `std::embed` but also features for example available in Rust; the motivation is to add fonts and images in little
+   game demos; instead of custom sections, we might have to consider data section (active or passive) since custom
+   sections are not accessible directly from inside WASM code
 
 ### Implement an (H)IR
 

@@ -98,6 +98,26 @@ fn _start() {
     assert "Undefined variable: 'missing_b'" in normalized
 
 
+@pytest.mark.parse_error
+def test_deref_of_non_pointer_type():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let a: u32 = 3u32;
+    proc_exit(*a)
+}"""
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
+    normalized = tools.normalize_filename_from_output(stderr)
+
+    assert exit_code == 1
+    assert (
+        tools.normalize_filename_from_output(stderr)
+        == "filename:7:16: Can't dereference non-pointer type u32\n"
+    )
+
+
 # --------------------------------------------------------------------
 # numeric literal range errors
 @pytest.mark.parse_error

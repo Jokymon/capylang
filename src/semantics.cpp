@@ -219,7 +219,7 @@ void semantic_analyser::process(source_range location, node_pointer_deref& n)
     if (!parse_context.is_pointer_type(expression_type))
     {
         append_error_at(
-            source_position{"", 0, 0},
+            location.start,
             "Can't dereference non-pointer type " + parse_context.repr(expression_type)
         );
     }
