@@ -135,6 +135,12 @@ So far these are:
    the last byte. The R-value is stored in the lowest address, followed by the
    next byte representing the G-value etc. etc.
    The returned value shall be the pointer to the start address of this area.
+ * `on_event(eventid: u32, data1: u32, data2: u32, data3: u32, data4: u32)`;
+   This function is called by the playground to forward UI events to the running
+   WASM instance. So far the following events with respective event ids are
+   available:
+
+    * *0001*: Mouse click where x-position is `data1`, y-position is `data2`.
 
 ## Contributing
 

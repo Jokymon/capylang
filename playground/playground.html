@@ -38,6 +38,18 @@
             return canvasEl.height;
         }
 
+        // - - - - - - - - - - - - - -
+        const EVT_MOUSE_CLICK = 1;
+
+        function canvasMouseClick(evt) {
+            if (exports) {
+                const canvasRect = evt.target.getBoundingClientRect();
+                const click_x = Math.floor(evt.x - canvasRect.left);
+                const click_y = Math.floor(evt.y - canvasRect.top);
+                exports.on_event(EVT_MOUSE_CLICK, click_x, click_y, 0);
+            }
+        }
+
         //-------------------------------------------------------------
 
         const wasi_snapshot_preview1 = new WasiPreview1();
@@ -90,11 +102,13 @@
                     exitCodeEl.classList.remove('flash');
                 }, 500);
                 console.log("appplication exit code: " + res);
+                exports = undefined;
             }
         }
 
         function stopApplication() {
             cancelAnimationFrame(animationLoop);
+            exports = undefined;
             document.getElementById('runButton').disabled = false;
             document.getElementById('stopButton').disabled = true;
         }
@@ -117,6 +131,7 @@
             consoleWindow = document.getElementById('consoleOutput');
 
             canvasEl = document.getElementById('fb');
+            canvasEl.addEventListener('click', canvasMouseClick);
         }
 
         async function populateWasmModules() {

@@ -5,6 +5,8 @@ import wasi_snapshot_preview1::fd_write(fd: u32, io: *u32, count: u32, res: *u32
 
 global mut canvas_base: *u32 = 0;
 global mut shape_x: u32 = 0;
+global mut click_x: u32 = 0;
+global mut click_y: u32 = 0;
 
 // WASM has an `abs` opcode but that only supports float and vector operands
 fn abs(v: s32) -> s32
@@ -86,6 +88,15 @@ fn draw_rect(x: u32, y: u32, width: u32, height: u32, abgr: u32, fill: bool)
 }
 
 @export
+fn on_event(event_id: u32, data1: u32, data2: u32, data3: u32)
+{
+    if (event_id == 1) {
+        click_x = data1;
+        click_y = data2;
+    }
+}
+
+@export
 fn init()
 {
     let w: u32 = canvas_width();
@@ -114,6 +125,8 @@ fn create_frame() -> *u32
     if (shape_x < (canvas_width() - 50)) {
         shape_x = shape_x + 1;
     }
+
+    draw_line(0, 0, click_x, click_y, 0xff00ff00);
 
     canvas_base
 }
