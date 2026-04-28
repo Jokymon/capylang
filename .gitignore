@@ -26,3 +26,6 @@ corpus/
 
 # a folder with some stuff to keep around, like documentations, examples, ...
 shelf/
+
+# project local shell history file(s)
+.shell/

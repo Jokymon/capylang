@@ -1,4 +1,5 @@
 {
+    "terminal.integrated.env.windows":{"SHELL_VSC_WS": "${workspaceFolder}"},
     "editor.formatOnSave": false,
     "[c]": {
         "editor.defaultFormatter": "ms-vscode.cpptools",
