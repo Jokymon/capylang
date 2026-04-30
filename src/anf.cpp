@@ -832,7 +832,7 @@ std::optional<size_t> anf_generator::record_field_index(type_id record_type_id, 
         return std::nullopt;
     }
 
-    const auto& entry = parse_context.types[resolved];
+    const auto& entry = parse_context.types[to_index(resolved)];
     const auto* rec = get_type_from_node<record_type>(entry);
     for (size_t i = 0; i < rec->fields.size(); ++i)
     {

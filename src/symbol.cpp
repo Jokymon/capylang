@@ -62,7 +62,7 @@ type_id context::intern_primitive(primitive_type p_type)
         return it->second;
     }
 
-    type_id id = static_cast<type_id>(types.size());
+    type_id id{static_cast<std::uint32_t>(types.size())};
     types.emplace_back(kind);
     interned.emplace(kind, id);
 
@@ -77,7 +77,7 @@ type_id context::intern(const type_kind& type)
         return it->second;
     }
 
-    type_id id = static_cast<type_id>(types.size());
+    type_id id{static_cast<std::uint32_t>(types.size())};
     types.emplace_back(type);
     interned.emplace(type, id);
 
@@ -86,7 +86,7 @@ type_id context::intern(const type_kind& type)
 
 type_id context::create_type_var()
 {
-    type_id id = static_cast<type_id>(types.size());
+    type_id id{static_cast<std::uint32_t>(types.size())};
     types.emplace_back(type_var{std::nullopt});
     return id;
 }
@@ -99,7 +99,7 @@ bool context::is_primitive_type(type_id type_idx, primitive_type p_type)
 
 bool context::is_record_type(type_id type_idx)
 {
-    auto t = types[type_idx];
+    auto t = types[to_index(type_idx)];
     if (!std::holds_alternative<type_kind>(t))
         return false;
 
@@ -111,20 +111,20 @@ bool context::is_record_type(type_id type_idx)
 
 bool context::is_pointer_type(type_id type_idx)
 {
-    auto t = types[type_idx];
+    auto t = types[to_index(type_idx)];
     auto* p = get_type_from_node<pointer_type>(t);
     return p != nullptr;
 }
 
 bool context::is_type_var(type_id type_idx)
 {
-    auto t = types[type_idx];
+    auto t = types[to_index(type_idx)];
     return std::holds_alternative<type_var>(t);
 }
 
 bool context::is_resolved(type_id type_idx) const
 {
-    auto entry = types[type_idx];
+    auto entry = types[to_index(type_idx)];
     // if this entry is not a type variable, then it is a concrete type and
     // therefore by definition always resolved
     if (!std::holds_alternative<type_var>(entry))
@@ -147,7 +147,7 @@ bool context::is_resolved(type_id type_idx) const
 
 type_id context::resolved_type(type_id type_idx) const
 {
-    auto entry = types[type_idx];
+    auto entry = types[to_index(type_idx)];
     // if this entry is not a type variable, we just return whatever index
     // we just got. This also serves as recursion anchor
     if (!std::holds_alternative<type_var>(entry))
@@ -175,12 +175,12 @@ bool context::resolve(type_id idx1, type_id idx2)
 {
     if (is_resolved(idx1) && !is_resolved(idx2))
     {
-        std::get<type_var>(types[idx2]).parent = idx1;
+        std::get<type_var>(types[to_index(idx2)]).parent = idx1;
         return true;
     }
     else if (!is_resolved(idx1) && is_resolved(idx2))
     {
-        std::get<type_var>(types[idx1]).parent = idx2;
+        std::get<type_var>(types[to_index(idx1)]).parent = idx2;
         return true;
     }
     // TODO: actually, if both are unresolved, we should just be able to assign
@@ -191,7 +191,7 @@ bool context::resolve(type_id idx1, type_id idx2)
 
 std::optional<type_id> context::record_field_type(type_id record_type_idx, const std::string& field_name)
 {
-    auto t = types[record_type_idx];
+    auto t = types[to_index(record_type_idx)];
     if (!std::holds_alternative<type_kind>(t))
         return std::nullopt;
 
@@ -227,7 +227,7 @@ std::optional<type_id> context::record_field_type(type_id record_type_idx, const
 
 std::optional<type_id> context::function_return_type(type_id function_type_idx)
 {
-    auto t = types[function_type_idx];
+    auto t = types[to_index(function_type_idx)];
     auto* f = get_type_from_node<function_type>(t);
 
     if (f == nullptr)
@@ -238,7 +238,7 @@ std::optional<type_id> context::function_return_type(type_id function_type_idx)
 
 std::optional<primitive_type> context::primitive_type_of(type_id type_idx) const
 {
-    auto t = types[type_idx];
+    auto t = types[to_index(type_idx)];
     auto* p = get_type_from_node<primitive_type>(t);
     if (p != nullptr)
     {
@@ -249,12 +249,12 @@ std::optional<primitive_type> context::primitive_type_of(type_id type_idx) const
 
 std::string context::repr(type_id type_idx) const
 {
-    if ((type_idx == ILLEGAL_TYPE) || (static_cast<size_t>(type_idx) >= types.size()))
+    if ((type_idx == ILLEGAL_TYPE) || (to_index(type_idx) >= types.size()))
     {
         return "!unassigned";
     }
 
-    const auto& typ = types[type_idx];
+    const auto& typ = types[to_index(type_idx)];
     return std::visit(
         [&](const auto& t) -> std::string
         {
@@ -324,7 +324,7 @@ std::string context::repr(type_id type_idx) const
                 std::string v = "type_var(";
                 if (t.parent.has_value())
                 {
-                    v += std::to_string(t.parent.value());
+                    v += std::to_string(to_underlying(t.parent.value()));
                 }
                 else
                 {
@@ -340,19 +340,19 @@ std::string context::repr(type_id type_idx) const
 
 symbol_id context::create_symbol(symbol sym)
 {
-    symbol_id id = static_cast<symbol_id>(symbols.size());
+    symbol_id id{static_cast<std::uint32_t>(symbols.size())};
     symbols.push_back(std::move(sym));
     return id;
 }
 
 symbol& context::symbol_at(symbol_id idx)
 {
-    return symbols[idx];
+    return symbols[to_index(idx)];
 }
 
 const symbol& context::symbol_at(symbol_id idx) const
 {
-    return symbols[idx];
+    return symbols[to_index(idx)];
 }
 
 scope* scope::get_global_scope() const

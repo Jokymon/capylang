@@ -10,7 +10,7 @@
 
 wasm_type from_type_kind(context& ctx, type_id idx)
 {
-    const auto& type_entry = ctx.types[idx];
+    const auto& type_entry = ctx.types[to_index(idx)];
 
     return std::visit(
         [&](const auto& t) -> auto
@@ -83,7 +83,7 @@ wasm_type from_type_kind(context& ctx, type_id idx)
 
 size_t type_size(context& ctx, type_id idx)
 {
-    const auto& type_entry = ctx.types[idx];
+    const auto& type_entry = ctx.types[to_index(idx)];
 
     return std::visit(
         [&](const auto& t) -> size_t
@@ -153,7 +153,7 @@ std::optional<size_t> record_field_offset(context& ctx, type_id idx, const std::
         return std::nullopt;
     }
 
-    const auto& type_spec = ctx.types[idx];
+    const auto& type_spec = ctx.types[to_index(idx)];
     auto* r = get_type_from_node<record_type>(type_spec);
     assert(r != nullptr && "Compiler error");
 
@@ -238,7 +238,7 @@ void emitter::emit(const node_import_definition& import_def)
     arguments_type args;
     auto function_name = import_def.function_head->name;
 
-    auto function_type_entry = parse_context.types[import_def.function_head->signature.function_type];
+    auto function_type_entry = parse_context.types[to_index(import_def.function_head->signature.function_type)];
     auto* func_type = get_type_from_node<function_type>(function_type_entry);
     assert(func_type != nullptr && "Compiler error");
 
@@ -423,7 +423,7 @@ void emitter::emit(const node_record_initialisation& record_init)
     cur_block->call("cabi_realloc");
     cur_block->local_set("_rec_ptr");
 
-    const auto& type_spec = parse_context.types[record_init.type_spec];
+    const auto& type_spec = parse_context.types[to_index(record_init.type_spec)];
     auto* rec_type = get_type_from_node<record_type>(type_spec);
 
     size_t offset = 0;

@@ -1,4 +1,7 @@
 #pragma once
+#include <compare>
+#include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
@@ -21,14 +24,48 @@ enum class primitive_type
     String
 };
 
+template <typename Tag>
+struct strong_id
+{
+    using underlying_type = std::uint32_t;
+
+    underlying_type value = 0;
+
+    constexpr strong_id() = default;
+    constexpr explicit strong_id(underlying_type v)
+    : value(v)
+    {
+    }
+
+    constexpr auto operator<=>(const strong_id&) const = default;
+};
+
+template <typename Tag>
+constexpr size_t to_index(strong_id<Tag> id)
+{
+    return static_cast<size_t>(id.value);
+}
+
+template <typename Tag>
+constexpr std::uint32_t to_underlying(strong_id<Tag> id)
+{
+    return id.value;
+}
+
 // identity of a specific concrete type as an index into an array
 // of type_node entries.
-using type_id = std::uint32_t;
-static constexpr type_id ILLEGAL_TYPE = 0;
+struct type_id_tag
+{
+};
+using type_id = strong_id<type_id_tag>;
+static constexpr type_id ILLEGAL_TYPE{0};
 
 // identity of a symbol in the global symbol arena in context.
-using symbol_id = std::uint32_t;
-static constexpr symbol_id ILLEGAL_SYMBOL = 0;
+struct symbol_id_tag
+{
+};
+using symbol_id = strong_id<symbol_id_tag>;
+static constexpr symbol_id ILLEGAL_SYMBOL{0};
 
 struct pointer_type
 {
@@ -63,6 +100,12 @@ using type_kind = std::variant<
 inline void hash_combine(size_t& seed, size_t value)
 {
     seed ^= value + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2);
+}
+
+template <typename Tag>
+inline void hash_combine(size_t& seed, strong_id<Tag> value)
+{
+    hash_combine(seed, to_index(value));
 }
 
 struct type_kind_hash
@@ -281,3 +324,15 @@ struct scope
     std::optional<symbol_id> lookup(const std::string& name);
     std::optional<type_id> lookup_type(const std::string& name);
 };
+
+namespace std
+{
+    template <typename Tag>
+    struct hash<strong_id<Tag>>
+    {
+        size_t operator()(strong_id<Tag> id) const noexcept
+        {
+            return std::hash<std::uint32_t>{}(id.value);
+        }
+    };
+} // namespace std

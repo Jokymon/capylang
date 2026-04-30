@@ -440,7 +440,7 @@ node_function_definition parser::parse_function_definition()
     func_scope->parent = current_scope;
     current_scope = func_scope.get();
 
-    auto function_type_entry = parse_context.types[function_head.signature.function_type];
+    auto function_type_entry = parse_context.types[to_index(function_head.signature.function_type)];
     auto* func_type = get_type_from_node<function_type>(function_type_entry);
     assert(func_type != nullptr && "Compiler error");
 

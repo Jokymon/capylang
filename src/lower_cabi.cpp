@@ -9,7 +9,7 @@ lower_cabi::lower_cabi(context& ctx)
 
 void lower_cabi::lower_function_arguments(const node_function_head& func_head, arguments_type& args)
 {
-    auto function_type_entry = parse_context.types[func_head.signature.function_type];
+    auto function_type_entry = parse_context.types[to_index(func_head.signature.function_type)];
     auto func_type = std::get<function_type>(std::get<type_kind>(function_type_entry));
 
     const auto& parameter_names = func_head.signature.parameters;
@@ -18,7 +18,7 @@ void lower_cabi::lower_function_arguments(const node_function_head& func_head, a
         type_id resolved_param_typ = parse_context.resolved_type(param_typ);
         assert(parse_context.is_resolved(resolved_param_typ) && "In emitter stage, all required types should be resolved");
 
-        const auto& type_entry = parse_context.types[resolved_param_typ];
+        const auto& type_entry = parse_context.types[to_index(resolved_param_typ)];
         // when the type is resolved, we know that it can't be a type variable,
         // let's still make sure it really is so
         assert(std::holds_alternative<type_kind>(type_entry) && "Unexpected type variable in resolved type");

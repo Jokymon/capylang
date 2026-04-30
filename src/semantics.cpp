@@ -225,7 +225,7 @@ void semantic_analyser::process(source_range location, node_pointer_deref& n)
     }
     else
     {
-        auto* ptr_type = get_type_from_node<pointer_type>(parse_context.types[expression_type]);
+        auto* ptr_type = get_type_from_node<pointer_type>(parse_context.types[to_index(expression_type)]);
         assert(ptr_type != nullptr && "Compiler error, in semantics check, the type of a pointer ref should be a pointer");
         n.assigned_type = ptr_type->to;
     }
@@ -237,7 +237,7 @@ void semantic_analyser::process(source_range location, node_record_definition& n
 
 void semantic_analyser::process(source_range location, node_record_initialisation& n)
 {
-    auto* r = get_type_from_node<record_type>(parse_context.types[n.type_spec]);
+    auto* r = get_type_from_node<record_type>(parse_context.types[to_index(n.type_spec)]);
     assert(r != nullptr && "Compiler error, semantics check should be on a record initialisation");
 
     std::unordered_set<std::string> expected_fields;
@@ -331,7 +331,7 @@ void semantic_analyser::process(source_range location, node_function_call& n)
         );
     }
 
-    auto declared_type = parse_context.types[symbol.signature.function_type];
+    auto declared_type = parse_context.types[to_index(symbol.signature.function_type)];
     auto* declared_function_type = get_type_from_node<function_type>(declared_type);
 
     if (!actual_func_type.is_call_signature_eq(*declared_function_type))

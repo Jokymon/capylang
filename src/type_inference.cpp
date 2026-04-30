@@ -118,7 +118,7 @@ void type_inference::process(source_range location, node_function_call& n)
         return;
     }
 
-    auto declared_type = parse_context.types[called_symbol.signature.function_type];
+    auto declared_type = parse_context.types[to_index(called_symbol.signature.function_type)];
     auto* declared_function_type = get_type_from_node<function_type>(declared_type);
 
     visit_nodes(n);
