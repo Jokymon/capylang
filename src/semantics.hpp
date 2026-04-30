@@ -4,7 +4,7 @@
 #include "parser.hpp"
 #include <optional>
 
-type_id assigned_node_type(const ast_node& node, context& ctx);
+type_id assigned_node_type(const node_expr& node, context& ctx);
 
 class semantic_analyser : public ast_visitor, private diagnostic_emitter
 {
@@ -37,7 +37,7 @@ private:
     void process(source_range location, node_return_expression& n) override;
     void process(source_range location, node_break_statement& n) override;
     void process(source_range location, node_negation& n) override;
-    void process(source_range location, node_expression& n) override;
+    void process(source_range location, node_binary_expression& n) override;
     void process(source_range location, node_import_definition& n) override;
     void process(source_range location, node_module& n) override;
 

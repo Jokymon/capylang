@@ -372,7 +372,7 @@ void anf_generator::lower_function(source_range location, const node_function_de
     generated_module.functions.push_back(std::move(func));
 }
 
-bool anf_generator::lower_statement(const ast_node& node, anf_block& block)
+bool anf_generator::lower_statement(const node_expr& node, anf_block& block)
 {
     return std::visit(
         [&](const auto& n) -> bool
@@ -398,7 +398,7 @@ bool anf_generator::lower_statement(const ast_node& node, anf_block& block)
                 });
                 return true;
             }
-            else if constexpr (std::is_same_v<T, node_expression>)
+            else if constexpr (std::is_same_v<T, node_binary_expression>)
             {
                 if (n.operation != op_assignment)
                 {
@@ -563,7 +563,7 @@ bool anf_generator::lower_statement(const ast_node& node, anf_block& block)
     );
 }
 
-void anf_generator::lower_block(const std::vector<std::unique_ptr<ast_node>>& expressions, anf_block& block)
+void anf_generator::lower_block(const std::vector<std::unique_ptr<node_expr>>& expressions, anf_block& block)
 {
     for (const auto& expression : expressions)
     {
@@ -577,7 +577,7 @@ void anf_generator::lower_block(const std::vector<std::unique_ptr<ast_node>>& ex
     }
 }
 
-std::optional<anf_atom> anf_generator::lower_atom(const ast_node& node) const
+std::optional<anf_atom> anf_generator::lower_atom(const node_expr& node) const
 {
     return std::visit(
         [&](const auto& n) -> std::optional<anf_atom>
@@ -650,7 +650,7 @@ std::optional<anf_atom> anf_generator::lower_atom(const ast_node& node) const
     );
 }
 
-std::optional<anf_atom> anf_generator::lower_atomized(const ast_node& node, anf_block& block)
+std::optional<anf_atom> anf_generator::lower_atomized(const node_expr& node, anf_block& block)
 {
     if (auto atom = lower_atom(node); atom.has_value())
     {
@@ -677,7 +677,7 @@ std::optional<anf_atom> anf_generator::lower_atomized(const ast_node& node, anf_
     return anf_atom_var{.binding = temp_binding};
 }
 
-std::optional<anf_let_value> anf_generator::lower_let_value(const ast_node& node, anf_block& block)
+std::optional<anf_let_value> anf_generator::lower_let_value(const node_expr& node, anf_block& block)
 {
     if (auto atom = lower_atom(node); atom.has_value())
     {
@@ -688,7 +688,7 @@ std::optional<anf_let_value> anf_generator::lower_let_value(const ast_node& node
         [&](const auto& n) -> std::optional<anf_let_value>
         {
             using T = std::decay_t<decltype(n)>;
-            if constexpr (std::is_same_v<T, node_expression>)
+            if constexpr (std::is_same_v<T, node_binary_expression>)
             {
                 auto maybe_op = to_anf_binary_op(n.operation);
                 if (!maybe_op.has_value())
@@ -780,12 +780,12 @@ std::optional<anf_let_value> anf_generator::lower_let_value(const ast_node& node
     );
 }
 
-std::optional<anf_atom> anf_generator::lower_condition(const ast_node& node, anf_block& block)
+std::optional<anf_atom> anf_generator::lower_condition(const node_expr& node, anf_block& block)
 {
     return lower_atomized(node, block);
 }
 
-std::optional<std::pair<std::unique_ptr<anf_block>, anf_atom>> anf_generator::lower_while_condition(const ast_node& node)
+std::optional<std::pair<std::unique_ptr<anf_block>, anf_atom>> anf_generator::lower_while_condition(const node_expr& node)
 {
     auto setup = std::make_unique<anf_block>();
     auto condition = lower_condition(node, *setup);

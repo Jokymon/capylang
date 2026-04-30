@@ -21,7 +21,7 @@ constexpr std::array<number_range_rule, 6> NUMBER_RANGE_RULES{{
     {primitive_type::S32, std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::max(), "s32"},
 }};
 
-type_id assigned_node_type(const ast_node& node, context& ctx)
+type_id assigned_node_type(const node_expr& node, context& ctx)
 {
     return std::visit(
         [&](const auto& n) -> type_id
@@ -111,7 +111,7 @@ type_id assigned_node_type(const ast_node& node, context& ctx)
             {
                 return ctx.resolved_type(n.assigned_type);
             }
-            else if constexpr (std::is_same_v<T, node_expression>)
+            else if constexpr (std::is_same_v<T, node_binary_expression>)
             {
                 return ctx.resolved_type(n.assigned_type);
             }
@@ -504,7 +504,7 @@ void semantic_analyser::process(source_range location, node_negation& n)
     n.assigned_type = assigned_node_type(*n.expr, parse_context);
 }
 
-void semantic_analyser::process(source_range location, node_expression& n)
+void semantic_analyser::process(source_range location, node_binary_expression& n)
 {
     visit_nodes(n);
 

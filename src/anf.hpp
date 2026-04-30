@@ -218,13 +218,13 @@ private:
     void lower_global(const node_global_definition& n);
     void lower_function(source_range location, const node_function_definition& n);
 
-    bool lower_statement(const ast_node& node, anf_block& block);
-    void lower_block(const std::vector<std::unique_ptr<ast_node>>& expressions, anf_block& block);
-    std::optional<anf_atom> lower_atom(const ast_node& node) const;
-    std::optional<anf_atom> lower_atomized(const ast_node& node, anf_block& block);
-    std::optional<anf_let_value> lower_let_value(const ast_node& node, anf_block& block);
-    std::optional<anf_atom> lower_condition(const ast_node& node, anf_block& block);
-    std::optional<std::pair<std::unique_ptr<anf_block>, anf_atom>> lower_while_condition(const ast_node& node);
+    bool lower_statement(const node_expr& node, anf_block& block);
+    void lower_block(const std::vector<std::unique_ptr<node_expr>>& expressions, anf_block& block);
+    std::optional<anf_atom> lower_atom(const node_expr& node) const;
+    std::optional<anf_atom> lower_atomized(const node_expr& node, anf_block& block);
+    std::optional<anf_let_value> lower_let_value(const node_expr& node, anf_block& block);
+    std::optional<anf_atom> lower_condition(const node_expr& node, anf_block& block);
+    std::optional<std::pair<std::unique_ptr<anf_block>, anf_atom>> lower_while_condition(const node_expr& node);
     std::optional<size_t> record_field_index(type_id record_type_id, const std::string& field_name) const;
 
     anf_binding binding_from_symbol(symbol_id symbol_ref, const std::string& fallback_name, type_id explicit_type = ILLEGAL_TYPE) const;

@@ -60,7 +60,7 @@ void normalization::process(source_range location, node_break_statement&)
 {
 }
 
-void normalization::process(source_range, node_expression& n)
+void normalization::process(source_range, node_binary_expression& n)
 {
     visit_nodes(n);
 }
@@ -106,7 +106,7 @@ void normalization::process(source_range, node_function_definition& n)
 
     auto tail = std::move(n.code.back());
     const auto tail_location = tail->location;
-    n.code.back() = std::make_unique<ast_node>(ast_node{
+    n.code.back() = std::make_unique<node_expr>(node_expr{
         .value = node_return_expression{
             .expression = std::move(tail),
             .is_explicit = false,

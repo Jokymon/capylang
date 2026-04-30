@@ -1,7 +1,7 @@
 #include "ast.hpp"
 #include <iostream>
 
-void dump_ast(const context& ctx, const ast_node& root, size_t indent = 0);
+void dump_ast(const context& ctx, const node_expr& root, size_t indent = 0);
 
 void dump_node(const context& ctx, const node_number& n, size_t indent)
 {
@@ -217,7 +217,7 @@ void dump_node(const context& ctx, const node_negation& n, size_t indent)
     dump_ast(ctx, *n.expr, indent + 4);
 }
 
-void dump_node(const context& ctx, const node_expression& n, size_t indent)
+void dump_node(const context& ctx, const node_binary_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
@@ -251,7 +251,7 @@ void dump_module(const context& ctx, const node_module& n, size_t indent)
     }
 }
 
-void dump_ast(const context& ctx, const ast_node& root, size_t indent)
+void dump_ast(const context& ctx, const node_expr& root, size_t indent)
 {
     std::visit(
         [=, &ctx](const auto& n)
@@ -305,7 +305,7 @@ ast_visitor::ast_visitor()
 {
 }
 
-void ast_visitor::visit(ast_node& root)
+void ast_visitor::visit(node_expr& root)
 {
     std::visit(
         [&](auto& n) -> void
@@ -382,7 +382,7 @@ void ast_visitor::visit_nodes(node_negation& expr)
     visit(*expr.expr);
 }
 
-void ast_visitor::visit_nodes(node_expression& expr)
+void ast_visitor::visit_nodes(node_binary_expression& expr)
 {
     if (expr.operation == op_assignment)
     {

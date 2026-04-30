@@ -156,7 +156,7 @@ void type_inference::process(source_range location, node_negation& n)
     visit_nodes(n);
 }
 
-void type_inference::process(source_range location, node_expression& n)
+void type_inference::process(source_range location, node_binary_expression& n)
 {
     (void)location;
     visit_nodes(n);

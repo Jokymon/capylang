@@ -14,7 +14,7 @@ public:
 
     wasm_module generate(node_module& module_def);
 
-    void emit(ast_node& node);
+    void emit(node_expr& node);
 
     void emit(const node_import_definition& import_def);
     void emit(const node_global_definition& global_def);
@@ -31,7 +31,7 @@ public:
     void emit(const node_return_expression& root);
     void emit(const node_break_statement& root);
     void emit(const node_negation& root);
-    void emit(const node_expression& root);
+    void emit(const node_binary_expression& root);
     void emit(const node_var_reference& variable);
     void emit(const node_pointer_deref& ptr_deref);
     void emit(const node_string_literal& literal);

@@ -222,7 +222,7 @@ wasm_module emitter::generate(node_module& module_def)
     return ir_module;
 }
 
-void emitter::emit(ast_node& node)
+void emitter::emit(node_expr& node)
 {
     std::visit(
         [this](auto& n)
@@ -540,7 +540,7 @@ void emitter::emit(const node_break_statement&)
     }
 }
 
-void emitter::emit(const node_expression& root)
+void emitter::emit(const node_binary_expression& root)
 {
     emit(*root.left);
     emit(*root.right);

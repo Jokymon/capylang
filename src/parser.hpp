@@ -34,20 +34,20 @@ private:
     node_global_definition parse_global();
     node_function_definition parse_function_definition();
     node_function_head parse_function_head();
-    ast_node parse_expression(int min_precedence = 0);
-    ast_node parse_function_call(source_range name_range, const std::string function_name);
-    ast_node parse_if_expression();
-    ast_node parse_while_expression();
-    ast_node parse_let_expression();
-    ast_node parse_record_definition();
-    ast_node parse_record_initialisation(source_range name_range, const std::string& record_name);
-    ast_node parse_field_deref(type_id base_type, ast_node object);
-    ast_node parse_primary();
+    node_expr parse_expression(int min_precedence = 0);
+    node_expr parse_function_call(source_range name_range, const std::string function_name);
+    node_expr parse_if_expression();
+    node_expr parse_while_expression();
+    node_expr parse_let_expression();
+    node_expr parse_record_definition();
+    node_expr parse_record_initialisation(source_range name_range, const std::string& record_name);
+    node_expr parse_field_deref(type_id base_type, node_expr object);
+    node_expr parse_primary();
     type_id parse_type_reference();
-    ast_node parse_number();
-    ast_node parse_string();
+    node_expr parse_number();
+    node_expr parse_string();
 
-    void parse_body(std::vector<std::unique_ptr<ast_node>>& body);
+    void parse_body(std::vector<std::unique_ptr<node_expr>>& body);
 
     size_t collect_literal(const std::string& literal);
 

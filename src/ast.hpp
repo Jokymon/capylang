@@ -13,7 +13,11 @@ struct located
     source_range location;
 };
 
-struct located_node
+struct node_base
+{
+};
+
+struct located_node : public node_base
 {
     source_range location;
 };
@@ -47,11 +51,11 @@ struct node_discard_expression;
 struct node_return_expression;
 struct node_break_statement;
 struct node_negation;
-struct node_expression;
+struct node_binary_expression;
 struct node_module;
 
-using ast_node_raw = std::variant<node_number, node_char_literal, node_bool_const, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_if_expression, node_while_expression, node_record_definition, node_record_initialisation, node_field_deref, node_function_call, node_cast_expression, node_discard_expression, node_return_expression, node_break_statement, node_negation, node_expression>;
-using ast_node = located<ast_node_raw>;
+using node_expr_raw = std::variant<node_number, node_char_literal, node_bool_const, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_if_expression, node_while_expression, node_record_definition, node_record_initialisation, node_field_deref, node_function_call, node_cast_expression, node_discard_expression, node_return_expression, node_break_statement, node_negation, node_binary_expression>;
+using node_expr = located<node_expr_raw>;
 
 void dump_module(const context& ctx, const node_module& module, size_t indent = 0);
 
@@ -61,18 +65,18 @@ enum class assign_context
     rhs
 };
 
-struct node_number
+struct node_number : public node_base
 {
     long long number;
     type_id assigned_type;
 };
 
-struct node_char_literal
+struct node_char_literal : public node_base
 {
     uint32_t ch;
 };
 
-struct node_bool_const
+struct node_bool_const : public node_base
 {
     bool value;
 
@@ -82,58 +86,58 @@ struct node_bool_const
     }
 };
 
-struct node_string_literal
+struct node_string_literal : public node_base
 {
     // index into the string literals table
     size_t table_index;
     uint32_t size;
 };
 
-struct node_var_reference
+struct node_var_reference : public node_base
 {
     std::string name;
     symbol_id symbol_ref;
     assign_context context;
 };
 
-struct node_pointer_deref
+struct node_pointer_deref : public node_base
 {
-    std::unique_ptr<ast_node> pointer_expression;
+    std::unique_ptr<node_expr> pointer_expression;
     type_id assigned_type;
     assign_context context;
 };
 
-struct node_let_expression
+struct node_let_expression : public node_base
 {
     std::string name;
     symbol_id symbol_ref;
-    std::unique_ptr<ast_node> init_expression;
+    std::unique_ptr<node_expr> init_expression;
 };
 
-struct node_if_expression
+struct node_if_expression : public node_base
 {
-    std::unique_ptr<ast_node> condition;
-    std::vector<std::unique_ptr<ast_node>> then_code;
-    std::vector<std::unique_ptr<ast_node>> else_code;
+    std::unique_ptr<node_expr> condition;
+    std::vector<std::unique_ptr<node_expr>> then_code;
+    std::vector<std::unique_ptr<node_expr>> else_code;
     type_id assigned_type;
     // TODO: should be introduce a new scope for the if?
 };
 
-struct node_while_expression
+struct node_while_expression : public node_base
 {
-    std::unique_ptr<ast_node> condition;
-    std::vector<std::unique_ptr<ast_node>> while_code;
+    std::unique_ptr<node_expr> condition;
+    std::vector<std::unique_ptr<node_expr>> while_code;
 };
 
-struct node_record_definition
+struct node_record_definition : public node_base
 {
     std::string name;
     std::vector<record_type::field_type> fields;
 };
 
-struct node_field_deref
+struct node_field_deref : public node_base
 {
-    std::unique_ptr<ast_node> object;
+    std::unique_ptr<node_expr> object;
     std::string fieldname;
     type_id object_type;
 
@@ -146,10 +150,10 @@ struct field_initialisation
 {
     source_position location;
     std::string field_name;
-    std::unique_ptr<ast_node> init_expression;
+    std::unique_ptr<node_expr> init_expression;
 };
 
-struct node_record_initialisation
+struct node_record_initialisation : public node_base
 {
     type_id type_spec;
     std::vector<field_initialisation> initialisations;
@@ -175,14 +179,14 @@ struct node_global_definition : public located_node
     type_id assigned_type;
     symbol_id symbol_ref;
     int32_t init_value;
-    // std::unique_ptr<ast_node> init_expression;
+    // std::unique_ptr<node_expr> init_expression;
 };
 
-struct node_function_call
+struct node_function_call : public node_base
 {
     std::string function_name;
     symbol_id symbol_ref;
-    std::vector<std::unique_ptr<ast_node>> parameter;
+    std::vector<std::unique_ptr<node_expr>> parameter;
 };
 
 struct node_function_definition : public located_node
@@ -191,44 +195,44 @@ struct node_function_definition : public located_node
     bool has_attribute(const std::string& attr_name) const;
 
     std::unique_ptr<node_function_head> function_head;
-    std::vector<std::unique_ptr<ast_node>> code;
+    std::vector<std::unique_ptr<node_expr>> code;
     std::unique_ptr<scope> function_scope;
 };
 
-struct node_cast_expression
+struct node_cast_expression : public node_base
 {
-    std::unique_ptr<ast_node> expression;
+    std::unique_ptr<node_expr> expression;
     type_id cast_type;
     source_range op_range;
 };
 
-struct node_discard_expression
+struct node_discard_expression : public node_base
 {
-    std::unique_ptr<ast_node> expression;
+    std::unique_ptr<node_expr> expression;
 };
 
-struct node_return_expression
+struct node_return_expression : public node_base
 {
-    std::unique_ptr<ast_node> expression;
+    std::unique_ptr<node_expr> expression;
     // used to distinguish return expressions that come from explicit uses of
     // keyword 'return' or if it was implicitly created from the last expression
     // in a function
     bool is_explicit;
 };
 
-struct node_break_statement
+struct node_break_statement : public node_base
 {
 };
 
-struct node_negation
+struct node_negation : public node_base
 {
-    std::unique_ptr<ast_node> expr;
+    std::unique_ptr<node_expr> expr;
     type_id assigned_type;
 };
 
-struct node_expression
+struct node_binary_expression : public node_base
 {
-    std::unique_ptr<ast_node> left, right;
+    std::unique_ptr<node_expr> left, right;
     source_range op_range;
     operator_type operation;
     type_id assigned_type;
@@ -239,7 +243,7 @@ struct node_module : public located_node
     std::vector<std::unique_ptr<node_import_definition>> imports;
     std::vector<std::unique_ptr<node_global_definition>> globals;
     std::vector<std::unique_ptr<node_function_definition>> functions;
-    std::vector<std::unique_ptr<ast_node>> typedefs;
+    std::vector<std::unique_ptr<node_expr>> typedefs;
 
     struct string_literal_entry
     {
@@ -255,7 +259,7 @@ class ast_visitor
 {
 public:
     ast_visitor();
-    void visit(ast_node& root);
+    void visit(node_expr& root);
 
 protected:
     void visit_nodes(node_module& module);
@@ -264,7 +268,7 @@ protected:
     void visit_nodes(node_while_expression& w_expr);
     void visit_nodes(node_let_expression& l_expr);
     void visit_nodes(node_negation& expr);
-    void visit_nodes(node_expression& expr);
+    void visit_nodes(node_binary_expression& expr);
     void visit_nodes(node_cast_expression& expr);
     void visit_nodes(node_discard_expression& expr);
     void visit_nodes(node_return_expression& expr);
@@ -287,7 +291,7 @@ protected:
     virtual void process(source_range location, node_return_expression& n) = 0;
     virtual void process(source_range location, node_break_statement& n) = 0;
     virtual void process(source_range location, node_negation& n) = 0;
-    virtual void process(source_range location, node_expression& n) = 0;
+    virtual void process(source_range location, node_binary_expression& n) = 0;
     virtual void process(source_range location, node_if_expression& n) = 0;
     virtual void process(source_range location, node_while_expression& n) = 0;
     virtual void process(source_range location, node_let_expression& n) = 0;

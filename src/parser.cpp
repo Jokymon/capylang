@@ -8,10 +8,10 @@
 #include <string>
 
 template <typename T, typename... Args>
-ast_node make_located(source_position start, source_position end, Args&&... args)
+node_expr make_located(source_position start, source_position end, Args&&... args)
 {
-    return ast_node{
-        .value = T{std::forward<Args>(args)...},
+    return node_expr{
+        .value = T{{}, std::forward<Args>(args)...},
         .location = source_range{
             .start = start,
             .end = end
@@ -143,8 +143,8 @@ void parser::populate_intrinsics()
 node_module parser::parse_module()
 {
     auto capy_module = node_module{
-        source_position{"", 1, 1},
-        source_position{"", 1, 1}
+        {{},
+         {source_position{"", 1, 1}, source_position{"", 1, 1}}}
     };
 
     current_module = &capy_module;
@@ -208,7 +208,7 @@ void parser::parse_module_body()
         else if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_record))
         {
             auto record_def = parse_record_definition();
-            current_module->typedefs.push_back(std::make_unique<ast_node>(std::move(record_def)));
+            current_module->typedefs.push_back(std::make_unique<node_expr>(std::move(record_def)));
         }
         else if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_fn))
         {
@@ -349,8 +349,8 @@ node_import_definition parser::parse_import_definition()
     auto end_range = capy_lexer->expect<token_symbol>().location;
 
     return node_import_definition{
-        start_range.start,
-        end_range.end,
+        {{},
+         {start_range.start, end_range.end}},
         namespace_name.name,
         std::make_unique<node_function_head>(std::move(function_head)),
         alias_name
@@ -412,8 +412,8 @@ node_global_definition parser::parse_global()
     auto end_token = capy_lexer->expect<token_symbol>();
 
     return node_global_definition{
-        start_location.start,
-        end_token.location.end,
+        {{},
+         {start_location.start, end_token.location.end}},
         variable_name.name,
         type_spec,
         global_symbol_id,
@@ -458,15 +458,15 @@ node_function_definition parser::parse_function_definition()
         current_scope->symbol_table[param_name] = param_symbol_id;
     }
 
-    std::vector<std::unique_ptr<ast_node>> function_body;
+    std::vector<std::unique_ptr<node_expr>> function_body;
     parse_body(function_body);
     auto end_range = capy_lexer->expect<token_symbol>().location;
 
     current_scope = current_scope->parent;
 
     return node_function_definition{
-        start_range.start,
-        end_range.end,
+        {{},
+         {start_range.start, end_range.end}},
         std::move(attributes),
         std::make_unique<node_function_head>(std::move(function_head)),
         std::move(function_body),
@@ -498,16 +498,16 @@ node_function_head parser::parse_function_head()
     current_scope->symbol_table[function_name.name] = function_symbol_id;
 
     return node_function_head{
-        start_range.start,
-        start_range.end, // TODO: this should span the whole signature
+        {{},
+         {start_range.start, start_range.end}}, // TODO: this should span the whole signature
         function_name.name,
         signature
     };
 }
 
-ast_node parser::parse_expression(int min_precedence)
+node_expr parser::parse_expression(int min_precedence)
 {
-    ast_node lhs;
+    node_expr lhs;
     source_range start;
 
     if (capy_lexer->ahead_is_sym(token_symbol::sym_paren_open))
@@ -528,11 +528,11 @@ ast_node parser::parse_expression(int min_precedence)
             append_error("Expected a closing brace ')' at the end of the expression");
 
             // return a dummy expression so we can continue parsing
-            return make_located<node_expression>(
+            return make_located<node_binary_expression>(
                 start.start,
                 start.end,
-                std::unique_ptr<ast_node>(nullptr),
-                std::unique_ptr<ast_node>(nullptr),
+                std::unique_ptr<node_expr>(nullptr),
+                std::unique_ptr<node_expr>(nullptr),
                 source_range{start.start, start.end},
                 op_multiply,
                 parse_context.intern_primitive(primitive_type::U32)
@@ -557,10 +557,10 @@ ast_node parser::parse_expression(int min_precedence)
         // eat the 'return' keyword
         auto start = capy_lexer->expect<token_symbol>().location;
         source_position end;
-        std::unique_ptr<ast_node> returned_expression = nullptr;
+        std::unique_ptr<node_expr> returned_expression = nullptr;
         if (!capy_lexer->ahead_is_sym(token_symbol::sym_semicolon))
         {
-            returned_expression = std::make_unique<ast_node>(parse_expression());
+            returned_expression = std::make_unique<node_expr>(parse_expression());
             end = returned_expression->location.end;
         }
         else
@@ -596,7 +596,7 @@ ast_node parser::parse_expression(int min_precedence)
             break;
         auto op_token = capy_lexer->expect<token_symbol>();
 
-        ast_node rhs;
+        node_expr rhs;
         type_id type_spec;
         source_range end = lhs.location;
         if (op == op_conversion)
@@ -615,18 +615,18 @@ ast_node parser::parse_expression(int min_precedence)
             lhs = make_located<node_cast_expression>(
                 start.start,
                 end.end,
-                std::make_unique<ast_node>(std::move(lhs)),
+                std::make_unique<node_expr>(std::move(lhs)),
                 type_spec,
                 op_token.location
             );
         }
         else
         {
-            lhs = make_located<node_expression>(
+            lhs = make_located<node_binary_expression>(
                 start.start,
                 end.end,
-                std::make_unique<ast_node>(std::move(lhs)),
-                std::make_unique<ast_node>(std::move(rhs)),
+                std::make_unique<node_expr>(std::move(lhs)),
+                std::make_unique<node_expr>(std::move(rhs)),
                 op_token.location,
                 op,
                 parse_context.create_type_var()
@@ -637,16 +637,16 @@ ast_node parser::parse_expression(int min_precedence)
     return lhs;
 }
 
-ast_node parser::parse_function_call(source_range name_range, const std::string function_name)
+node_expr parser::parse_function_call(source_range name_range, const std::string function_name)
 {
     // skip over the opening ( of the function call
     capy_lexer->expect<token_symbol>();
 
-    std::vector<std::unique_ptr<ast_node>> function_parameters;
+    std::vector<std::unique_ptr<node_expr>> function_parameters;
     while (!capy_lexer->ahead_is_sym(token_symbol::sym_paren_close))
     {
         auto parameter = parse_expression();
-        function_parameters.emplace_back(std::make_unique<ast_node>(std::move(parameter)));
+        function_parameters.emplace_back(std::make_unique<node_expr>(std::move(parameter)));
 
         if (capy_lexer->ahead_is_sym(token_symbol::sym_comma))
         {
@@ -682,7 +682,7 @@ ast_node parser::parse_function_call(source_range name_range, const std::string 
     );
 }
 
-ast_node parser::parse_if_expression()
+node_expr parser::parse_if_expression()
 {
     // eat the 'if' keyword
     auto start_location = capy_lexer->expect<token_symbol>().location;
@@ -694,8 +694,8 @@ ast_node parser::parse_if_expression()
         append_error("Expecting an opening brace '{' for if-body");
     }
 
-    std::vector<std::unique_ptr<ast_node>> then_body;
-    std::vector<std::unique_ptr<ast_node>> else_body;
+    std::vector<std::unique_ptr<node_expr>> then_body;
+    std::vector<std::unique_ptr<node_expr>> else_body;
     parse_body(then_body);
 
     // eat the closing '}' of the then-branch
@@ -719,14 +719,14 @@ ast_node parser::parse_if_expression()
     return make_located<node_if_expression>(
         start_location.start,
         start_location.end,
-        std::make_unique<ast_node>(std::move(condition)),
+        std::make_unique<node_expr>(std::move(condition)),
         std::move(then_body),
         std::move(else_body),
         parse_context.create_type_var()
     );
 }
 
-ast_node parser::parse_while_expression()
+node_expr parser::parse_while_expression()
 {
     // eat the 'while' keyword
     auto start_location = capy_lexer->expect<token_symbol>().location;
@@ -738,7 +738,7 @@ ast_node parser::parse_while_expression()
         append_error("Expecting an opening brace '{' for while-body");
     }
 
-    std::vector<std::unique_ptr<ast_node>> while_body;
+    std::vector<std::unique_ptr<node_expr>> while_body;
     parse_body(while_body);
 
     // eat the closing '}' of the while block
@@ -747,12 +747,12 @@ ast_node parser::parse_while_expression()
     return make_located<node_while_expression>(
         start_location.start,
         start_location.end,
-        std::make_unique<ast_node>(std::move(condition)),
+        std::make_unique<node_expr>(std::move(condition)),
         std::move(while_body)
     );
 }
 
-ast_node parser::parse_let_expression()
+node_expr parser::parse_let_expression()
 {
     // eat the 'let' keyword
     auto start_location = capy_lexer->expect<token_symbol>().location;
@@ -805,7 +805,7 @@ ast_node parser::parse_let_expression()
             initializer.location.end,
             variable_name.name,
             local_symbol_id,
-            std::make_unique<ast_node>(std::move(initializer))
+            std::make_unique<node_expr>(std::move(initializer))
         );
     }
 
@@ -819,7 +819,7 @@ ast_node parser::parse_let_expression()
     );
 }
 
-ast_node parser::parse_record_definition()
+node_expr parser::parse_record_definition()
 {
     // eat the 'record' keyword
     auto start_range = capy_lexer->expect<token_symbol>().location;
@@ -878,7 +878,7 @@ ast_node parser::parse_record_definition()
     );
 }
 
-ast_node parser::parse_record_initialisation(source_range name_range, const std::string& record_name)
+node_expr parser::parse_record_initialisation(source_range name_range, const std::string& record_name)
 {
     auto record_type = current_scope->lookup_type(record_name);
     if (!record_type.has_value())
@@ -903,7 +903,7 @@ ast_node parser::parse_record_initialisation(source_range name_range, const std:
         }
         capy_lexer->expect<token_symbol>();
 
-        ast_node init_expression = parse_expression();
+        node_expr init_expression = parse_expression();
 
         if (!capy_lexer->ahead_is_sym(token_symbol::sym_comma))
         {
@@ -911,7 +911,7 @@ ast_node parser::parse_record_initialisation(source_range name_range, const std:
         }
         capy_lexer->expect<token_symbol>();
 
-        fields.emplace_back(field_initialisation{field_position.start, field_name.name, std::make_unique<ast_node>(std::move(init_expression))});
+        fields.emplace_back(field_initialisation{field_position.start, field_name.name, std::make_unique<node_expr>(std::move(init_expression))});
     }
 
     if (!capy_lexer->ahead_is_sym(token_symbol::sym_curly_close))
@@ -928,7 +928,7 @@ ast_node parser::parse_record_initialisation(source_range name_range, const std:
     );
 }
 
-ast_node parser::parse_field_deref(type_id base_type, ast_node object)
+node_expr parser::parse_field_deref(type_id base_type, node_expr object)
 {
     // eat the dot '.'
     capy_lexer->expect<token_symbol>();
@@ -939,7 +939,7 @@ ast_node parser::parse_field_deref(type_id base_type, ast_node object)
         return make_located<node_field_deref>(
             object.location.start,
             object.location.end,
-            std::make_unique<ast_node>(std::move(object)),
+            std::make_unique<node_expr>(std::move(object)),
             "",
             base_type
         );
@@ -950,7 +950,7 @@ ast_node parser::parse_field_deref(type_id base_type, ast_node object)
     auto node = make_located<node_field_deref>(
         object.location.start,
         field_range.end,
-        std::make_unique<ast_node>(std::move(object)),
+        std::make_unique<node_expr>(std::move(object)),
         field_name.name,
         base_type
     );
@@ -980,7 +980,7 @@ ast_node parser::parse_field_deref(type_id base_type, ast_node object)
     return node;
 }
 
-ast_node parser::parse_primary()
+node_expr parser::parse_primary()
 {
     if (capy_lexer->ahead_is<token_identifier>())
     {
@@ -1007,7 +1007,7 @@ ast_node parser::parse_primary()
                 var = error_symbol;
             }
 
-            ast_node object = make_located<node_var_reference>(
+            node_expr object = make_located<node_var_reference>(
                 id_range.start,
                 id_range.end,
                 id.name,
@@ -1054,7 +1054,7 @@ ast_node parser::parse_primary()
         return make_located<node_pointer_deref>(
             op_token.location.start,
             pointer_expr.location.end,
-            std::make_unique<ast_node>(std::move(pointer_expr)),
+            std::make_unique<node_expr>(std::move(pointer_expr)),
             parse_context.create_type_var(),
             // parse_context.intern_primitive(primitive_type::Void),
             assign_context::rhs
@@ -1076,7 +1076,7 @@ ast_node parser::parse_primary()
             return make_located<node_negation>(
                 op_token.location.start,
                 expr.location.end,
-                std::make_unique<ast_node>(std::move(expr)),
+                std::make_unique<node_expr>(std::move(expr)),
                 parse_context.create_type_var()
             );
         }
@@ -1157,7 +1157,7 @@ type_id parser::parse_type_reference()
     return type_spec.value();
 }
 
-ast_node parser::parse_number()
+node_expr parser::parse_number()
 {
     auto lhs = capy_lexer->expect<token_integer>();
 
@@ -1190,7 +1190,7 @@ ast_node parser::parse_number()
     );
 }
 
-ast_node parser::parse_string()
+node_expr parser::parse_string()
 {
     auto literal = capy_lexer->expect<token_string_literal>();
     auto literal_location = literal.location;
@@ -1203,13 +1203,13 @@ ast_node parser::parse_string()
     );
 }
 
-void parser::parse_body(std::vector<std::unique_ptr<ast_node>>& body)
+void parser::parse_body(std::vector<std::unique_ptr<node_expr>>& body)
 {
     while (!capy_lexer->ahead_is_sym(token_symbol::sym_curly_close) &&
            !capy_lexer->ahead_is<token_eof>())
     {
         auto expression = parse_expression();
-        body.emplace_back(std::make_unique<ast_node>(std::move(expression)));
+        body.emplace_back(std::make_unique<node_expr>(std::move(expression)));
 
         if (capy_lexer->ahead_is_sym(token_symbol::sym_semicolon))
         {
@@ -1225,7 +1225,7 @@ void parser::parse_body(std::vector<std::unique_ptr<ast_node>>& body)
                 previous_expression->location.end,
                 std::move(previous_expression)
             );
-            body.emplace_back(std::make_unique<ast_node>(std::move(discard_wrapper)));
+            body.emplace_back(std::make_unique<node_expr>(std::move(discard_wrapper)));
         }
     }
 
