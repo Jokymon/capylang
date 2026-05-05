@@ -17,7 +17,7 @@ private:
 
     void process(source_range location, node_number& n) override;
     void process(source_range location, node_char_literal& n) override;
-    void process(source_range location, node_bool_const& n) override;
+    void process(source_range location, node_bool_literal& n) override;
     void process(source_range location, node_string_literal& n) override;
     void process(source_range location, node_var_reference& n) override;
     void process(source_range location, node_pointer_deref& n) override;

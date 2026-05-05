@@ -601,7 +601,7 @@ std::optional<anf_atom> anf_generator::lower_atom(const node_expr& node) const
                     .assigned_type = n.assigned_type,
                 };
             }
-            else if constexpr (std::is_same_v<T, node_bool_const>)
+            else if constexpr (std::is_same_v<T, node_bool_literal>)
             {
                 return anf_atom_bool{.value = n.value};
             }

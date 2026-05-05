@@ -31,7 +31,7 @@ using attribute_bag = std::vector<capy_attribute>;
 
 struct node_number;
 struct node_char_literal;
-struct node_bool_const;
+struct node_bool_literal;
 struct node_string_literal;
 struct node_var_reference;
 struct node_pointer_deref;
@@ -54,7 +54,7 @@ struct node_negation;
 struct node_binary_expression;
 struct node_module;
 
-using node_expr_raw = std::variant<node_number, node_char_literal, node_bool_const, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_if_expression, node_while_expression, node_record_definition, node_record_initialisation, node_field_deref, node_function_call, node_cast_expression, node_discard_expression, node_return_expression, node_break_statement, node_negation, node_binary_expression>;
+using node_expr_raw = std::variant<node_number, node_char_literal, node_bool_literal, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_if_expression, node_while_expression, node_record_definition, node_record_initialisation, node_field_deref, node_function_call, node_cast_expression, node_discard_expression, node_return_expression, node_break_statement, node_negation, node_binary_expression>;
 using node_expr = located<node_expr_raw>;
 
 void dump_module(const context& ctx, const node_module& module, size_t indent = 0);
@@ -76,7 +76,7 @@ struct node_char_literal : public node_base
     uint32_t ch;
 };
 
-struct node_bool_const : public node_base
+struct node_bool_literal : public node_base
 {
     bool value;
 
@@ -278,7 +278,7 @@ protected:
 
     virtual void process(source_range location, node_number& n) = 0;
     virtual void process(source_range location, node_char_literal& n) = 0;
-    virtual void process(source_range location, node_bool_const& n) = 0;
+    virtual void process(source_range location, node_bool_literal& n) = 0;
     virtual void process(source_range location, node_string_literal& n) = 0;
     virtual void process(source_range location, node_var_reference& n) = 0;
     virtual void process(source_range location, node_pointer_deref& n) = 0;

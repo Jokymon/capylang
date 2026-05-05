@@ -36,7 +36,7 @@ public:
     void emit(const node_pointer_deref& ptr_deref);
     void emit(const node_string_literal& literal);
     void emit(const node_char_literal& literal);
-    void emit(const node_bool_const& number);
+    void emit(const node_bool_literal& number);
     void emit(const node_number& number);
 
 private:

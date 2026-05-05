@@ -1025,10 +1025,10 @@ node_expr parser::parse_primary()
             {
                 if ((id.name == "true") || (id.name == "false"))
                 {
-                    return make_located<node_bool_const>(
+                    return make_located<node_bool_literal>(
                         id_range.start,
                         id_range.end,
-                        node_bool_const::from_string(id.name)
+                        node_bool_literal::from_string(id.name)
                     );
                 }
 

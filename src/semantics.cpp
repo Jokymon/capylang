@@ -36,7 +36,7 @@ type_id assigned_node_type(const node_expr& node, context& ctx)
             {
                 return ctx.intern_primitive(primitive_type::Char);
             }
-            else if constexpr (std::is_same_v<T, node_bool_const>)
+            else if constexpr (std::is_same_v<T, node_bool_literal>)
             {
                 return ctx.intern_primitive(primitive_type::Boolean);
             }
@@ -175,7 +175,7 @@ void semantic_analyser::process(source_range location, node_char_literal& n)
 {
 }
 
-void semantic_analyser::process(source_range location, node_bool_const& n)
+void semantic_analyser::process(source_range location, node_bool_literal& n)
 {
 }
 

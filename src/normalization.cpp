@@ -13,7 +13,7 @@ void normalization::normalize(node_module& module)
 
 void normalization::process(source_range, node_number&) {}
 void normalization::process(source_range, node_char_literal&) {}
-void normalization::process(source_range, node_bool_const&) {}
+void normalization::process(source_range, node_bool_literal&) {}
 void normalization::process(source_range, node_string_literal&) {}
 void normalization::process(source_range, node_var_reference&) {}
 void normalization::process(source_range, node_record_definition&) {}

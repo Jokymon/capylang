@@ -67,7 +67,7 @@ void type_inference::process(source_range location, node_char_literal& n)
     (void)n;
 }
 
-void type_inference::process(source_range location, node_bool_const& n)
+void type_inference::process(source_range location, node_bool_literal& n)
 {
     (void)location;
     (void)n;

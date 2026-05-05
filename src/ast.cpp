@@ -24,7 +24,7 @@ void dump_node(const context& ctx, const node_string_literal& n, size_t indent)
     std::cout << ind << "String literal: \"" << n.table_index << "\"\n";
 }
 
-void dump_node(const context& ctx, const node_bool_const& n, size_t indent)
+void dump_node(const context& ctx, const node_bool_literal& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
