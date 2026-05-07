@@ -38,6 +38,7 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(capylang-unit-tests
     src/tests/test_argparser.cpp
+    src/tests/test_dumpable.cpp
     src/args_parse.cpp
     ${Catch2_SOURCE_DIR}/src/catch2/internal/catch_main.cpp
 )

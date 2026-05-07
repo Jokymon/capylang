@@ -30,3 +30,11 @@ BinPackArguments: false
 PackConstructorInitializers: Never
 BreakConstructorInitializers: BeforeComma
 ConstructorInitializerIndentWidth: 0
+
+MacroBlockBegin: '^DEF_NODE$'
+MacroBlockEnd: 'DEF_END$'
+StatementMacros:
+  - DEF_NO_DUMP
+  - DEF_SCALAR_FIELD
+  - DEF_LIST_FIELD
+  - DEF_NODE_LIST_FIELD
