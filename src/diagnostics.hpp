@@ -1,5 +1,5 @@
 #pragma once
-#include "lexer.hpp"
+#include "locations.hpp"
 #include <ostream>
 #include <string>
 #include <vector>
