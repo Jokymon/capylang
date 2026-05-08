@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
     }
 
     diagnostic_bag diagnostics;
-    std::shared_ptr<lexer> capylexer = std::make_shared<lexer>(infile, args.input_path);
+    std::shared_ptr<lexer> capylexer = std::make_shared<lexer>(diagnostics, infile, args.input_path);
     context parse_context;
     parser capyparser{diagnostics, capylexer, parse_context};
     auto root_node = capyparser.parse();

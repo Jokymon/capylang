@@ -311,8 +311,9 @@ std::string repr_token(const token& tok)
                       tok);
 }
 
-lexer::lexer(std::istream& input, const std::string& file_path)
-: input_(input)
+lexer::lexer(diagnostic_bag& diagnostics, std::istream& input, const std::string& file_path)
+: diagnostic_emitter(diagnostics, diagnostic_phase::parser)
+, input_(input)
 , input_file_path(file_path)
 , lookahead_(std::nullopt)
 , look_ahead_position{}

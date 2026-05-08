@@ -162,7 +162,8 @@ fn cabi_realloc(originalPtr: u32, originalSize: u32, alignment: u32, newSize: u3
 )";
     std::istringstream lib_stream{library_code};
     auto previous_lexer = capy_lexer;
-    capy_lexer = std::make_shared<lexer>(lib_stream, "stdlib");
+    diagnostic_bag diagnostics;
+    capy_lexer = std::make_shared<lexer>(diagnostics, lib_stream, "stdlib");
     parse_module_body();
     capy_lexer = previous_lexer;
 

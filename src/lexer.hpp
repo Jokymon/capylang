@@ -125,14 +125,14 @@ using token = std::variant<token_integer, token_char_literal, token_string_liter
 std::string repr_op(operator_type op);
 std::string repr_token(const token& tok);
 
-class lexer
+class lexer : private diagnostic_emitter
 {
 public:
     /// @brief Construct a new lexer object from an input_stream to read the characters from
     /// and a file_path that is used as part of the location in error messages
     /// @param input Input stream for reading the characters
     /// @param file_path A file name or path representing the location of this input
-    explicit lexer(std::istream& input, const std::string& file_path);
+    explicit lexer(diagnostic_bag& diagnostics, std::istream& input, const std::string& file_path);
 
     source_position current_source_position() const;
 
