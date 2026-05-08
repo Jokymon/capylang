@@ -151,7 +151,7 @@ void type_inference::process(source_range location, node_break_statement&)
 {
 }
 
-void type_inference::process(source_range location, node_negation& n)
+void type_inference::process(source_range location, node_unary_expression& n)
 {
     visit_nodes(n);
 }

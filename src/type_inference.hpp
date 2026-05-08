@@ -30,7 +30,7 @@ private:
     void process(source_range location, node_return_expression& n) override;
     void process(source_range location, node_break_statement& n) override;
     void process(source_range location, node_if_expression& n) override;
-    void process(source_range location, node_negation& n) override;
+    void process(source_range location, node_unary_expression& n) override;
     void process(source_range location, node_binary_expression& n) override;
     void process(source_range location, node_while_expression& n) override;
     void process(source_range location, node_let_expression& n) override;

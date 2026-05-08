@@ -107,7 +107,7 @@ type_id assigned_node_type(const node_expr& node, context& ctx)
             {
                 return ctx.intern_primitive(primitive_type::Void);
             }
-            else if constexpr (std::is_same_v<T, node_negation>)
+            else if constexpr (std::is_same_v<T, node_unary_expression>)
             {
                 return ctx.resolved_type(n.assigned_type);
             }
@@ -498,7 +498,7 @@ void semantic_analyser::process(source_range location, node_break_statement&)
     }
 }
 
-void semantic_analyser::process(source_range location, node_negation& n)
+void semantic_analyser::process(source_range location, node_unary_expression& n)
 {
     visit_nodes(n);
     n.assigned_type = assigned_node_type(*n.expr, parse_context);

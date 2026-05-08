@@ -50,11 +50,11 @@ struct node_cast_expression;
 struct node_discard_expression;
 struct node_return_expression;
 struct node_break_statement;
-struct node_negation;
+struct node_unary_expression;
 struct node_binary_expression;
 struct node_module;
 
-using node_expr_raw = std::variant<node_number, node_char_literal, node_bool_literal, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_if_expression, node_while_expression, node_record_definition, node_record_initialisation, node_field_deref, node_function_call, node_cast_expression, node_discard_expression, node_return_expression, node_break_statement, node_negation, node_binary_expression>;
+using node_expr_raw = std::variant<node_number, node_char_literal, node_bool_literal, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_if_expression, node_while_expression, node_record_definition, node_record_initialisation, node_field_deref, node_function_call, node_cast_expression, node_discard_expression, node_return_expression, node_break_statement, node_unary_expression, node_binary_expression>;
 using node_expr = located<node_expr_raw>;
 
 void dump_module(const context& ctx, const node_module& module, size_t indent = 0);
@@ -224,9 +224,10 @@ struct node_break_statement : public node_base
 {
 };
 
-struct node_negation : public node_base
+struct node_unary_expression : public node_base
 {
     std::unique_ptr<node_expr> expr;
+    operator_type operation;
     type_id assigned_type;
 };
 
@@ -267,7 +268,7 @@ protected:
     void visit_nodes(node_if_expression& i_expr);
     void visit_nodes(node_while_expression& w_expr);
     void visit_nodes(node_let_expression& l_expr);
-    void visit_nodes(node_negation& expr);
+    void visit_nodes(node_unary_expression& expr);
     void visit_nodes(node_binary_expression& expr);
     void visit_nodes(node_cast_expression& expr);
     void visit_nodes(node_discard_expression& expr);
@@ -290,7 +291,7 @@ protected:
     virtual void process(source_range location, node_discard_expression& n) = 0;
     virtual void process(source_range location, node_return_expression& n) = 0;
     virtual void process(source_range location, node_break_statement& n) = 0;
-    virtual void process(source_range location, node_negation& n) = 0;
+    virtual void process(source_range location, node_unary_expression& n) = 0;
     virtual void process(source_range location, node_binary_expression& n) = 0;
     virtual void process(source_range location, node_if_expression& n) = 0;
     virtual void process(source_range location, node_while_expression& n) = 0;

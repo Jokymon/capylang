@@ -208,11 +208,12 @@ void dump_node(const context& ctx, const node_break_statement&, size_t indent)
     std::cout << ind << "Break\n";
 }
 
-void dump_node(const context& ctx, const node_negation& n, size_t indent)
+void dump_node(const context& ctx, const node_unary_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Negation; type: " << ctx.repr(n.assigned_type) << "\n";
+    std::cout << ind << "Unary expression; op: " << repr_op(n.operation)
+              << "; type: " << ctx.repr(n.assigned_type) << "\n";
 
     dump_ast(ctx, *n.expr, indent + 4);
 }
@@ -377,7 +378,7 @@ void ast_visitor::visit_nodes(node_let_expression& l_expr)
     }
 }
 
-void ast_visitor::visit_nodes(node_negation& expr)
+void ast_visitor::visit_nodes(node_unary_expression& expr)
 {
     visit(*expr.expr);
 }

@@ -1073,10 +1073,11 @@ node_expr parser::parse_primary()
         }
         else
         {
-            return make_located<node_negation>(
+            return make_located<node_unary_expression>(
                 op_token.location.start,
                 expr.location.end,
                 std::make_unique<node_expr>(std::move(expr)),
+                operator_type::op_minus,
                 parse_context.create_type_var()
             );
         }

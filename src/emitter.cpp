@@ -509,7 +509,7 @@ void emitter::emit(const node_return_expression& root)
         cur_block->ret();
     }
 }
-void emitter::emit(const node_negation& root)
+void emitter::emit(const node_unary_expression& root)
 {
     cur_block->const_val(wasm_type::i32, 0);
     emit(*root.expr);
