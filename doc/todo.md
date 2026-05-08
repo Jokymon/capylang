@@ -15,7 +15,6 @@
  * 'address of'-operator and where it should be supported; do we really want to go the path of C, where a local
    variable always needs to be addressable? Maybe we can just not take an address of every variable, maybe that is
    just a property of some data types
- * In some cases the parser seems to get stuck in an endless loop trying to look for some token that never appears
  * Add an option to the compiler to just dump the sequence of tokens
  * Add --help option to the compiler
  * Add intrinsics, for example:
@@ -27,17 +26,16 @@
    paths create an untyped number
  * Add logic unary !
  * Allow the "const"-part of instructions for global initialisation
- * Update the README section about the canvas access to the playground API
  * I saw that let expressions with init can be terminated without a ; and still be correctly parsed. Are we now in JS
    territory? Is this really what we want?
  * Unknown/illegal tokens create an endless loop for the parser
+ * In some cases the parser seems to get stuck in an endless loop trying to look for some token that never appears
  * Turn explicit import structure for functions into an attribute for regular functions
  * Add support for multiple WASM memories? Should this be explicit somehow?
- * Extend the playground so that it can it runs `create_frame()` in a loop, uses some kind of `init()` function and
-   also supports event handling
  * Long-term: extend the playground with a DSP/Audio interface, maybe using the AudioWorkletNode API of the browser.
    See web-devfs.js for inspiration of an abstraction of this
- * Move the string literals into the scopes/symbol tables
+ * Move the string literals into the scopes/symbol tables so they are outside of the AST nodes tree and can be
+   used from other tree structures
  * Feature to include binary data directly by referencing a file and maybe adding a custom WASM section; think about
    `std::embed` but also features for example available in Rust; the motivation is to add fonts and images in little
    game demos; instead of custom sections, we might have to consider data section (active or passive) since custom
