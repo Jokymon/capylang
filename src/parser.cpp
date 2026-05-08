@@ -1,4 +1,5 @@
 #include "parser.hpp"
+#include "diagnostics.hpp"
 #include <assert.h>
 #include <format>
 #include <limits>
@@ -61,8 +62,8 @@ std::optional<type_id> type_from_id(context& ctx, const std::string& id)
     return std::nullopt;
 }
 
-parser::parser(std::shared_ptr<lexer> l, context& ctx)
-: diagnostic_emitter(diagnostic_phase::parser)
+parser::parser(diagnostic_bag& diagnostics, std::shared_ptr<lexer> l, context& ctx)
+: diagnostic_emitter(diagnostics, diagnostic_phase::parser)
 , capy_lexer(l)
 , parse_context(ctx)
 , error_symbol(ILLEGAL_SYMBOL)
@@ -80,23 +81,12 @@ parser::parser(std::shared_ptr<lexer> l, context& ctx)
 
 node_module parser::parse()
 {
-    diagnostics_.clear();
     auto root = parse_module();
     if (!capy_lexer->ahead_is<token_eof>())
     {
         append_error("Unexpected trailing code after function definition");
     }
     return root;
-}
-
-const diagnostic_bag& parser::diagnostics() const
-{
-    return diagnostics_;
-}
-
-diagnostic_bag& parser::diagnostics_sink()
-{
-    return diagnostics_;
 }
 
 void parser::append_error(const std::string& error_message)

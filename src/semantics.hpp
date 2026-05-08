@@ -9,14 +9,10 @@ type_id assigned_node_type(const node_expr& node, context& ctx);
 class semantic_analyser : public ast_visitor, private diagnostic_emitter
 {
 public:
-    explicit semantic_analyser(context& ctx);
+    explicit semantic_analyser(diagnostic_bag& diagnostics, context& ctx);
     void semantic_analysis(node_module& module);
 
-    const diagnostic_bag& diagnostics() const;
-
 private:
-    diagnostic_bag& diagnostics_sink() override;
-
     void process(source_range location, node_number& n) override;
     void process(source_range location, node_char_literal& n) override;
     void process(source_range location, node_bool_literal& n) override;
@@ -42,7 +38,6 @@ private:
     void process(source_range location, node_module& n) override;
 
     context& parse_context;
-    diagnostic_bag diagnostics_;
 
     node_function_head* current_func_head;
 };

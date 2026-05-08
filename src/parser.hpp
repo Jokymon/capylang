@@ -9,17 +9,13 @@
 class parser : private diagnostic_emitter
 {
 public:
-    explicit parser(std::shared_ptr<lexer> l, context& ctx);
+    explicit parser(diagnostic_bag& diagnostics, std::shared_ptr<lexer> l, context& ctx);
 
-    const diagnostic_bag& diagnostics() const;
     node_module parse();
 
 private:
-    diagnostic_bag& diagnostics_sink() override;
-
     std::shared_ptr<lexer> capy_lexer;
     context& parse_context;
-    diagnostic_bag diagnostics_;
 
     void append_error(const std::string& error_message);
 

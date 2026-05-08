@@ -124,27 +124,16 @@ type_id assigned_node_type(const node_expr& node, context& ctx)
     );
 }
 
-semantic_analyser::semantic_analyser(context& ctx)
+semantic_analyser::semantic_analyser(diagnostic_bag& diagnostics, context& ctx)
 : ast_visitor()
-, diagnostic_emitter(diagnostic_phase::semantics)
+, diagnostic_emitter(diagnostics, diagnostic_phase::semantics)
 , parse_context(ctx)
 , current_func_head(nullptr)
 {
 }
 
-const diagnostic_bag& semantic_analyser::diagnostics() const
-{
-    return diagnostics_;
-}
-
-diagnostic_bag& semantic_analyser::diagnostics_sink()
-{
-    return diagnostics_;
-}
-
 void semantic_analyser::semantic_analysis(node_module& module)
 {
-    diagnostics_.clear();
     visit_nodes(module);
 }
 

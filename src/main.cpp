@@ -39,30 +39,31 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    diagnostic_bag diagnostics;
     std::shared_ptr<lexer> capylexer = std::make_shared<lexer>(infile, args.input_path);
     context parse_context;
-    parser capyparser{capylexer, parse_context};
+    parser capyparser{diagnostics, capylexer, parse_context};
     auto root_node = capyparser.parse();
 
-    if (capyparser.diagnostics().has_errors())
+    if (diagnostics.has_errors())
     {
-        print_diagnostics(std::cerr, capyparser.diagnostics());
+        print_diagnostics(std::cerr, diagnostics);
         return 1;
     }
 
-    type_inference inference{parse_context};
+    type_inference inference{diagnostics, parse_context};
     inference.infer_types(root_node);
-    if (inference.diagnostics().has_errors())
+    if (diagnostics.has_errors())
     {
-        print_diagnostics(std::cerr, inference.diagnostics());
+        print_diagnostics(std::cerr, diagnostics);
         return 1;
     }
 
-    semantic_analyser analyser{parse_context};
+    semantic_analyser analyser{diagnostics, parse_context};
     analyser.semantic_analysis(root_node);
-    if (analyser.diagnostics().has_errors())
+    if (diagnostics.has_errors())
     {
-        print_diagnostics(std::cerr, analyser.diagnostics());
+        print_diagnostics(std::cerr, diagnostics);
         return 1;
     }
 
@@ -77,11 +78,11 @@ int main(int argc, char* argv[])
 
     if (args.dump_anf)
     {
-        anf_generator anf_gen{parse_context};
+        anf_generator anf_gen{diagnostics, parse_context};
         auto anf_module = anf_gen.generate(root_node);
-        // if (anf_gen.diagnostics().has_errors())
+        // if (diagnostics.has_errors())
         // {
-        //     print_diagnostics(std::cerr, anf_gen.diagnostics());
+        //     print_diagnostics(std::cerr, diagnostics);
         //     return 1;
         // }
         dump_anf_module(parse_context, anf_module);

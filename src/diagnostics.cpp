@@ -3,20 +3,20 @@
 
 namespace
 {
-const char* to_string(diagnostic_severity severity)
-{
-    switch (severity)
+    const char* to_string(diagnostic_severity severity)
     {
-        case diagnostic_severity::error:
-            return "error";
-        case diagnostic_severity::warning:
-            return "warning";
-        case diagnostic_severity::note:
-            return "note";
-    }
+        switch (severity)
+        {
+            case diagnostic_severity::error:
+                return "error";
+            case diagnostic_severity::warning:
+                return "warning";
+            case diagnostic_severity::note:
+                return "note";
+        }
 
-    return "error";
-}
+        return "error";
+    }
 }
 
 void diagnostic_bag::add(diagnostic entry)
@@ -66,8 +66,9 @@ const std::vector<diagnostic>& diagnostic_bag::items() const
     return diagnostics_;
 }
 
-diagnostic_emitter::diagnostic_emitter(diagnostic_phase phase)
-: phase_(phase)
+diagnostic_emitter::diagnostic_emitter(diagnostic_bag& diagnostics_sink, diagnostic_phase phase)
+: diagnostics_sink_(diagnostics_sink)
+, phase_(phase)
 {
 }
 
@@ -77,7 +78,7 @@ void diagnostic_emitter::emit_diagnostic(
     diagnostic_severity severity
 )
 {
-    diagnostics_sink().add(std::move(location), message, severity, phase_);
+    diagnostics_sink_.add(std::move(location), message, severity, phase_);
 }
 
 void diagnostic_emitter::append_error_at(source_position location, const std::string& message)

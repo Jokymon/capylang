@@ -205,14 +205,10 @@ void dump_anf_module(const context& ctx, const anf_module& module, size_t indent
 class anf_generator : private diagnostic_emitter
 {
 public:
-    explicit anf_generator(context& ctx);
+    explicit anf_generator(diagnostic_bag& diagnostics, context& ctx);
     anf_module generate(node_module& module);
 
-    const diagnostic_bag& diagnostics() const;
-
 private:
-    diagnostic_bag& diagnostics_sink() override;
-
     void lower_module(const node_module& n);
     void lower_import(const node_import_definition& n);
     void lower_global(const node_global_definition& n);
@@ -234,5 +230,4 @@ private:
     context& parse_context;
     anf_module generated_module;
     uint32_t temp_index = 0;
-    diagnostic_bag diagnostics_;
 };

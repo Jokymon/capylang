@@ -52,7 +52,7 @@ private:
 class diagnostic_emitter
 {
 protected:
-    explicit diagnostic_emitter(diagnostic_phase phase);
+    explicit diagnostic_emitter(diagnostic_bag& diagnostics_sink, diagnostic_phase phase);
     virtual ~diagnostic_emitter() = default;
 
     void emit_diagnostic(
@@ -63,7 +63,7 @@ protected:
     void append_error_at(source_position location, const std::string& message);
 
 private:
-    virtual diagnostic_bag& diagnostics_sink() = 0;
+    diagnostic_bag& diagnostics_sink_;
     diagnostic_phase phase_;
 };
 

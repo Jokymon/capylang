@@ -287,8 +287,8 @@ void dump_anf_module(const context& ctx, const anf_module& module, size_t indent
     }
 }
 
-anf_generator::anf_generator(context& ctx)
-: diagnostic_emitter(diagnostic_phase::anf)
+anf_generator::anf_generator(diagnostic_bag& diagnostics, context& ctx)
+: diagnostic_emitter(diagnostics, diagnostic_phase::anf)
 , parse_context(ctx)
 {
 }
@@ -296,20 +296,9 @@ anf_generator::anf_generator(context& ctx)
 anf_module anf_generator::generate(node_module& module)
 {
     generated_module = {};
-    diagnostics_.clear();
     temp_index = 0;
     lower_module(module);
     return std::move(generated_module);
-}
-
-const diagnostic_bag& anf_generator::diagnostics() const
-{
-    return diagnostics_;
-}
-
-diagnostic_bag& anf_generator::diagnostics_sink()
-{
-    return diagnostics_;
 }
 
 void anf_generator::lower_module(const node_module& n)

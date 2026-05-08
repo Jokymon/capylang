@@ -6,13 +6,10 @@
 class type_inference : public ast_visitor, private diagnostic_emitter
 {
 public:
-    explicit type_inference(context& ctx);
+    explicit type_inference(diagnostic_bag& diagnostics, context& ctx);
     void infer_types(node_module& module);
 
-    const diagnostic_bag& diagnostics() const;
-
 private:
-    diagnostic_bag& diagnostics_sink() override;
     void unify();
 
     void process(source_range location, node_number& n) override;
@@ -40,5 +37,4 @@ private:
     void process(source_range location, node_module& n) override;
 
     context& parse_context;
-    diagnostic_bag diagnostics_;
 };
