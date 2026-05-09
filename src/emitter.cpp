@@ -567,6 +567,12 @@ void emitter::emit(const node_binary_expression& root)
         case op_or:
             cur_block->or_instr(wasm_type::i32);
             break;
+        case op_shl:
+            cur_block->shl(wasm_type::i32);
+            break;
+        case op_shr:
+            cur_block->shr(wasm_type::i32);
+            break;
         case op_equals:
             cur_block->eq(wasm_type::i32);
             break;

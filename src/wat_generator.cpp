@@ -369,6 +369,9 @@ void wat_generator::generate(const wasm_op_type& inst, std::ostream& output, siz
         case wasm_op::ior:
             output << ".or\n";
             break;
+        case wasm_op::ishl:
+            output << ".shl\n";
+            break;
         case wasm_op::eq:
             output << ".eq\n";
             break;
@@ -396,6 +399,9 @@ void wat_generator::generate(const wasm_op_type_sign& inst, std::ostream& output
             break;
         case wasm_op::irem:
             output << ".rem_";
+            break;
+        case wasm_op::ishr:
+            output << ".shr_";
             break;
         case wasm_op::ilt:
             output << ".lt_";

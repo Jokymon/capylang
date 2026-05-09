@@ -62,8 +62,10 @@ struct token_symbol : public located_token
         sym_etet,
         sym_gt,
         sym_gte,
+        sym_gtgt,
         sym_lt,
         sym_lte,
+        sym_ltlt,
         sym_minus,
         sym_noteq,
         sym_percent,
@@ -102,11 +104,13 @@ enum operator_type
 
     op_and,
     op_or,
+    op_shl,
+    op_shr,
 
     op_conversion,
 };
 
-const int PRECEDENCE_UNARY_MINUS = 6;
+const int PRECEDENCE_UNARY_MINUS = 7;
 
 int get_precedence(operator_type op_type);
 operator_type op_from_symbol(const token_symbol& symbol);

@@ -566,6 +566,9 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
                                case wasm_op::ior:
                                    output.put(INST_I32_OR);
                                    break;
+                               case wasm_op::ishl:
+                                   output.put(INST_I32_SHL);
+                                   break;
                                case wasm_op::eq:
                                    output.put(INST_I32_EQ);
                                    break;
@@ -633,6 +636,12 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
                                        output.put(INST_I32_REM_S);
                                    else
                                        output.put(INST_I32_REM_U);
+                                   break;
+                               case wasm_op::ishr:
+                                   if (is_wasm_type_signed(t.value_type))
+                                       output.put(INST_I32_SHR_S);
+                                   else
+                                       output.put(INST_I32_SHR_U);
                                    break;
                                case wasm_op::ilt:
                                    if (is_wasm_type_signed(t.value_type))

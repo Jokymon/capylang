@@ -59,3 +59,7 @@ const char INST_I32_REM_S = '\x6f';
 const char INST_I32_REM_U = '\x70';
 const char INST_I32_AND = '\x71';
 const char INST_I32_OR = '\x72';
+const char INST_I32_XOR = '\x73';
+const char INST_I32_SHL = '\x74';
+const char INST_I32_SHR_S = '\x75';
+const char INST_I32_SHR_U = '\x76';

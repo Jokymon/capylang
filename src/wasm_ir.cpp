@@ -200,6 +200,16 @@ void wasm_block::sub(wasm_type type)
     instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type(wasm_op::isub, type)));
 }
 
+void wasm_block::shl(wasm_type type)
+{
+    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type(wasm_op::ishl, type)));
+}
+
+void wasm_block::shr(wasm_type type)
+{
+    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type_sign(wasm_op::ishr, type)));
+}
+
 void wasm_block::load(wasm_type type, size_t offset)
 {
     instructions.push_back(std::make_unique<wasm_statement>(wasm_op_align_offset(wasm_op::load, type, 0, offset)));

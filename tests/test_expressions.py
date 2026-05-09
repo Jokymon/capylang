@@ -234,6 +234,38 @@ fn _start() {
 
 
 @pytest.mark.good
+def test_right_shifting_works():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let a = 0xab00u32;
+    let b: bool = (a >> 8u32) == 0xab;
+    proc_exit((b as u32) + 5u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 6
+
+
+@pytest.mark.good
+def test_right_shifting_works():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let a = 0xab00u32;
+    let b: bool = (a << 8u32) == 0xab0000;
+    proc_exit((b as u32) + 5u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 6
+
+
+@pytest.mark.good
 def test_eq_has_lower_precedence_than_plus():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;

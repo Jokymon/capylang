@@ -115,10 +115,14 @@ std::string token_symbol::to_string() const
             return "<";
         case sym_lte:
             return "<=";
+        case sym_ltlt:
+            return "<<";
         case sym_gt:
             return ">";
         case sym_gte:
             return ">=";
+        case sym_gtgt:
+            return ">>";
         case sym_noteq:
             return "!=";
         case sym_minus:
@@ -151,15 +155,18 @@ int get_precedence(operator_type op_type)
     switch (op_type)
     {
         case op_conversion:
-            return 7;
+            return 8;
         // unary minus precedence according to
         // PRECEDENCE_UNARY_MINUS
         case op_multiply:
         case op_division:
         case op_modulus:
-            return 5;
+            return 6;
         case op_minus:
         case op_plus:
+            return 5;
+        case op_shl:
+        case op_shr:
             return 4;
         case op_equals:
         case op_notequals:
@@ -202,8 +209,12 @@ operator_type op_from_symbol(const token_symbol& symbol)
             return op_lessthan;
         case token_symbol::sym_lte:
             return op_lessthan_equal;
+        case token_symbol::sym_ltlt:
+            return op_shl;
         case token_symbol::sym_gt:
             return op_greaterthan;
+        case token_symbol::sym_gtgt:
+            return op_shr;
         case token_symbol::sym_gte:
             return op_greaterthan_equal;
         case token_symbol::sym_barbar:
@@ -272,10 +283,14 @@ std::string repr_op(operator_type op)
             return "<";
         case op_lessthan_equal:
             return "<=";
+        case op_shl:
+            return "<<";
         case op_greaterthan:
             return ">";
         case op_greaterthan_equal:
             return ">=";
+        case op_shr:
+            return ">>";
         case op_and:
             return "&&";
         case op_or:
@@ -363,8 +378,10 @@ bool lexer::ahead_is_operator()
                     case token_symbol::sym_eqeq:
                     case token_symbol::sym_lt:
                     case token_symbol::sym_lte:
+                    case token_symbol::sym_ltlt:
                     case token_symbol::sym_gt:
                     case token_symbol::sym_gte:
+                    case token_symbol::sym_gtgt:
                     case token_symbol::sym_noteq:
                     case token_symbol::sym_barbar:
                     case token_symbol::sym_etet:
@@ -562,6 +579,11 @@ token lexer::parse_token()
             get_char();
             return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_lte};
         }
+        else if (input_.peek() == '<')
+        {
+            get_char();
+            return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_ltlt};
+        }
         return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_lt};
     }
     else if (ch == '>')
@@ -572,6 +594,11 @@ token lexer::parse_token()
         {
             get_char();
             return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_gte};
+        }
+        else if (input_.peek() == '>')
+        {
+            get_char();
+            return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_gtgt};
         }
         return token_symbol{look_ahead_position, look_ahead_position, token_symbol::sym_gt};
     }
@@ -769,7 +796,7 @@ token lexer::parse_string_literal()
     while (input_.peek() != '\"')
     {
         auto ch = get_char();
-        int char_code = 0;
+        uint32_t char_code = 0;
         int digit;
 
         if (ch == '\\')
