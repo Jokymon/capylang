@@ -1,11 +1,15 @@
+#pragma once
 #include <string>
 
 struct Args
 {
     std::string input_path;
     std::string output_path;
-    bool dump_ast;
-    bool dump_anf;
+    bool dump_ast = false;
+    bool dump_anf = false;
+
+    bool help = false;
 };
 
+std::string generate_help_text(Args const& args);
 Args parse_args(int argc, char* argv[]);

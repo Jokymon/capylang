@@ -15,6 +15,12 @@ int main(int argc, char* argv[])
 {
     auto args = parse_args(argc, argv);
 
+    if (args.help)
+    {
+        std::cout << generate_help_text(args);
+        return 0;
+    }
+
     if ((args.output_path == "") && !args.dump_ast && !args.dump_anf)
     {
         std::cerr << "Argument required: -o\n";

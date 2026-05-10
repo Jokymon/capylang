@@ -1,5 +1,7 @@
 #include "args_parse.hpp"
+#include <functional>
 #include <iterator>
+#include <vector>
 
 class ArgvIterator
 {
@@ -53,52 +55,144 @@ private:
     char** end_;
 };
 
-void parse_option(const char* option, ArgvIterator& start, const ArgvIterator& end, std::string& output_string)
+struct ArgumentDescriptor
 {
-    if ((*start).starts_with(option))
-    {
-        if ((*start).size() == strlen(option))
+    std::vector<std::string> options;
+    std::string value_name;
+    std::string description;
+    std::function<bool(ArgvIterator&, ArgvIterator const&)> parser;
+};
+
+static ArgumentDescriptor make_flag_descriptor(
+    std::vector<std::string> options,
+    std::string description,
+    bool& target
+)
+{
+    return ArgumentDescriptor{
+        options,
+        "",
+        description,
+        [&target, options = options](ArgvIterator& current, ArgvIterator const&)
         {
-            // we have to take the argument for the given option from the next
-            // argument
-            if (++start != end)
+            std::string arg = *current;
+            for (auto const& option : options)
             {
-                output_string = *start;
+                if (arg == option)
+                {
+                    target = true;
+                    return true;
+                }
             }
+            return false;
         }
-        else
-        {
-            // The option is already included in the argument and has to be
-            // removed
-            output_string = (*start).substr(strlen(option));
-        }
-    }
+    };
 }
 
-void parse_flag(const char* option, ArgvIterator& start, const ArgvIterator& end, bool& output_flag)
+static ArgumentDescriptor make_value_descriptor(
+    std::vector<std::string> options,
+    std::string value_name,
+    std::string description,
+    std::string& target
+)
 {
-    if ((*start) == std::string(option))
+    return ArgumentDescriptor{
+        options,
+        value_name,
+        description,
+        [&target, options = options](ArgvIterator& current, ArgvIterator const& end)
+        {
+            std::string arg = *current;
+            for (auto const& option : options)
+            {
+                if (arg == option)
+                {
+                    if (++current == end)
+                    {
+                        return false;
+                    }
+                    target = *current;
+                    return true;
+                }
+                const std::string prefix = option + "=";
+                if (arg.rfind(prefix, 0) == 0)
+                {
+                    target = arg.substr(prefix.size());
+                    return true;
+                }
+            }
+            return false;
+        }
+    };
+}
+
+static std::vector<ArgumentDescriptor> make_argument_descriptors(Args& args)
+{
+    return {
+        make_value_descriptor({"-o", "--output"}, "PATH", "Path to the output file", args.output_path),
+        make_value_descriptor({"-i", "--input"}, "PATH", "Path to the input file", args.input_path),
+        make_flag_descriptor({"--dump-ast"}, "Dump the AST and exit", args.dump_ast),
+        make_flag_descriptor({"--dump-anf"}, "Dump the ANF and exit", args.dump_anf),
+        make_flag_descriptor({"--help"}, "Show this help message and exit", args.help),
+    };
+}
+
+static std::string describe_argument(ArgumentDescriptor const& descriptor)
+{
+    std::string text;
+    bool first = true;
+    for (auto const& option : descriptor.options)
     {
-        output_flag = true;
+        if (!first)
+        {
+            text += ", ";
+        }
+        first = false;
+        text += option;
     }
+    if (!descriptor.value_name.empty())
+    {
+        text += " ";
+        text += descriptor.value_name;
+    }
+    return text;
+}
+
+std::string generate_help_text(Args const& args)
+{
+    std::vector<ArgumentDescriptor> descriptors = make_argument_descriptors(const_cast<Args&>(args));
+    std::string help_text = "Options:\n";
+    for (auto const& descriptor : descriptors)
+    {
+        help_text += "  ";
+        help_text += describe_argument(descriptor);
+        help_text += "\n      ";
+        help_text += descriptor.description;
+        help_text += "\n";
+    }
+    return help_text;
 }
 
 Args parse_args(int argc, char* argv[])
 {
     Args arguments;
-    arguments.dump_ast = false;
-    arguments.dump_anf = false;
 
-    ArgvRange args{argc, argv};
-    auto args_start = args.begin();
-    auto args_end = args.end();
+    std::vector<ArgumentDescriptor> descriptors = make_argument_descriptors(arguments);
+    ArgvRange arg_range{argc, argv};
+    auto arg = arg_range.begin();
+    auto args_end = arg_range.end();
 
-    for (; args_start != args_end; args_start++)
+    for (; arg != args_end; ++arg)
     {
-        parse_option("-o", args_start, args_end, arguments.output_path);
-        parse_option("-i", args_start, args_end, arguments.input_path);
-        parse_flag("--dump-ast", args_start, args_end, arguments.dump_ast);
-        parse_flag("--dump-anf", args_start, args_end, arguments.dump_anf);
+        for (auto& descriptor : descriptors)
+        {
+            ArgvIterator temp = arg;
+            if (descriptor.parser(temp, args_end))
+            {
+                arg = temp;
+                break;
+            }
+        }
     }
     return arguments;
 }
