@@ -198,3 +198,22 @@ fn _start() {
 
 # TODO: assigning from string literal should either create a copy of the string
 # or it should only be allowed to assign to an immutable variable
+
+
+@pytest.mark.parse_error
+def test_unicode_escape_must_start_with_curly():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let s: string = "\\u932}";
+    proc_exit(s.size)
+}"""
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
+
+    assert exit_code == 1
+    assert (
+        tools.normalize_filename_from_output(stderr)
+        == "filename:6:22: Unicode escape sequence must start with '\\u{'\n"
+    )

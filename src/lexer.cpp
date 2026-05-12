@@ -795,6 +795,8 @@ token lexer::parse_string_literal()
 
     while (input_.peek() != '\"')
     {
+        auto current_char_pos = look_ahead_position;
+
         auto ch = get_char();
         uint32_t char_code = 0;
         int digit;
@@ -818,9 +820,17 @@ token lexer::parse_string_literal()
                     string_literal += '\"';
                     break;
                 case 'u':
-                    get_char(); // skip '{'; TODO: check for correct character
+                    digit = get_char(); // check for opening '{'
+                    if (digit == '{')
+                    {
+                        digit = get_char();
+                    }
+                    else
+                    {
+                        append_error_at(current_char_pos, "Unicode escape sequence must start with '\\u{'");
+                    }
+
                     char_code = 0;
-                    digit = get_char();
                     while (digit != '}')
                     {
                         if ((digit >= '0') && (digit <= '9'))
