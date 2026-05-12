@@ -206,4 +206,6 @@ private:
     token parse_identifier_or_keyword();
     token parse_char_literal();
     token parse_string_literal();
+
+    uint32_t parse_unicode_escape();
 };

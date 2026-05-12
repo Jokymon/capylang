@@ -6,7 +6,6 @@
      tweaking beyond what a generator could do.
  * add 64-bit version of numbers
  * add floating point number types
- * Add unicode code point support for characters (so far we only have it in strings)
  * design and add support for vector numeric types
  * add structured component model types (variant/enum, list, result, ...)
  * Extend the basic memory management

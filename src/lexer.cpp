@@ -777,7 +777,11 @@ token lexer::parse_char_literal()
             case '\"':
                 ch = '\"';
                 break;
+            case 'u':
+                ch = parse_unicode_escape();
+                break;
             default:
+                // TODO: handle unknown escape sequence with a warning
                 ch = next_ch;
                 break;
         }
@@ -798,7 +802,6 @@ token lexer::parse_string_literal()
         auto current_char_pos = look_ahead_position;
 
         auto ch = get_char();
-        uint32_t char_code = 0;
         int digit;
 
         if (ch == '\\')
@@ -820,34 +823,13 @@ token lexer::parse_string_literal()
                     string_literal += '\"';
                     break;
                 case 'u':
-                    digit = get_char(); // check for opening '{'
-                    if (digit == '{')
-                    {
-                        digit = get_char();
-                    }
-                    else
-                    {
-                        append_error_at(current_char_pos, "Unicode escape sequence must start with '\\u{'");
-                    }
-
-                    char_code = 0;
-                    while (digit != '}')
-                    {
-                        if ((digit >= '0') && (digit <= '9'))
-                        {
-                            char_code = (char_code * 0x10) + (digit - '0');
-                        }
-                        else if ((digit >= 'a') && (digit <= 'f'))
-                        {
-                            char_code = (char_code * 0x10) + (digit - 'a' + 10);
-                        }
-                        // TODO: handle invalid digit
-                        digit = get_char();
-                    }
-
+                {
+                    uint32_t char_code = parse_unicode_escape();
                     encode_utf8_raw_unchecked(char_code, string_literal);
                     break;
+                }
                 default:
+                    // TODO: add a warning text for unknown escape sequence
                     // unknown escape sequence, just add both characters as-is
                     string_literal += ch;
                     string_literal += next_ch;
@@ -862,4 +844,36 @@ token lexer::parse_string_literal()
     get_char(); // parse over the closing "
 
     return token_string_literal{start_position, look_ahead_position, string_literal};
+}
+
+uint32_t lexer::parse_unicode_escape()
+{
+    auto current_char_pos = look_ahead_position;
+    uint32_t char_code = 0;
+    int digit = get_char(); // check for opening '{'
+
+    if (digit == '{')
+    {
+        digit = get_char();
+    }
+    else
+    {
+        append_error_at(current_char_pos, "Unicode escape sequence must start with '\\u{'");
+    }
+
+    while (digit != '}')
+    {
+        if ((digit >= '0') && (digit <= '9'))
+        {
+            char_code = (char_code * 0x10) + (digit - '0');
+        }
+        else if ((digit >= 'a') && (digit <= 'f'))
+        {
+            char_code = (char_code * 0x10) + (digit - 'a' + 10);
+        }
+        // TODO: handle invalid digit
+        digit = get_char();
+    }
+
+    return char_code;
 }

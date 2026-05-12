@@ -158,6 +158,22 @@ fn _start() {
 
 
 @pytest.mark.good
+def test_character_literals_can_be_utf8():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let c: char = '\\u{1234}';
+    let e: u32 = (c as u32) >> 8u32;
+    proc_exit(e)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 0x12
+
+
+@pytest.mark.good
 def test_strings_can_be_passed_as_arguments():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
@@ -215,5 +231,5 @@ fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:6:22: Unicode escape sequence must start with '\\u{'\n"
+        == "filename:6:24: Unicode escape sequence must start with '\\u{'\n"
     )
