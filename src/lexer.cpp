@@ -327,7 +327,7 @@ std::string repr_token(const token& tok)
 }
 
 lexer::lexer(diagnostic_bag& diagnostics, std::istream& input, const std::string& file_path)
-: diagnostic_emitter(diagnostics, diagnostic_phase::parser)
+: diagnostic_emitter(diagnostics, diagnostic_phase::lexer)
 , input_(input)
 , input_file_path(file_path)
 , lookahead_(std::nullopt)

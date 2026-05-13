@@ -13,6 +13,7 @@ enum class diagnostic_severity
 
 enum class diagnostic_phase
 {
+    lexer,
     parser,
     type_inference,
     semantics,
