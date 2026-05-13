@@ -27,6 +27,15 @@ The datatype `string` contains UTF-8 encoded Unicode text.
 To insert specific unicode code points in strings, we use the more flexible notation `\u{xxx}` as used in Rust, Swift or
 PHP rather than the stricter, fixed length variants with `\u` and `\U` as in Java, C, C++ or C#.
 
+### String literal handling
+
+String literals are stored in the parse context structure which already contains all symbols and types.
+
+The advantage of this approach is that it's easier for other compiler stages to access the string literal list. We could
+store the string literals in the `node_module` AST node as initially implemented, but as soon as we want to use these
+literals in other compiler stages which may no longer rely on the AST but maybe on some form of IR, we will have to
+duplicate this information somehow.
+
 ## Encoding Unicode code points
 
 To insert specific unicode code points in strings, we use the more flexible notation `\u{xxx}` as used in Rust, Swift or

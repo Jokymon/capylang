@@ -1229,9 +1229,9 @@ void parser::parse_body(std::vector<std::unique_ptr<node_expr>>& body)
 
 size_t parser::collect_literal(const std::string& literal)
 {
-    size_t insert_index = current_module->string_literals.size();
-    current_module->string_literals.emplace_back(
-        node_module::string_literal_entry{0, literal}
+    size_t insert_index = parse_context.string_literals.size();
+    parse_context.string_literals.emplace_back(
+        context::string_literal_entry{0, literal}
     );
 
     return insert_index;

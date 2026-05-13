@@ -31,8 +31,6 @@
  * Add support for multiple WASM memories? Should this be explicit somehow?
  * Long-term: extend the playground with a DSP/Audio interface, maybe using the AudioWorkletNode API of the browser.
    See web-devfs.js for inspiration of an abstraction of this
- * Move the string literals into the scopes/symbol tables so they are outside of the AST nodes tree and can be
-   used from other tree structures
  * Feature to include binary data directly by referencing a file and maybe adding a custom WASM section; think about
    `std::embed` but also features for example available in Rust; the motivation is to add fonts and images in little
    game demos; instead of custom sections, we might have to consider data section (active or passive) since custom

@@ -194,7 +194,7 @@ wasm_module emitter::generate(node_module& module_def)
     auto& memory = ir_module.create_memory(2);
     ir_module.export_as("memory", memory);
 
-    for (auto& literal : module_def.string_literals)
+    for (auto& literal : parse_context.string_literals)
     {
         literal.start_address = allocate_data(literal.literal);
     }
@@ -627,7 +627,7 @@ void emitter::emit(const node_binary_expression& root)
 
 void emitter::emit(const node_string_literal& literal)
 {
-    uint32_t ptr = current_module->string_literals[literal.table_index].start_address;
+    uint32_t ptr = parse_context.string_literals[literal.table_index].start_address;
     cur_block->const_val(wasm_type::i32, ptr);
     cur_block->const_val(wasm_type::i32, literal.size);
 }

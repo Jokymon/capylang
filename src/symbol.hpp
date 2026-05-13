@@ -311,6 +311,13 @@ struct context
 
     std::vector<type_constraint> constraints;
     std::vector<symbol> symbols;
+
+    struct string_literal_entry
+    {
+        uint32_t start_address;
+        std::string literal;
+    };
+    std::vector<string_literal_entry> string_literals;
 };
 
 struct scope

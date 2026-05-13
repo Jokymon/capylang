@@ -246,13 +246,6 @@ struct node_module : public located_node
     std::vector<std::unique_ptr<node_function_definition>> functions;
     std::vector<std::unique_ptr<node_expr>> typedefs;
 
-    struct string_literal_entry
-    {
-        uint32_t start_address;
-        std::string literal;
-    };
-    std::vector<string_literal_entry> string_literals;
-
     std::unique_ptr<scope> module_scope;
 };
 
