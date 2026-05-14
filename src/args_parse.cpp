@@ -148,6 +148,7 @@ static std::vector<ArgumentDescriptor> make_argument_descriptors(Args& args)
     return {
         make_value_descriptor({"-o", "--output"}, true, "PATH", "Path to the output file. Depending on the suffix, a WAT or WASM file is generated", args.output_path),
         make_value_descriptor({"-i", "--input"}, true, "PATH", "Path to the capylang source input file", args.input_path),
+        make_flag_descriptor({"--dump-tokens"}, "Only dump the tokens and exit", args.dump_tokens),
         make_flag_descriptor({"--dump-ast"}, "Only dump the AST and exit", args.dump_ast),
         make_flag_descriptor({"--dump-anf"}, "Only dump the ANF and exit", args.dump_anf),
         make_flag_descriptor({"--help"}, "Show this help message and exit", args.help),

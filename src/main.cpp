@@ -41,6 +41,43 @@ int main(int argc, char* argv[])
 
     diagnostic_bag diagnostics;
     std::shared_ptr<lexer> capylexer = std::make_shared<lexer>(diagnostics, infile, args.input_path);
+
+    if (args.dump_tokens)
+    {
+        while (!capylexer->ahead_is<token_eof>())
+        {
+            const token& tok = capylexer->peek_token();
+            std::cout << std::visit(
+                [](const auto& n) -> std::string
+                {
+                              using T = std::decay_t<decltype(n)>;
+
+                              if constexpr (std::is_same_v<T, token_eof>) {
+                                return "<TOK_EOF>";
+                              } else if constexpr (std::is_same_v<T, token_identifier>) {
+                                return "<TOK_ID: "+n.name+">";
+                              } else if constexpr (std::is_same_v<T, token_illegal>) {
+                                return "<TOK_ILLEGAL: "+n.token_text+">";
+                              } else if constexpr (std::is_same_v<T, token_integer>) {
+                                return "<TOK_INT: "+std::to_string(n.number)+">";
+                              } else if constexpr (std::is_same_v<T, token_char_literal>) {
+                                return "<TOK_CHAR: "+std::to_string(n.ch)+">";
+                              } else if constexpr (std::is_same_v<T, token_string_literal>) {
+                                return "<TOK_STR: "+n.str+">";
+                              } else if constexpr (std::is_same_v<T, token_symbol>) {
+                                return "<TOK_SYM: "+n.to_string()+">";
+                              } else {
+                                return "<!TOK_FAIL!>";
+                              } },
+                tok
+            );
+            std::cout << " ";
+            capylexer->next_token();
+        }
+        std::cout << "\n";
+        return 0;
+    }
+
     context parse_context;
     parser capyparser{diagnostics, capylexer, parse_context};
     auto root_node = capyparser.parse();

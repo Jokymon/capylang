@@ -8,11 +8,14 @@
 #               this option, the compiler will use its own WASM generator
 # -DumpAst      When this option is present, the compiler will only print the
 #               AST on stdout without generating any output files.
+# -DumpTokens   When this option is present, the compiler will only print the
+#               tokens on stdout without generating any output files.
 
 param (
     [string]$InputFile = $(throw "Input file path is required"),
     [switch]$Direct,
-    [switch]$DumpAst
+    [switch]$DumpAst,
+    [switch]$DumpTokens
 )
 
 # --- Compute relative paths manually (without requiring existence) ---
@@ -52,6 +55,9 @@ $AdditionalArgs = ""
 if ($DumpAst) {
     $AdditionalArgs = "--dump-ast"
 }
+if ($DumpTokens) {
+    $AdditionalArgs = "--dump-tokens"
+}
 
 # Run the capylang compiler
 $CompilerOutput = if ($Direct) { $WasmFileRel } else { $WatFileRel }
@@ -61,7 +67,7 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-if (-not $Direct -and -not $DumpAst) {
+if (-not $Direct -and -not $DumpAst -and -not $DumpTokens) {
     # convert the WAT file to WASM
     wasm-tools.exe parse $WatFile -o $WasmFile
     if ($LASTEXITCODE -ne 0) {

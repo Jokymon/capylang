@@ -14,7 +14,6 @@
  * 'address of'-operator and where it should be supported; do we really want to go the path of C, where a local
    variable always needs to be addressable? Maybe we can just not take an address of every variable, maybe that is
    just a property of some data types
- * Add an option to the compiler to just dump the sequence of tokens
  * Add intrinsics, for example:
     * abs(), sqrt(), ceil(), floor(), trunc(), min(), max()
     * memory instructions, size(), grow(), copy(), fill()
