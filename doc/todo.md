@@ -15,7 +15,6 @@
    variable always needs to be addressable? Maybe we can just not take an address of every variable, maybe that is
    just a property of some data types
  * Add an option to the compiler to just dump the sequence of tokens
- * Add --help option to the compiler
  * Add intrinsics, for example:
     * abs(), sqrt(), ceil(), floor(), trunc(), min(), max()
     * memory instructions, size(), grow(), copy(), fill()
@@ -91,3 +90,11 @@ about different lowering strategies and for example store a string in two local 
 - Safe navigation operator: https://en.wikipedia.org/wiki/Safe_navigation_operator
 - Null coalescing operator: https://en.wikipedia.org/wiki/Null_coalescing_operator
 - Chocopy WASM backend: https://yangdanny97.github.io/blog/2022/10/11/chocopy-wasm-backend
+
+## BAA
+
+ * string library; sketch an implementation and derive the necessary language concepts and features that are still
+   needed
+ * Migrate frontend to ANTLR?
+ * Update the VSCode integration of capylang support
+ * Sketch a WASM-based language server integration for capylang in VSCode

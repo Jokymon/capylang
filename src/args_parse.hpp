@@ -3,6 +3,8 @@
 
 struct Args
 {
+    std::string programm_name;
+
     std::string input_path;
     std::string output_path;
     bool dump_ast = false;
