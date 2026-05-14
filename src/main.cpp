@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
 
     if (args.dump_ast)
     {
-        dump_node(parse_context, root_node);
+        dump_node(std::cout, parse_context, root_node);
         return 0;
     }
 

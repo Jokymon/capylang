@@ -3,6 +3,7 @@
 #include "symbol.hpp"
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <variant>
 #include <vector>
 
@@ -57,7 +58,7 @@ struct node_module;
 using node_expr_raw = std::variant<node_number, node_char_literal, node_bool_literal, node_string_literal, node_var_reference, node_pointer_deref, node_let_expression, node_if_expression, node_while_expression, node_record_definition, node_record_initialisation, node_field_deref, node_function_call, node_cast_expression, node_discard_expression, node_return_expression, node_break_statement, node_unary_expression, node_binary_expression>;
 using node_expr = located<node_expr_raw>;
 
-void dump_node(const context& ctx, const node_module& module, size_t indent = 0);
+void dump_node(std::ostream& os, const context& ctx, const node_module& module, size_t indent = 0);
 
 enum class assign_context
 {

@@ -1,263 +1,262 @@
 #include "ast.hpp"
-#include <iostream>
 
-void dump_node(const context& ctx, const node_expr& root, size_t indent = 0);
+void dump_node(std::ostream& os, const context& ctx, const node_expr& root, size_t indent = 0);
 
-void dump_node(const context& ctx, const node_number& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_number& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Num:" << n.number << "\n";
+    os << ind << "Num:" << n.number << "\n";
 }
 
-void dump_node(const context& ctx, const node_char_literal& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_char_literal& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Char literal: \"" << n.ch << "\"\n";
+    os << ind << "Char literal: \"" << n.ch << "\"\n";
 }
 
-void dump_node(const context& ctx, const node_string_literal& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_string_literal& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "String literal: \"" << n.table_index << "\"\n";
+    os << ind << "String literal: \"" << n.table_index << "\"\n";
 }
 
-void dump_node(const context& ctx, const node_bool_literal& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_bool_literal& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Bool:" << n.value << "\n";
+    os << ind << "Bool:" << n.value << "\n";
 }
 
-void dump_node(const context& ctx, const node_var_reference& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_var_reference& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Var(" << ctx.repr(ctx.symbol_at(n.symbol_ref).symbol_type) << "):" << n.name << "\n";
+    os << ind << "Var(" << ctx.repr(ctx.symbol_at(n.symbol_ref).symbol_type) << "):" << n.name << "\n";
 }
 
-void dump_node(const context& ctx, const node_pointer_deref& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_pointer_deref& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Pointer Deref:\n";
-    dump_node(ctx, *n.pointer_expression, indent + 4);
+    os << ind << "Pointer Deref:\n";
+    dump_node(os, ctx, *n.pointer_expression, indent + 4);
 }
 
-void dump_node(const context& ctx, const node_let_expression& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_let_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Let:\n";
-    std::cout << ind << "  " << n.name << "=\n";
-    dump_node(ctx, *n.init_expression, indent + 4);
+    os << ind << "Let:\n";
+    os << ind << "  " << n.name << "=\n";
+    dump_node(os, ctx, *n.init_expression, indent + 4);
 }
 
-void dump_node(const context& ctx, const node_if_expression& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_if_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
-    std::cout << ind << "If: " << ctx.repr(n.assigned_type) << "\n";
-    std::cout << ind << "  Condition:\n";
-    dump_node(ctx, *n.condition, indent + 4);
-    std::cout << ind << "  Then-Body:\n";
+    os << ind << "If: " << ctx.repr(n.assigned_type) << "\n";
+    os << ind << "  Condition:\n";
+    dump_node(os, ctx, *n.condition, indent + 4);
+    os << ind << "  Then-Body:\n";
     for (const auto& expression : n.then_code)
     {
-        dump_node(ctx, *expression, indent + 4);
+        dump_node(os, ctx, *expression, indent + 4);
     }
     if (n.else_code.size() > 0)
     {
-        std::cout << ind << "  Else-Body:\n";
+        os << ind << "  Else-Body:\n";
         for (const auto& expression : n.else_code)
         {
-            dump_node(ctx, *expression, indent + 4);
+            dump_node(os, ctx, *expression, indent + 4);
         }
     }
 }
 
-void dump_node(const context& ctx, const node_while_expression& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_while_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
-    std::cout << ind << "While\n";
-    std::cout << ind << "  Condition:\n";
-    dump_node(ctx, *n.condition, indent + 4);
-    std::cout << ind << "  While-Body:\n";
+    os << ind << "While\n";
+    os << ind << "  Condition:\n";
+    dump_node(os, ctx, *n.condition, indent + 4);
+    os << ind << "  While-Body:\n";
     for (const auto& expression : n.while_code)
     {
-        dump_node(ctx, *expression, indent + 4);
+        dump_node(os, ctx, *expression, indent + 4);
     }
 }
 
-void dump_node(const context& ctx, const node_record_definition& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_record_definition& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Record definition " << n.name << ":\n";
+    os << ind << "Record definition " << n.name << ":\n";
     for (const auto& field : n.fields)
     {
-        std::cout << ind << "  " << field.first << ": " << ctx.repr(field.second) << "\n";
+        os << ind << "  " << field.first << ": " << ctx.repr(field.second) << "\n";
     }
 }
 
-void dump_node(const context& ctx, const node_record_initialisation& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_record_initialisation& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Record init\n";
+    os << ind << "Record init\n";
     for (const auto& field_init : n.initialisations)
     {
-        std::cout << ind << "  " << field_init.field_name << "=\n";
-        dump_node(ctx, *field_init.init_expression, indent + 6);
+        os << ind << "  " << field_init.field_name << "=\n";
+        dump_node(os, ctx, *field_init.init_expression, indent + 6);
     }
 }
 
-void dump_node(const context& ctx, const node_field_deref& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_field_deref& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Deref:\n";
-    std::cout << ind << "  object:\n";
-    dump_node(ctx, *n.object, indent + 4);
-    std::cout << ind << "  field: " << n.fieldname << "\n";
+    os << ind << "Deref:\n";
+    os << ind << "  object:\n";
+    dump_node(os, ctx, *n.object, indent + 4);
+    os << ind << "  field: " << n.fieldname << "\n";
 }
 
-void dump_node(const context& ctx, const node_function_head& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_function_head& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    // std::cout << ind << "Function head: TODO\n";
-    std::cout << ind << "  Name: " << n.name << "\n";
+    // os << ind << "Function head: TODO\n";
+    os << ind << "  Name: " << n.name << "\n";
 }
 
-void dump_node(const context& ctx, const node_import_definition& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_import_definition& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Import definition: TODO\n";
+    os << ind << "Import definition: TODO\n";
 }
 
-void dump_node(const context& ctx, const node_global_definition& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_global_definition& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Global:\n";
-    std::cout << ind << "  " << n.name << "=\n";
-    // dump_node(ctx, *n.init_expression, indent+4);
+    os << ind << "Global:\n";
+    os << ind << "  " << n.name << "=\n";
+    // dump_node(os, ctx, *n.init_expression, indent+4);
 }
 
-void dump_node(const context& ctx, const node_function_call& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_function_call& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Function call '" << n.function_name << "'\n";
+    os << ind << "Function call '" << n.function_name << "'\n";
     for (const auto& param : n.parameter)
     {
-        std::cout << ind << "  Parameter:\n";
-        dump_node(ctx, *param, indent + 4);
+        os << ind << "  Parameter:\n";
+        dump_node(os, ctx, *param, indent + 4);
     }
 }
 
-void dump_node(const context& ctx, const node_function_definition& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_function_definition& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Function definition:\n";
-    dump_node(ctx, *n.function_head, indent);
-    std::cout << ind << "  Body:\n";
+    os << ind << "Function definition:\n";
+    dump_node(os, ctx, *n.function_head, indent);
+    os << ind << "  Body:\n";
     for (const auto& expression : n.code)
     {
-        dump_node(ctx, *expression, indent + 4);
+        dump_node(os, ctx, *expression, indent + 4);
     }
 }
 
-void dump_node(const context& ctx, const node_cast_expression& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_cast_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Casting operation"
-              << "; target type: " << ctx.repr(n.cast_type) << "\n";
+    os << ind << "Casting operation"
+       << "; target type: " << ctx.repr(n.cast_type) << "\n";
 
-    dump_node(ctx, *n.expression, indent + 4);
+    dump_node(os, ctx, *n.expression, indent + 4);
 }
 
-void dump_node(const context& ctx, const node_discard_expression& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_discard_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
-    std::cout << ind << "Discard:\n";
-    dump_node(ctx, *n.expression, indent + 4);
+    os << ind << "Discard:\n";
+    dump_node(os, ctx, *n.expression, indent + 4);
 }
 
-void dump_node(const context& ctx, const node_return_expression& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_return_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
-    std::cout << ind << "Return:\n";
+    os << ind << "Return:\n";
     if (n.expression)
     {
-        dump_node(ctx, *n.expression, indent + 4);
+        dump_node(os, ctx, *n.expression, indent + 4);
     }
     else
     {
-        std::cout << ind << "  <void>\n";
+        os << ind << "  <void>\n";
     }
 }
 
-void dump_node(const context& ctx, const node_break_statement&, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_break_statement&, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
-    std::cout << ind << "Break\n";
+    os << ind << "Break\n";
 }
 
-void dump_node(const context& ctx, const node_unary_expression& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_unary_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Unary expression; op: " << repr_op(n.operation)
-              << "; type: " << ctx.repr(n.assigned_type) << "\n";
+    os << ind << "Unary expression; op: " << repr_op(n.operation)
+       << "; type: " << ctx.repr(n.assigned_type) << "\n";
 
-    dump_node(ctx, *n.expr, indent + 4);
+    dump_node(os, ctx, *n.expr, indent + 4);
 }
 
-void dump_node(const context& ctx, const node_binary_expression& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_binary_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Expression; op: " << repr_op(n.operation)
-              << "; type: " << ctx.repr(n.assigned_type) << "\n";
+    os << ind << "Expression; op: " << repr_op(n.operation)
+       << "; type: " << ctx.repr(n.assigned_type) << "\n";
 
-    dump_node(ctx, *n.left, indent + 4);
-    dump_node(ctx, *n.right, indent + 4);
+    dump_node(os, ctx, *n.left, indent + 4);
+    dump_node(os, ctx, *n.right, indent + 4);
 }
 
-void dump_node(const context& ctx, const node_module& n, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_module& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
-    std::cout << ind << "Module:\n";
+    os << ind << "Module:\n";
     for (const auto& import : n.imports)
     {
-        dump_node(ctx, *import, indent + 4);
+        dump_node(os, ctx, *import, indent + 4);
     }
     for (const auto& type_def : n.typedefs)
     {
-        dump_node(ctx, *type_def, indent + 4);
+        dump_node(os, ctx, *type_def, indent + 4);
     }
     for (const auto& global : n.globals)
     {
-        dump_node(ctx, *global, indent + 4);
+        dump_node(os, ctx, *global, indent + 4);
     }
     for (const auto& function : n.functions)
     {
-        dump_node(ctx, *function, indent + 4);
+        dump_node(os, ctx, *function, indent + 4);
     }
 }
 
-void dump_node(const context& ctx, const node_expr& root, size_t indent)
+void dump_node(std::ostream& os, const context& ctx, const node_expr& root, size_t indent)
 {
     std::visit(
-        [=, &ctx](const auto& n)
+        [=, &ctx, &os](const auto& n)
         {
-            dump_node(ctx, n, indent);
+            dump_node(os, ctx, n, indent);
         },
         root.value
     );
