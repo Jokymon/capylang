@@ -1,7 +1,7 @@
 #include "ast.hpp"
 #include <iostream>
 
-void dump_ast(const context& ctx, const node_expr& root, size_t indent = 0);
+void dump_node(const context& ctx, const node_expr& root, size_t indent = 0);
 
 void dump_node(const context& ctx, const node_number& n, size_t indent)
 {
@@ -43,7 +43,7 @@ void dump_node(const context& ctx, const node_pointer_deref& n, size_t indent)
     std::string ind = std::string(indent, ' ');
 
     std::cout << ind << "Pointer Deref:\n";
-    dump_ast(ctx, *n.pointer_expression, indent + 4);
+    dump_node(ctx, *n.pointer_expression, indent + 4);
 }
 
 void dump_node(const context& ctx, const node_let_expression& n, size_t indent)
@@ -52,7 +52,7 @@ void dump_node(const context& ctx, const node_let_expression& n, size_t indent)
 
     std::cout << ind << "Let:\n";
     std::cout << ind << "  " << n.name << "=\n";
-    dump_ast(ctx, *n.init_expression, indent + 4);
+    dump_node(ctx, *n.init_expression, indent + 4);
 }
 
 void dump_node(const context& ctx, const node_if_expression& n, size_t indent)
@@ -60,18 +60,18 @@ void dump_node(const context& ctx, const node_if_expression& n, size_t indent)
     std::string ind = std::string(indent, ' ');
     std::cout << ind << "If: " << ctx.repr(n.assigned_type) << "\n";
     std::cout << ind << "  Condition:\n";
-    dump_ast(ctx, *n.condition, indent + 4);
+    dump_node(ctx, *n.condition, indent + 4);
     std::cout << ind << "  Then-Body:\n";
     for (const auto& expression : n.then_code)
     {
-        dump_ast(ctx, *expression, indent + 4);
+        dump_node(ctx, *expression, indent + 4);
     }
     if (n.else_code.size() > 0)
     {
         std::cout << ind << "  Else-Body:\n";
         for (const auto& expression : n.else_code)
         {
-            dump_ast(ctx, *expression, indent + 4);
+            dump_node(ctx, *expression, indent + 4);
         }
     }
 }
@@ -81,11 +81,11 @@ void dump_node(const context& ctx, const node_while_expression& n, size_t indent
     std::string ind = std::string(indent, ' ');
     std::cout << ind << "While\n";
     std::cout << ind << "  Condition:\n";
-    dump_ast(ctx, *n.condition, indent + 4);
+    dump_node(ctx, *n.condition, indent + 4);
     std::cout << ind << "  While-Body:\n";
     for (const auto& expression : n.while_code)
     {
-        dump_ast(ctx, *expression, indent + 4);
+        dump_node(ctx, *expression, indent + 4);
     }
 }
 
@@ -108,7 +108,7 @@ void dump_node(const context& ctx, const node_record_initialisation& n, size_t i
     for (const auto& field_init : n.initialisations)
     {
         std::cout << ind << "  " << field_init.field_name << "=\n";
-        dump_ast(ctx, *field_init.init_expression, indent + 6);
+        dump_node(ctx, *field_init.init_expression, indent + 6);
     }
 }
 
@@ -118,7 +118,7 @@ void dump_node(const context& ctx, const node_field_deref& n, size_t indent)
 
     std::cout << ind << "Deref:\n";
     std::cout << ind << "  object:\n";
-    dump_ast(ctx, *n.object, indent + 4);
+    dump_node(ctx, *n.object, indent + 4);
     std::cout << ind << "  field: " << n.fieldname << "\n";
 }
 
@@ -143,7 +143,7 @@ void dump_node(const context& ctx, const node_global_definition& n, size_t inden
 
     std::cout << ind << "Global:\n";
     std::cout << ind << "  " << n.name << "=\n";
-    // dump_ast(ctx, *n.init_expression, indent+4);
+    // dump_node(ctx, *n.init_expression, indent+4);
 }
 
 void dump_node(const context& ctx, const node_function_call& n, size_t indent)
@@ -154,7 +154,7 @@ void dump_node(const context& ctx, const node_function_call& n, size_t indent)
     for (const auto& param : n.parameter)
     {
         std::cout << ind << "  Parameter:\n";
-        dump_ast(ctx, *param, indent + 4);
+        dump_node(ctx, *param, indent + 4);
     }
 }
 
@@ -167,7 +167,7 @@ void dump_node(const context& ctx, const node_function_definition& n, size_t ind
     std::cout << ind << "  Body:\n";
     for (const auto& expression : n.code)
     {
-        dump_ast(ctx, *expression, indent + 4);
+        dump_node(ctx, *expression, indent + 4);
     }
 }
 
@@ -178,14 +178,14 @@ void dump_node(const context& ctx, const node_cast_expression& n, size_t indent)
     std::cout << ind << "Casting operation"
               << "; target type: " << ctx.repr(n.cast_type) << "\n";
 
-    dump_ast(ctx, *n.expression, indent + 4);
+    dump_node(ctx, *n.expression, indent + 4);
 }
 
 void dump_node(const context& ctx, const node_discard_expression& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
     std::cout << ind << "Discard:\n";
-    dump_ast(ctx, *n.expression, indent + 4);
+    dump_node(ctx, *n.expression, indent + 4);
 }
 
 void dump_node(const context& ctx, const node_return_expression& n, size_t indent)
@@ -194,7 +194,7 @@ void dump_node(const context& ctx, const node_return_expression& n, size_t inden
     std::cout << ind << "Return:\n";
     if (n.expression)
     {
-        dump_ast(ctx, *n.expression, indent + 4);
+        dump_node(ctx, *n.expression, indent + 4);
     }
     else
     {
@@ -215,7 +215,7 @@ void dump_node(const context& ctx, const node_unary_expression& n, size_t indent
     std::cout << ind << "Unary expression; op: " << repr_op(n.operation)
               << "; type: " << ctx.repr(n.assigned_type) << "\n";
 
-    dump_ast(ctx, *n.expr, indent + 4);
+    dump_node(ctx, *n.expr, indent + 4);
 }
 
 void dump_node(const context& ctx, const node_binary_expression& n, size_t indent)
@@ -225,11 +225,11 @@ void dump_node(const context& ctx, const node_binary_expression& n, size_t inden
     std::cout << ind << "Expression; op: " << repr_op(n.operation)
               << "; type: " << ctx.repr(n.assigned_type) << "\n";
 
-    dump_ast(ctx, *n.left, indent + 4);
-    dump_ast(ctx, *n.right, indent + 4);
+    dump_node(ctx, *n.left, indent + 4);
+    dump_node(ctx, *n.right, indent + 4);
 }
 
-void dump_module(const context& ctx, const node_module& n, size_t indent)
+void dump_node(const context& ctx, const node_module& n, size_t indent)
 {
     std::string ind = std::string(indent, ' ');
 
@@ -240,7 +240,7 @@ void dump_module(const context& ctx, const node_module& n, size_t indent)
     }
     for (const auto& type_def : n.typedefs)
     {
-        dump_ast(ctx, *type_def, indent + 4);
+        dump_node(ctx, *type_def, indent + 4);
     }
     for (const auto& global : n.globals)
     {
@@ -252,7 +252,7 @@ void dump_module(const context& ctx, const node_module& n, size_t indent)
     }
 }
 
-void dump_ast(const context& ctx, const node_expr& root, size_t indent)
+void dump_node(const context& ctx, const node_expr& root, size_t indent)
 {
     std::visit(
         [=, &ctx](const auto& n)
