@@ -15,3 +15,7 @@ DEF_END
 DEF_NODE(tst, struct_with_struct_list, root)
     DEF_NODE_LIST_FIELD(tst, tst_single_scalar, child)
 DEF_END
+
+DEF_NODE(tst, struct_with_context_value, root)
+    DEF_SCALAR_WITH_CONTEXT(custom_type, child)
+DEF_END
