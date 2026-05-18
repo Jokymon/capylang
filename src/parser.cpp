@@ -20,6 +20,11 @@ node_expr make_located(source_position start, source_position end, Args&&... arg
     };
 }
 
+bool bool_from_string(std::string str)
+{
+    return (str == "true");
+}
+
 std::optional<type_id> type_from_id(context& ctx, const std::string& id)
 {
     if (id == "u32")
@@ -456,9 +461,7 @@ node_function_definition parser::parse_function_definition()
     current_scope = current_scope->parent;
 
     return node_function_definition{
-        {{},
-         {start_range.start, end_range.end}},
-        std::move(attributes),
+        {{{}, {start_range.start, end_range.end}}, std::move(attributes)},
         std::make_unique<node_function_head>(std::move(function_head)),
         std::move(function_body),
         std::move(func_scope)
@@ -881,7 +884,7 @@ node_expr parser::parse_record_initialisation(source_range name_range, const std
     // skipping the opening '{'
     capy_lexer->expect<token_symbol>();
 
-    std::vector<field_initialisation> fields;
+    std::vector<node_field_initialisation> fields;
 
     while (capy_lexer->ahead_is<token_identifier>())
     {
@@ -902,7 +905,7 @@ node_expr parser::parse_record_initialisation(source_range name_range, const std
         }
         capy_lexer->expect<token_symbol>();
 
-        fields.emplace_back(field_initialisation{field_position.start, field_name.name, std::make_unique<node_expr>(std::move(init_expression))});
+        fields.emplace_back(node_field_initialisation{{}, field_position.start, field_name.name, std::make_unique<node_expr>(std::move(init_expression))});
     }
 
     if (!capy_lexer->ahead_is_sym(token_symbol::sym_curly_close))
@@ -1019,7 +1022,7 @@ node_expr parser::parse_primary()
                     return make_located<node_bool_literal>(
                         id_range.start,
                         id_range.end,
-                        node_bool_literal::from_string(id.name)
+                        bool_from_string(id.name)
                     );
                 }
 

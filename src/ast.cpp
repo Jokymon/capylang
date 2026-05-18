@@ -1,264 +1,70 @@
 #include "ast.hpp"
 
-void dump_node(std::ostream& os, const context& ctx, const node_expr& root, int indent = 0);
-
-void dump_node(std::ostream& os, const context& ctx, const node_number& n, int indent)
+// val_repr() functions are used in DUMPER_CTX_DUMP_FUNC to dispatch on
+// the context-based type to dump
+std::string val_repr(const context& ctx, type_id tid)
 {
-    std::string ind = std::string(abs(indent), ' ');
-
-    os << ind << "Num:" << n.number << "\n";
+    return ctx.repr(tid);
 }
 
-void dump_node(std::ostream& os, const context& ctx, const node_char_literal& n, int indent)
+std::string val_repr(const context& ctx, symbol_id sid)
 {
-    std::string ind = std::string(abs(indent), ' ');
-
-    os << ind << "Char literal: \"" << n.ch << "\"\n";
+    // TODO: find a better suitable repr for a symbol entry
+    return ctx.repr(ctx.symbol_at(sid).symbol_type);
 }
 
-void dump_node(std::ostream& os, const context& ctx, const node_string_literal& n, int indent)
+// plain streaming functions for dumping some special scalar types
+inline std::ostream& operator<<(std::ostream& o, assign_context a_ctx)
 {
-    std::string ind = std::string(abs(indent), ' ');
-
-    os << ind << "String literal: \"" << n.table_index << "\"\n";
-}
-
-void dump_node(std::ostream& os, const context& ctx, const node_bool_literal& n, int indent)
-{
-    std::string ind = std::string(abs(indent), ' ');
-
-    os << ind << "Bool:" << n.value << "\n";
-}
-
-void dump_node(std::ostream& os, const context& ctx, const node_var_reference& n, int indent)
-{
-    std::string ind = std::string(abs(indent), ' ');
-
-    os << ind << "Var(" << ctx.repr(ctx.symbol_at(n.symbol_ref).symbol_type) << "):" << n.name << "\n";
-}
-
-void dump_node(std::ostream& os, const context& ctx, const node_pointer_deref& n, int indent)
-{
-    std::string ind = std::string(abs(indent), ' ');
-
-    os << ind << "Pointer Deref:\n";
-    dump_node(os, ctx, *n.pointer_expression, indent + 4);
-}
-
-void dump_node(std::ostream& os, const context& ctx, const node_let_expression& n, int indent)
-{
-    std::string ind = std::string(abs(indent), ' ');
-
-    os << ind << "Let:\n";
-    os << ind << "  " << n.name << "=\n";
-    dump_node(os, ctx, *n.init_expression, indent + 4);
-}
-
-void dump_node(std::ostream& os, const context& ctx, const node_if_expression& n, int indent)
-{
-    std::string ind = std::string(abs(indent), ' ');
-    os << ind << "If: " << ctx.repr(n.assigned_type) << "\n";
-    os << ind << "  Condition:\n";
-    dump_node(os, ctx, *n.condition, indent + 4);
-    os << ind << "  Then-Body:\n";
-    for (const auto& expression : n.then_code)
+    switch (a_ctx)
     {
-        dump_node(os, ctx, *expression, indent + 4);
+        case assign_context::lhs:
+            o << "lhs";
+            break;
+        case assign_context::rhs:
+            o << "rhs";
+            break;
     }
-    if (n.else_code.size() > 0)
+    return o;
+}
+
+inline std::ostream& operator<<(std::ostream& o, operator_type op)
+{
+    o << "\"" << repr_op(op) << "\"";
+    return o;
+}
+
+inline std::ostream& operator<<(std::ostream& o, function_signature sig)
+{
+    // TODO
+    return o;
+}
+
+bool located_node_with_attributes::has_attribute(const std::string& attr_name) const
+{
+    for (const auto& attr : attributes)
     {
-        os << ind << "  Else-Body:\n";
-        for (const auto& expression : n.else_code)
+        if (attr.name == attr_name)
         {
-            dump_node(os, ctx, *expression, indent + 4);
+            return true;
         }
     }
+    return false;
 }
 
-void dump_node(std::ostream& os, const context& ctx, const node_while_expression& n, int indent)
-{
-    std::string ind = std::string(abs(indent), ' ');
-    os << ind << "While\n";
-    os << ind << "  Condition:\n";
-    dump_node(os, ctx, *n.condition, indent + 4);
-    os << ind << "  While-Body:\n";
-    for (const auto& expression : n.while_code)
-    {
-        dump_node(os, ctx, *expression, indent + 4);
-    }
-}
+#define DEFINE_DUMP_FUNCS
+#define DUMPER_CTX_TYPE const context&
+#define DUMPER_CTX_DUMP_FUNC(cntxt, val) val_repr(cntxt, val)
+#include "dumpable.hpp"
+#include "ast_nodes.hpp"
+#undef DEFINE_DUMP_FUNCS
 
-void dump_node(std::ostream& os, const context& ctx, const node_record_definition& n, int indent)
-{
-    std::string ind = std::string(abs(indent), ' ');
-
-    os << ind << "Record definition " << n.name << ":\n";
-    for (const auto& field : n.fields)
-    {
-        os << ind << "  " << field.first << ": " << ctx.repr(field.second) << "\n";
-    }
-}
-
-void dump_node(std::ostream& os, const context& ctx, const node_record_initialisation& n, int indent)
-{
-    std::string ind = std::string(abs(indent), ' ');
-
-    os << ind << "Record init\n";
-    for (const auto& field_init : n.initialisations)
-    {
-        os << ind << "  " << field_init.field_name << "=\n";
-        dump_node(os, ctx, *field_init.init_expression, indent + 6);
-    }
-}
-
-void dump_node(std::ostream& os, const context& ctx, const node_field_deref& n, int indent)
-{
-    std::string ind = std::string(abs(indent), ' ');
-
-    os << ind << "Deref:\n";
-    os << ind << "  object:\n";
-    dump_node(os, ctx, *n.object, indent + 4);
-    os << ind << "  field: " << n.fieldname << "\n";
-}
-
-void dump_node(std::ostream& os, const context& ctx, const node_function_head& n, int indent)
-{
-    std::string ind = std::string(abs(indent), ' ');
-
-    // os << ind << "Function head: TODO\n";
-    os << ind << "  Name: " << n.name << "\n";
-}
-
-void dump_node(std::ostream& os, const context& ctx, const node_import_definition& n, int indent)
-{
-    std::string ind = std::string(abs(indent), ' ');
-
-    os << ind << "Import definition: TODO\n";
-}
-
-void dump_node(std::ostream& os, const context& ctx, const node_global_definition& n, int indent)
-{
-    std::string ind = std::string(abs(indent), ' ');
-
-    os << ind << "Global:\n";
-    os << ind << "  " << n.name << "=\n";
-    // dump_node(os, ctx, *n.init_expression, indent+4);
-}
-
-void dump_node(std::ostream& os, const context& ctx, const node_function_call& n, int indent)
-{
-    std::string ind = std::string(abs(indent), ' ');
-
-    os << ind << "Function call '" << n.function_name << "'\n";
-    for (const auto& param : n.parameter)
-    {
-        os << ind << "  Parameter:\n";
-        dump_node(os, ctx, *param, indent + 4);
-    }
-}
-
-void dump_node(std::ostream& os, const context& ctx, const node_function_definition& n, int indent)
-{
-    std::string ind = std::string(abs(indent), ' ');
-
-    os << ind << "Function definition:\n";
-    dump_node(os, ctx, *n.function_head, indent);
-    os << ind << "  Body:\n";
-    for (const auto& expression : n.code)
-    {
-        dump_node(os, ctx, *expression, indent + 4);
-    }
-}
-
-void dump_node(std::ostream& os, const context& ctx, const node_cast_expression& n, int indent)
-{
-    std::string ind = std::string(abs(indent), ' ');
-
-    os << ind << "Casting operation"
-       << "; target type: " << ctx.repr(n.cast_type) << "\n";
-
-    dump_node(os, ctx, *n.expression, indent + 4);
-}
-
-void dump_node(std::ostream& os, const context& ctx, const node_discard_expression& n, int indent)
-{
-    std::string ind = std::string(abs(indent), ' ');
-    os << ind << "Discard:\n";
-    dump_node(os, ctx, *n.expression, indent + 4);
-}
-
-void dump_node(std::ostream& os, const context& ctx, const node_return_expression& n, int indent)
-{
-    std::string ind = std::string(abs(indent), ' ');
-    os << ind << "Return:\n";
-    if (n.expression)
-    {
-        dump_node(os, ctx, *n.expression, indent + 4);
-    }
-    else
-    {
-        os << ind << "  <void>\n";
-    }
-}
-
-void dump_node(std::ostream& os, const context& ctx, const node_break_statement&, int indent)
-{
-    std::string ind = std::string(abs(indent), ' ');
-    os << ind << "Break\n";
-}
-
-void dump_node(std::ostream& os, const context& ctx, const node_unary_expression& n, int indent)
-{
-    std::string ind = std::string(abs(indent), ' ');
-
-    os << ind << "Unary expression; op: " << repr_op(n.operation)
-       << "; type: " << ctx.repr(n.assigned_type) << "\n";
-
-    dump_node(os, ctx, *n.expr, indent + 4);
-}
-
-void dump_node(std::ostream& os, const context& ctx, const node_binary_expression& n, int indent)
-{
-    std::string ind = std::string(abs(indent), ' ');
-
-    os << ind << "Expression; op: " << repr_op(n.operation)
-       << "; type: " << ctx.repr(n.assigned_type) << "\n";
-
-    dump_node(os, ctx, *n.left, indent + 4);
-    dump_node(os, ctx, *n.right, indent + 4);
-}
-
-void dump_node(std::ostream& os, const context& ctx, const node_module& n, int indent)
-{
-    std::string ind = std::string(abs(indent), ' ');
-
-    os << ind << "Module:\n";
-    for (const auto& import : n.imports)
-    {
-        dump_node(os, ctx, *import, indent + 4);
-    }
-    for (const auto& type_def : n.typedefs)
-    {
-        dump_node(os, ctx, *type_def, indent + 4);
-    }
-    for (const auto& global : n.globals)
-    {
-        dump_node(os, ctx, *global, indent + 4);
-    }
-    for (const auto& function : n.functions)
-    {
-        dump_node(os, ctx, *function, indent + 4);
-    }
-}
-
-void dump_node(std::ostream& os, const context& ctx, const node_expr& root, int indent)
+void dump_node(std::ostream& os, const context& ctx, const node_expr& node, int indent)
 {
     std::visit(
-        [=, &ctx, &os](const auto& n)
-        {
-            dump_node(os, ctx, n, indent);
-        },
-        root.value
+        [indent, &ctx, &os](auto&& arg)
+        { dump_node(os, ctx, arg, indent); },
+        node.value
     );
 }
 
@@ -285,18 +91,6 @@ std::string node_field_deref::repr_obj() const
         },
         object->value
     );
-}
-
-bool node_function_definition::has_attribute(const std::string& attr_name) const
-{
-    for (const auto& attr : attributes)
-    {
-        if (attr.name == attr_name)
-        {
-            return true;
-        }
-    }
-    return false;
 }
 
 ast_visitor::ast_visitor()

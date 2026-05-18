@@ -30,6 +30,13 @@ struct capy_attribute
 
 using attribute_bag = std::vector<capy_attribute>;
 
+struct located_node_with_attributes : public located_node
+{
+    attribute_bag attributes;
+
+    bool has_attribute(const std::string& attr_name) const;
+};
+
 struct node_number;
 struct node_char_literal;
 struct node_bool_literal;
@@ -59,6 +66,7 @@ using node_expr_raw = std::variant<node_number, node_char_literal, node_bool_lit
 using node_expr = located<node_expr_raw>;
 
 void dump_node(std::ostream& os, const context& ctx, const node_module& module, int indent = 0);
+void dump_node(std::ostream& os, const context& ctx, const node_expr& node, int indent = 0);
 
 enum class assign_context
 {
@@ -66,189 +74,10 @@ enum class assign_context
     rhs
 };
 
-struct node_number : public node_base
-{
-    long long number;
-    type_id assigned_type;
-};
-
-struct node_char_literal : public node_base
-{
-    uint32_t ch;
-};
-
-struct node_bool_literal : public node_base
-{
-    bool value;
-
-    static bool from_string(const std::string& str)
-    {
-        return (str == "true");
-    }
-};
-
-struct node_string_literal : public node_base
-{
-    // index into the string literals table
-    size_t table_index;
-    uint32_t size;
-};
-
-struct node_var_reference : public node_base
-{
-    std::string name;
-    symbol_id symbol_ref;
-    assign_context context;
-};
-
-struct node_pointer_deref : public node_base
-{
-    std::unique_ptr<node_expr> pointer_expression;
-    type_id assigned_type;
-    assign_context context;
-};
-
-struct node_let_expression : public node_base
-{
-    std::string name;
-    symbol_id symbol_ref;
-    std::unique_ptr<node_expr> init_expression;
-};
-
-struct node_if_expression : public node_base
-{
-    std::unique_ptr<node_expr> condition;
-    std::vector<std::unique_ptr<node_expr>> then_code;
-    std::vector<std::unique_ptr<node_expr>> else_code;
-    type_id assigned_type;
-    // TODO: should be introduce a new scope for the if?
-};
-
-struct node_while_expression : public node_base
-{
-    std::unique_ptr<node_expr> condition;
-    std::vector<std::unique_ptr<node_expr>> while_code;
-};
-
-struct node_record_definition : public node_base
-{
-    std::string name;
-    std::vector<record_type::field_type> fields;
-};
-
-struct node_field_deref : public node_base
-{
-    std::unique_ptr<node_expr> object;
-    std::string fieldname;
-    type_id object_type;
-
-    // give a textual representation of the object for this dereferencing AST node
-    // without including the field name
-    std::string repr_obj() const;
-};
-
-struct field_initialisation
-{
-    source_position location;
-    std::string field_name;
-    std::unique_ptr<node_expr> init_expression;
-};
-
-struct node_record_initialisation : public node_base
-{
-    type_id type_spec;
-    std::vector<field_initialisation> initialisations;
-};
-
-struct node_function_head : public located_node
-{
-    std::string name;
-    function_signature signature;
-};
-
-struct node_import_definition : public located_node
-{
-    std::string ns_name;
-    std::unique_ptr<node_function_head> function_head;
-
-    std::optional<std::string> alias;
-};
-
-struct node_global_definition : public located_node
-{
-    std::string name;
-    type_id assigned_type;
-    symbol_id symbol_ref;
-    int32_t init_value;
-    // std::unique_ptr<node_expr> init_expression;
-};
-
-struct node_function_call : public node_base
-{
-    std::string function_name;
-    symbol_id symbol_ref;
-    std::vector<std::unique_ptr<node_expr>> parameter;
-};
-
-struct node_function_definition : public located_node
-{
-    attribute_bag attributes;
-    bool has_attribute(const std::string& attr_name) const;
-
-    std::unique_ptr<node_function_head> function_head;
-    std::vector<std::unique_ptr<node_expr>> code;
-    std::unique_ptr<scope> function_scope;
-};
-
-struct node_cast_expression : public node_base
-{
-    std::unique_ptr<node_expr> expression;
-    type_id cast_type;
-    source_range op_range;
-};
-
-struct node_discard_expression : public node_base
-{
-    std::unique_ptr<node_expr> expression;
-};
-
-struct node_return_expression : public node_base
-{
-    std::unique_ptr<node_expr> expression;
-    // used to distinguish return expressions that come from explicit uses of
-    // keyword 'return' or if it was implicitly created from the last expression
-    // in a function
-    bool is_explicit;
-};
-
-struct node_break_statement : public node_base
-{
-};
-
-struct node_unary_expression : public node_base
-{
-    std::unique_ptr<node_expr> expr;
-    operator_type operation;
-    type_id assigned_type;
-};
-
-struct node_binary_expression : public node_base
-{
-    std::unique_ptr<node_expr> left, right;
-    source_range op_range;
-    operator_type operation;
-    type_id assigned_type;
-};
-
-struct node_module : public located_node
-{
-    std::vector<std::unique_ptr<node_import_definition>> imports;
-    std::vector<std::unique_ptr<node_global_definition>> globals;
-    std::vector<std::unique_ptr<node_function_definition>> functions;
-    std::vector<std::unique_ptr<node_expr>> typedefs;
-
-    std::unique_ptr<scope> module_scope;
-};
+#define DEFINE_NODES
+#include "dumpable.hpp"
+#include "ast_nodes.hpp"
+#undef DEFINE_NODES
 
 class ast_visitor
 {
