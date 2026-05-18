@@ -12,6 +12,10 @@ DEF_NODE(tst, single_nesting, root)
     DEF_NODE_FIELD(tst, tst_single_scalar, child)
 DEF_END
 
+DEF_NODE(tst, struct_with_vector, root)
+    DEF_LIST_FIELD(tst, tst_single_scalar, child)
+DEF_END
+
 DEF_NODE(tst, struct_with_struct_list, root)
     DEF_NODE_LIST_FIELD(tst, tst_single_scalar, child)
 DEF_END

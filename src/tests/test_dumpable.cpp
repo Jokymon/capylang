@@ -66,7 +66,28 @@ TEST_CASE("struct with nested struct")
                             "        name: value\n");
 }
 
-TEST_CASE("struct with list of structs")
+TEST_CASE("struct with vector of structs")
+{
+    std::stringstream output;
+
+    std::vector<tst_single_scalar> child;
+    child.push_back(tst_single_scalar{.name = "value1"});
+    child.push_back(tst_single_scalar{.name = "value2"});
+
+    tst_struct_with_vector sut{
+        .child = std::move(child)
+    };
+    dump_tst(output, nullptr, sut, 0);
+
+    REQUIRE(output.str() == "    _type: struct_with_vector\n"
+                            "    child:\n"
+                            "      - _type: single_scalar\n"
+                            "        name: value1\n"
+                            "      - _type: single_scalar\n"
+                            "        name: value2\n");
+}
+
+TEST_CASE("struct with vector of struct pointers")
 {
     std::stringstream output;
 

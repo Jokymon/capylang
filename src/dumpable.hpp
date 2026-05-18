@@ -16,6 +16,7 @@ std::unique_ptr<T> make_node(T value)
 //      Starting definition of a dumpable node
 // DEF_END
 //      Finishing definition of a dumpable node
+// DEF_NO_DUMP_PLAIN(text)
 // DEF_NO_DUMP(type, name)
 // DEF_SCALAR_FIELD(type, name)
 // DEF_SCALAR_WITH_CONTEXT(type, name)
@@ -46,6 +47,9 @@ std::unique_ptr<T> make_node(T value)
 
 #define DEF_NO_DUMP(type, name) \
     type name;
+
+#define DEF_NO_DUMP_PLAIN(text) \
+    text
 
 #define DEF_SCALAR_FIELD(type, name) \
     type name;
@@ -105,6 +109,9 @@ std::unique_ptr<T> make_node(T value)
 #undef DEF_NO_DUMP
 #define DEF_NO_DUMP(type, name)
 
+#undef DEF_NO_DUMP_PLAIN
+#define DEF_NO_DUMP_PLAIN(text)
+
 #undef DEF_NODE_FIELD
 #define DEF_NODE_FIELD(node_ns, type, name)                  \
     os << ind << field_ind << #name << ":\n";                \
@@ -115,7 +122,8 @@ std::unique_ptr<T> make_node(T value)
 
 #undef DEF_LIST_FIELD
 #define DEF_LIST_FIELD(node_ns, type, name)                 \
-    for (const auto& entry : def.##name)                    \
+    os << ind << field_ind << #name << ":\n";               \
+    for (const auto& entry : def.name)                      \
     {                                                       \
         dump_##node_ns(os, ctx, entry, -(abs(indent) + 4)); \
     }
