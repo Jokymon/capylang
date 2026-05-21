@@ -45,6 +45,12 @@
    be nice, including the line number in the capy source, the source file name and depending on what DWARF/the wasm runtime
    can provide, maybe even more information, like function signature.
 
+### Not-TODOs learned from C++
+
+ * Error-prone, weird concept for pattern matching on sum types (std::visit)
+ * Need for verbose and complex pointer handling (&, *, unique_ptr, ...)
+ * Missing returns in functions only a warning
+
 ### Big refactoring
 
 The final goal is to use dedicated AST node types (if possible). If we manage to do that, then a lot of code should get
@@ -84,11 +90,3 @@ about different lowering strategies and for example store a string in two local 
 - Safe navigation operator: https://en.wikipedia.org/wiki/Safe_navigation_operator
 - Null coalescing operator: https://en.wikipedia.org/wiki/Null_coalescing_operator
 - Chocopy WASM backend: https://yangdanny97.github.io/blog/2022/10/11/chocopy-wasm-backend
-
-## BAA
-
- * string library; sketch an implementation and derive the necessary language concepts and features that are still
-   needed
- * Migrate frontend to ANTLR?
- * Update the VSCode integration of capylang support
- * Sketch a WASM-based language server integration for capylang in VSCode

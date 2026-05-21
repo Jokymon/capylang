@@ -9,13 +9,16 @@ Capylang is a research language targeting the WebAssembly ecosystem.
    * The primary, and currently only, compilation target of Capylang is WebAssembly, both in binary form and in text form (WAT).
    * The compiler itself should run in WASI-compatible WebAssembly runtimes.
    * The goal is to have first-class support for diagnostics, testing, and a language server.
+   * WebAssembly depends on a runtime environment with a very specific interface through exported functions. The Capylang concept can also address aspects beyond the pure language including integration in host environments.
  * Language design decisions should be informed by modern programming language concepts, while remaining practical to implement and reason about.
+ * The primary language paradignm is imperative with selective features of OO and FP added where useful.
 
 ## Research goals
 
  * Explore the challenges of using WebAssembly across frontend and backend environments, and, with lower priority, in more constrained or experimental environments such as embedded runtimes.
  * Investigate how a programming language can be designed to collaborate well with LLMs, for example by reducing token usage, reducing ambiguity, and making generated code and reviews easier for both humans and machines.
  * Use Capylang as a vehicle for studying the interaction between language design, intermediate representations, tooling, and WebAssembly execution models.
+ * Explore the potential of an ecosystem that uses WebAssembly specifics to implement security features such as fine grained capability permissions.
 
 ## Educational goals
 
