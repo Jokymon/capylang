@@ -17,7 +17,6 @@ enum class diagnostic_phase
     parser,
     type_inference,
     semantics,
-    anf,
     emitter
 };
 

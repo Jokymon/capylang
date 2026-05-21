@@ -45,13 +45,6 @@
    be nice, including the line number in the capy source, the source file name and depending on what DWARF/the wasm runtime
    can provide, maybe even more information, like function signature.
 
-### Implement an (H)IR
-
-Currently the code contains some experiments with an ANF-based intermediate representation that was created with the
-help of Codex. However it turned out that this was created without a clear understanding of the needs from the backend
-side and either needs a lot of additions and changes or we should anyways completely rethink the concept for an IR that
-actually fits our needs for efficient WASM-IR generation.
-
 ### Big refactoring
 
 The final goal is to use dedicated AST node types (if possible). If we manage to do that, then a lot of code should get

@@ -1,4 +1,3 @@
-#include "anf.hpp"
 #include "args_parse.hpp"
 #include "diagnostics.hpp"
 #include "emitter.hpp"
@@ -21,7 +20,7 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    if ((args.output_path == "") && !args.dump_ast && !args.dump_anf)
+    if ((args.output_path == "") && !args.dump_ast)
     {
         std::cerr << "Argument required: -o\n";
         return 1;
@@ -112,19 +111,6 @@ int main(int argc, char* argv[])
 
     normalization normalizer{parse_context};
     normalizer.normalize(root_node);
-
-    if (args.dump_anf)
-    {
-        anf_generator anf_gen{diagnostics, parse_context};
-        auto anf_module = anf_gen.generate(root_node);
-        // if (diagnostics.has_errors())
-        // {
-        //     print_diagnostics(std::cerr, diagnostics);
-        //     return 1;
-        // }
-        dump_anf_module(parse_context, anf_module);
-        return 0;
-    }
 
     emitter capyemitter{parse_context};
     wasm_module mod = capyemitter.generate(root_node);
