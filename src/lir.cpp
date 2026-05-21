@@ -96,10 +96,32 @@ lir_binary_op from_op_type(operator_type op)
     }
 }
 
+inline std::ostream& operator<<(std::ostream& o, const lir_place_elem& elem)
+{
+    std::visit([&](auto&& e)
+               {
+                    using T = std::decay_t<decltype(e)>;
+                    if constexpr (std::is_same_v<T, lir_deref>)
+                    {
+                        o << "*";
+                    }
+                    else if constexpr (std::is_same_v<T, lir_field>)
+                    {
+                        o << "_" << e.index;
+                    } },
+               elem);
+    return o;
+}
+
 inline std::ostream& operator<<(std::ostream& o, const lir_place& value)
 {
     // TODO: add projections to the output
-    o << "{ lir_place: { variable: " << value.base.name << " } }";
+    o << "{ lir_place: { variable: " << value.base.name << ", projection: ";
+    for (const auto& proj : value.projection)
+    {
+        o << proj << ", ";
+    }
+    o << "} }";
     return o;
 }
 
@@ -427,10 +449,13 @@ lir_node_list lir_generator::generate(const node_field_deref& node)
         const auto& type_spec = parse_context.types[to_index(node.object_type)];
         auto* rec_type = get_type_from_node<record_type>(type_spec);
         size_t field_index = 0;
+        printf("Trying to find index for field %s\n", node.fieldname.c_str());
         for (const auto& field : rec_type->fields)
         {
+            printf("Checking field with name %s\n", field.first.c_str());
             if (field.first == node.fieldname)
             {
+                printf("Found an index for field %s\n", node.fieldname.c_str());
                 break;
             }
             field_index++;
