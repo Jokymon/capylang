@@ -6,6 +6,8 @@
 # -Direct       Normally the script will compile the source file to a WAT file
 #               and then run wasm-tools to turn this into a WASM file. Using
 #               this option, the compiler will use its own WASM generator
+# -DumpLir      When this option is present, the compiler will only print the
+#               LIR on stdout without generating any output files.
 # -DumpAst      When this option is present, the compiler will only print the
 #               AST on stdout without generating any output files.
 # -DumpTokens   When this option is present, the compiler will only print the
@@ -15,6 +17,7 @@ param (
     [string]$InputFile = $(throw "Input file path is required"),
     [switch]$Direct,
     [switch]$DumpAst,
+    [switch]$DumpLir,
     [switch]$DumpTokens
 )
 
@@ -52,6 +55,9 @@ if (Test-Path $WasmFile) {
 }
 
 $AdditionalArgs = ""
+if ($DumpLir) {
+    $AdditionalArgs = "--dump-lir"
+}
 if ($DumpAst) {
     $AdditionalArgs = "--dump-ast"
 }
@@ -67,7 +73,7 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-if (-not $Direct -and -not $DumpAst -and -not $DumpTokens) {
+if (-not $Direct -and -not $DumpLir -and -not $DumpAst -and -not $DumpTokens) {
     # convert the WAT file to WASM
     wasm-tools.exe parse $WatFile -o $WasmFile
     if ($LASTEXITCODE -ne 0) {

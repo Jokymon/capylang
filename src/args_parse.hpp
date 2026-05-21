@@ -9,6 +9,7 @@ struct Args
     std::string output_path;
     bool dump_tokens = false;
     bool dump_ast = false;
+    bool dump_lir = false;
 
     bool help = false;
 };

@@ -81,3 +81,29 @@ supported to keep this part of the compiler simple.
 Compiler-recognized/builtin attributes are:
 
  * `export` to mark a function as exported from a WASM module
+
+## First attempt at an intermediate representation
+
+The language intermediate representation (LIR) is roughly based on the MIR used in Rust. About half of the nodes
+defined in the AST have identical representations in LIR. However the following aspects are explicitly handled
+differently in LIR:
+
+ 1. The LIR introduces the concept of *load* and *store* expressions which can be seen as special functions only known
+    by the LIR. These functions should reduce the challenges from having to track LHS and RHS contexts when dealing with
+    variables, field access and pointer dereferencing. Instead of simply dealing with a variable, these functions
+    refer to something called a `place`, which not only includes single variables, but can also contain field access
+    and pointer dereferencings. By knowing that something is a load or a store and by having the full context of the
+    referenced `place`, the emitter should have it easier to generate the corresponding webassembly code.
+ 2. Record initialisations are simplified into a struct which only contains the records type and initialisation
+    expressions in field definition order.
+ 3. Type definitions are no longer visible in the LIR, they are instead taken from the symbol table.
+
+Possible future modifications:
+
+ * The transformation to LIR happens after type inference, so all the necessary type information should already be
+   established. One future modification could be, the remove the version of an unresolved type variable and to make
+   sure that everywhere only the reified types are available.
+ * Currently the order for the evaluation of record field initialisation expressions is modified by LIR to match the
+   definition order. This could be unexpected when a programmer relies on side effects and the correction execution
+   order. We might have to introduce some form of LIR-level temporaries to first evaluate field initialisers in code
+   order, assign them to these temporaries and then actually initialise the record itself using the temporaries.

@@ -1,6 +1,7 @@
 #include "args_parse.hpp"
 #include "diagnostics.hpp"
 #include "emitter.hpp"
+#include "lir.hpp"
 #include "normalization.hpp"
 #include "parser.hpp"
 #include "semantics.hpp"
@@ -20,7 +21,7 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    if ((args.output_path == "") && !args.dump_ast)
+    if ((args.output_path == "") && !args.dump_ast && !args.dump_lir)
     {
         std::cerr << "Argument required: -o\n";
         return 1;
@@ -111,6 +112,13 @@ int main(int argc, char* argv[])
 
     normalization normalizer{parse_context};
     normalizer.normalize(root_node);
+
+    if (args.dump_lir)
+    {
+        lir_generator lir_gen{parse_context};
+        dump_lir(std::cout, parse_context, lir_gen.generate(root_node));
+        return 0;
+    }
 
     emitter capyemitter{parse_context};
     wasm_module mod = capyemitter.generate(root_node);
