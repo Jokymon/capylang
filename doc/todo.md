@@ -36,10 +36,14 @@
    game demos; instead of custom sections, we might have to consider data section (active or passive) since custom
    sections are not accessible directly from inside WASM code
  * Add error handling and message output for lexer
- * Extend argument parser with "Usage: ...." and more detailed help text
  * Add some library/module/package concept which allows for better management of functions and types in terms of reuse;
    One challenge here is, how capy-source files and WASM modules are mappend and where and if WASM module linking already
    has to be considered or if we can start working with simple nested lexers/parsers.
+ * The type inference doesn't properly pick up on the return type when only `return` statements are used.
+ * The `unreachable()` intrinsic allows for some very simple abort/fail semantic, however the stack unwinding/traceback
+   in this scenario is still very limited and only shows the function names. Having more detailed information here would
+   be nice, including the line number in the capy source, the source file name and depending on what DWARF/the wasm runtime
+   can provide, maybe even more information, like function signature.
 
 ### Implement an (H)IR
 
