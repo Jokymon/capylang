@@ -23,6 +23,9 @@ example.wasm
 drawing.wat
 drawing.wasm
 
+# generated documentation
+site/
+
 # extracted code examples
 corpus/
 

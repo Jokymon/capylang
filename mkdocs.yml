@@ -1,0 +1,28 @@
+site_name: Capylang Compiler Internals
+site_description: Internal compiler documentation for the Capylang project
+repo_url: https://github.com/Jokymon/capylang
+docs_dir: doc
+site_dir: site
+strict: true
+
+theme:
+  name: mkdocs
+
+nav:
+  - Overview: index.md
+  - Compiler Pipeline: compiler-pipeline.md
+  - Design Decisions: design-decisions.md
+  - Roadmap: roadmap.md
+
+exclude_docs: |
+  lir_examples.md
+  component-model/
+  component-model/**
+  ideas/
+  ideas/**
+
+markdown_extensions:
+  - toc:
+      permalink: true
+  - tables
+  - fenced_code

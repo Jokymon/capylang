@@ -84,6 +84,23 @@ with a WASI-capable WebAssembly runtime:
 wasmtime run example.wasm
 ```
 
+### Building the documentation
+
+The compiler internals documentation is written in Markdown under `doc/` and is
+built as a small MkDocs site. To generate the HTML version locally, run:
+
+```bash
+uv sync --group docs
+uv run mkdocs build --strict
+```
+
+This writes the generated site into `site/`. To preview the documentation
+locally with a development server, run:
+
+```bash
+uv run mkdocs serve
+```
+
 ## Testing
 
 To check the compiler source, you can run all test vectors implemented in Python using

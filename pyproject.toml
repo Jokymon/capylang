@@ -13,3 +13,8 @@ markers = [
     "good: tests for capy code that compiles and runs",
     "parse_error: source code that fails the parsing step",
 ]
+
+[dependency-groups]
+docs = [
+    "mkdocs>=1.6.1",
+]
