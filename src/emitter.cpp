@@ -389,6 +389,10 @@ void emitter::emit(const node_function_call& func_call)
         {
             cur_block->memory_grow();
         }
+        else if (func_symbol.name == "unreachable")
+        {
+            cur_block->unreachable();
+        }
         else
         {
             assert(false && "Unknown intrinsic");

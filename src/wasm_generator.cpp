@@ -542,6 +542,9 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
                                    output.put(INST_MEMORY_GROW);
                                    encode_leb128(output, 0);  // memory index is hardcoded for the moment
                                    break;
+                               case wasm_op::unreachable:
+                                   output.put(INST_UNREACHABLE);
+                                   break;
                                default:
                                    break;
                            }

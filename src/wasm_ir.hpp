@@ -250,6 +250,7 @@ public:
     void ret();
     void memory_size();
     void memory_grow();
+    void unreachable();
 
     wasm_block_type block_type;
     wasm_type return_type;

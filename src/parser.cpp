@@ -133,6 +133,21 @@ void parser::populate_intrinsics()
             .is_assigned = true,
             .is_intrinsic = true,
         });
+
+    function_type unreachable_type;
+    unreachable_type.return_type = parse_context.intern_primitive(primitive_type::Void);
+    function_signature unreachable_sig;
+    unreachable_sig.function_type = parse_context.intern(unreachable_type);
+    current_scope->symbol_table["unreachable"] =
+        parse_context.create_symbol(symbol{
+            .name = "unreachable",
+            .symbol_type = unreachable_sig.function_type,
+            .signature = unreachable_sig,
+            .kind = symbol_kind::function,
+            .mutab = false,
+            .is_assigned = true,
+            .is_intrinsic = true,
+        });
 }
 
 node_module parser::parse_module()

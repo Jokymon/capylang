@@ -16,6 +16,8 @@ wheels/
 *.swp
 
 # Example generated code
+crash.wat
+crash.wasm
 example.wat
 example.wasm
 drawing.wat

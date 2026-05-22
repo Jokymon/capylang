@@ -1,0 +1,22 @@
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn level3() -> u32
+{
+    unreachable();
+    42u32
+}
+
+fn level2() -> u32
+{
+    level3()
+}
+
+fn level1() -> u32
+{
+    level2()
+}
+
+@export
+fn _start() {
+    proc_exit(level1());
+}
