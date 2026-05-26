@@ -31,7 +31,7 @@ PackConstructorInitializers: Never
 BreakConstructorInitializers: BeforeComma
 ConstructorInitializerIndentWidth: 0
 
-MacroBlockBegin: '^DEF_NODE$'
+MacroBlockBegin: '^DEF_NODE$|^DEF_BASE_NODE$'
 MacroBlockEnd: 'DEF_END$'
 StatementMacros:
   - DEF_NO_DUMP

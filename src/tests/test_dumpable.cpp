@@ -121,3 +121,18 @@ TEST_CASE("dumping of context-based field")
     REQUIRE(output.str() == "    _type: struct_with_context_value\n"
                             "    child: Value=42\n");
 }
+
+TEST_CASE("when base type is also dumpable, then those fields are dumped as part of derived")
+{
+    std::stringstream output;
+
+    context ctx;
+    tst_derived_type sut{};
+    sut.base_value = "10";
+    sut.derived_value = "20";
+    dump_tst(output, &ctx, sut, 0);
+
+    REQUIRE(output.str() == "    _type: derived_type\n"
+                            "    base_value: 10\n"
+                            "    derived_value: 20\n");
+}

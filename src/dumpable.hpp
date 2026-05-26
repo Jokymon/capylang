@@ -7,6 +7,42 @@ std::unique_ptr<T> make_node(T value)
 {
     return std::make_unique<T>(std::move(value));
 }
+
+// The dumpable tooling aims at supporting factored out data members into common
+// base classes. For dumping we just assume that this factored out members are
+// normal members of the derived type.
+// To make this work, we explicitly mark dumpable "base" classes with a static
+// constexpr boolean class member named `is_based` which is set to true. Non-
+// base classes either have set this value to false or do not have this member
+// at call.
+// To be able to use this property, we have to defer access to this member far
+// down in the compile process and use the combination of get_is_base() together
+// with the helper function dump_parent_if_base().
+template <typename T>
+constexpr bool get_is_base()
+{
+    if constexpr (requires { { T::is_base } -> std::convertible_to<bool>; })
+    {
+        return T::is_base;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+template <typename T>
+constexpr bool is_base_v = get_is_base<T>();
+
+template <typename Parent, typename Derived, typename DumpParentFn>
+void dump_parent_if_base(const Derived& def, DumpParentFn&& dump_parent)
+{
+    if constexpr (is_base_v<Parent>)
+    {
+        dump_parent(static_cast<const Parent&>(def));
+    }
+}
+
 #endif
 
 // The API of dumpable provides the following macros to define a
@@ -14,6 +50,9 @@ std::unique_ptr<T> make_node(T value)
 //
 // DEF_NODE(namespace, node_name, parent class)
 //      Starting definition of a dumpable node
+// DEF_BASE_NODE(namespace, node_name, parent class)
+//      Starting definition of a base class which contains members that should
+//      also be dumped when dumping a derived class
 // DEF_END
 //      Finishing definition of a dumpable node
 // DEF_NO_DUMP_PLAIN(text)
@@ -39,7 +78,13 @@ std::unique_ptr<T> make_node(T value)
 
 #define DEF_NODE(node_ns, node_name, parent)     \
     struct node_ns##_##node_name : public parent \
-    {
+    {                                            \
+        static constexpr bool is_base = false;
+
+#define DEF_BASE_NODE(node_ns, node_name, parent) \
+    struct node_ns##_##node_name : public parent  \
+    {                                             \
+        static constexpr bool is_base = true;
 
 #define DEF_END \
     }           \
@@ -92,7 +137,15 @@ std::unique_ptr<T> make_node(T value)
         else                                                                                                 \
         {                                                                                                    \
             os << ind << field_ind << "_type: " << #node_name << "\n";                                       \
-        }
+        }                                                                                                    \
+        dump_parent_if_base<parent>(def, [&](const auto& base_def) { dump_##node_ns(os, ctx, base_def, indent); });
+
+#undef DEF_BASE_NODE
+#define DEF_BASE_NODE(node_ns, node_name, parent)                                                            \
+    void dump_##node_ns(std::ostream& os, DUMPER_CTX_TYPE ctx, const node_ns##_##node_name& def, int indent) \
+    {                                                                                                        \
+        std::string ind = std::string(abs(indent), ' ');                                                     \
+        std::string field_ind = std::string(4, ' ');
 
 #undef DEF_END
 #define DEF_END \

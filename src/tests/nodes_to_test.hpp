@@ -23,3 +23,11 @@ DEF_END
 DEF_NODE(tst, struct_with_context_value, root)
     DEF_SCALAR_WITH_CONTEXT(custom_type, child)
 DEF_END
+
+DEF_BASE_NODE(tst, base_type, root)
+    DEF_SCALAR_FIELD(std::string, base_value)
+DEF_END
+
+DEF_NODE(tst, derived_type, tst_base_type)
+    DEF_SCALAR_FIELD(std::string, derived_value)
+DEF_END
