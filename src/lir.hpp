@@ -76,7 +76,7 @@ struct lir_place
     std::vector<lir_place_elem> projection;
 };
 
-struct lir_expr
+struct lir_base
 {
 };
 
@@ -128,6 +128,8 @@ using lir_node_list = std::vector<std::unique_ptr<lir_node>>;
 #undef DEFINE_NODES
 
 // ----------------------------------------------------------
+
+type_id lir_assigned_node_type(const lir_node& node, context& ctx);
 
 class lir_generator
 {

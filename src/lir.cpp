@@ -115,7 +115,6 @@ inline std::ostream& operator<<(std::ostream& o, const lir_place_elem& elem)
 
 inline std::ostream& operator<<(std::ostream& o, const lir_place& value)
 {
-    // TODO: add projections to the output
     o << "{ lir_place: { variable: " << value.base.name << ", projection: ";
     for (const auto& proj : value.projection)
     {
@@ -147,6 +146,90 @@ bool lir_attributed_node::has_attribute(const std::string& attr_name) const
         }
     }
     return false;
+}
+
+// --------------------------------------------------------
+
+type_id lir_assigned_node_type(const lir_node& node, context& ctx)
+{
+    return std::visit(
+        [&](const auto& n) -> type_id
+        {
+            using T = std::decay_t<decltype(n)>;
+
+            if constexpr (std::is_same_v<T, lir_number>)
+            {
+                return n.assigned_type;
+            }
+            else if constexpr (std::is_same_v<T, lir_char_literal>)
+            {
+                return ctx.intern_primitive(primitive_type::Char);
+            }
+            else if constexpr (std::is_same_v<T, lir_bool_literal>)
+            {
+                return ctx.intern_primitive(primitive_type::Boolean);
+            }
+            else if constexpr (std::is_same_v<T, lir_string_literal>)
+            {
+                return ctx.intern_primitive(primitive_type::String);
+            }
+            else if constexpr (std::is_same_v<T, lir_record_init>)
+            {
+                return n.record_type;
+            }
+            else if constexpr (std::is_same_v<T, lir_load_expression>)
+            {
+                return n.assigned_type;
+            }
+            else if constexpr (std::is_same_v<T, lir_store_expression>)
+            {
+                return ctx.intern_primitive(primitive_type::Void);
+            }
+            else if constexpr (std::is_same_v<T, lir_if_expression>)
+            {
+                return n.assigned_type;
+            }
+            else if constexpr (std::is_same_v<T, lir_while_expression>)
+            {
+                return ctx.intern_primitive(primitive_type::Void);
+            }
+            else if constexpr (std::is_same_v<T, lir_function_call>)
+            {
+                const auto& sym = ctx.symbol_at(n.symbol_ref);
+                assert(sym.kind == symbol_kind::function && "Compiler Error: LIR function call should resolve to function symbol");
+
+                auto return_type = ctx.function_return_type(sym.signature.function_type);
+                assert(return_type.has_value() && "Compiler Error: LIR function call type should have a valid return type");
+                return return_type.value();
+            }
+            else if constexpr (std::is_same_v<T, lir_cast_expression>)
+            {
+                return n.cast_type;
+            }
+            else if constexpr (std::is_same_v<T, lir_discard_expression>)
+            {
+                return ctx.intern_primitive(primitive_type::Void);
+            }
+            else if constexpr (std::is_same_v<T, lir_return_expression>)
+            {
+                return ctx.intern_primitive(primitive_type::Void);
+            }
+            else if constexpr (std::is_same_v<T, lir_unary_expression>)
+            {
+                return n.assigned_type;
+            }
+            else if constexpr (std::is_same_v<T, lir_binary_expression>)
+            {
+                return n.assigned_type;
+            }
+            else
+            {
+                assert(false && "Compiler error: LIR encountered unhandled type");
+                return ILLEGAL_TYPE;
+            }
+        },
+        node.value
+    );
 }
 
 // --------------------------------------------------------
@@ -239,7 +322,7 @@ lir_node_list lir_generator::generate(const node_number& node)
 {
     lir_number stmt{
         .number = node.number,
-        .assigned_type = node.assigned_type
+        .assigned_type = parse_context.resolved_type(node.assigned_type)
     };
     lir_node_list result;
     result.push_back(std::make_unique<lir_node>(std::move(stmt)));
@@ -282,8 +365,10 @@ lir_node_list lir_generator::generate(const node_var_reference& node)
     // We assume, we only ever get here from an RHS context and we really
     // only have to generate load expressions. The LHS case should already
     // be handled by let-expressions and the assignment operator.
+    auto& sym = parse_context.symbol_at(node.symbol_ref);
     lir_load_expression stmt{
-        .source = get_place(node)
+        .source = get_place(node),
+        .assigned_type = parse_context.resolved_type(sym.symbol_type)
     };
     lir_node_list result;
     result.push_back(std::make_unique<lir_node>(std::move(stmt)));
@@ -300,6 +385,7 @@ lir_node_list lir_generator::generate(const node_pointer_deref& node)
         // We already have a load expression, so we only need to add the pointer
         // dereferencing to the projections
         load_expr->source.projection.push_back(lir_place_elem{lir_deref{}});
+        load_expr->assigned_type = parse_context.resolved_type(node.assigned_type);
     }
     else
     {
@@ -333,7 +419,7 @@ lir_node_list lir_generator::generate(const node_let_expression& node)
     lir_store_expression stmt{
         .target = get_place(node),
         .value = std::move(init_expr),
-        .stored_type = sym.symbol_type
+        .stored_type = parse_context.resolved_type(sym.symbol_type)
     };
 
     lir_node_list result;
@@ -369,7 +455,7 @@ lir_node_list lir_generator::generate(const node_if_expression& node)
         .condition = std::move(condition[0]),
         .then_code = std::move(then_code),
         .else_code = std::move(else_code),
-        .assigned_type = node.assigned_type
+        .assigned_type = parse_context.resolved_type(node.assigned_type)
     };
     lir_node_list result;
     result.push_back(std::make_unique<lir_node>(std::move(expr)));
@@ -429,7 +515,7 @@ lir_node_list lir_generator::generate(const node_record_initialisation& node)
     // when they used some form of ordering relevant functions with side effects. To fix this, we would have to
     // introduce some form of LIR-local temporaries that could be a new form of lir_place maybe.
     lir_record_init expr{
-        .record_type = node.type_spec,
+        .record_type = parse_context.resolved_type(node.type_spec),
         .values = std::move(init_values)
     };
     lir_node_list result;
@@ -449,19 +535,19 @@ lir_node_list lir_generator::generate(const node_field_deref& node)
         const auto& type_spec = parse_context.types[to_index(node.object_type)];
         auto* rec_type = get_type_from_node<record_type>(type_spec);
         size_t field_index = 0;
-        printf("Trying to find index for field %s\n", node.fieldname.c_str());
+        type_id field_type = ILLEGAL_TYPE;
         for (const auto& field : rec_type->fields)
         {
-            printf("Checking field with name %s\n", field.first.c_str());
             if (field.first == node.fieldname)
             {
-                printf("Found an index for field %s\n", node.fieldname.c_str());
+                field_type = parse_context.resolved_type(field.second);
                 break;
             }
             field_index++;
         }
 
         load_expr->source.projection.push_back(lir_place_elem{lir_field{field_index}});
+        load_expr->assigned_type = field_type;
     }
     else
     {
@@ -502,7 +588,7 @@ lir_node_list lir_generator::generate(const node_cast_expression& node)
     assert(expressions.size() == 1 && "LIR generation for cast expression should produce exactly one expression");
     lir_cast_expression stmt{
         .expression = std::move(expressions[0]),
-        .cast_type = node.cast_type
+        .cast_type = parse_context.resolved_type(node.cast_type)
     };
     lir_node_list result;
     result.push_back(std::make_unique<lir_node>(std::move(stmt)));
@@ -535,7 +621,7 @@ lir_node_list lir_generator::generate(const node_unary_expression& node)
     lir_node_list expressions = generate(node);
     lir_unary_expression stmt{
         .expr = std::move(expressions[0]),
-        .assigned_type = node.assigned_type
+        .assigned_type = parse_context.resolved_type(node.assigned_type)
     };
     lir_node_list result;
     result.push_back(std::make_unique<lir_node>(std::move(stmt)));
@@ -555,7 +641,7 @@ lir_node_list lir_generator::generate(const node_binary_expression& node)
             .operation = from_op_type(node.operation),
             .left = std::move(left[0]),
             .right = std::move(right[0]),
-            .assigned_type = node.assigned_type,
+            .assigned_type = parse_context.resolved_type(node.assigned_type),
         };
         lir_node_list result;
         result.push_back(std::make_unique<lir_node>(std::move(expr)));
