@@ -252,7 +252,7 @@ void wat_generator::generate(const wasm_block& block, std::ostream& output, size
         std::visit(
             [&, this](const auto& n)
             {
-                this->generate(n, output, indent);
+                this->generate(n, output, indent + (block.block_type != wasm_block::t_plain ? 2 : 0));
             },
             *inst
         );
