@@ -597,11 +597,14 @@ lir_node_list lir_generator::generate(const node_cast_expression& node)
 
 lir_node_list lir_generator::generate(const node_discard_expression& node)
 {
-    // TODO: consider what is still needed to actually perform the discard;
-    // only a discard with a block type not equal to void needs to do something
-    return std::visit([&](auto&& arg)
-                      { return generate(arg); },
-                      node.expression->value);
+    lir_node_list expressions = generate(*node.expression);
+    assert(expressions.size() == 1 && "LIR generation for cast expression should produce exactly one expression");
+    lir_discard_expression stmt{
+        .expression = std::move(expressions[0])
+    };
+    lir_node_list result;
+    result.push_back(std::make_unique<lir_node>(std::move(stmt)));
+    return result;
 }
 
 lir_node_list lir_generator::generate(const node_return_expression& node)
@@ -702,6 +705,10 @@ std::unique_ptr<lir_global_definition> lir_generator::generate(const node_global
 std::unique_ptr<lir_function_definition> lir_generator::generate(const node_function_definition& func_def)
 {
     auto func = std::make_unique<lir_function_definition>();
+    for (const auto& attr : func_def.attributes)
+    {
+        func->attributes.push_back(lir_attribute{attr.name});
+    }
     func->function_head = std::make_unique<lir_function_head>();
     func->function_head->name = func_def.function_head->name;
     func->function_head->signature = func_def.function_head->signature;
