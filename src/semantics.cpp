@@ -1,6 +1,6 @@
 #include "semantics.hpp"
+#include "tools.hpp"
 #include <array>
-#include <assert.h>
 #include <iostream>
 #include <unordered_set>
 
@@ -215,7 +215,7 @@ void semantic_analyser::process(source_range location, node_pointer_deref& n)
     else
     {
         auto* ptr_type = get_type_from_node<pointer_type>(parse_context.types[to_index(expression_type)]);
-        assert(ptr_type != nullptr && "Compiler error, in semantics check, the type of a pointer ref should be a pointer");
+        CAPY_ASSERT(ptr_type != nullptr, "Compiler error, in semantics check, the type of a pointer ref should be a pointer");
         n.assigned_type = ptr_type->to;
     }
 }
@@ -227,7 +227,7 @@ void semantic_analyser::process(source_range location, node_record_definition& n
 void semantic_analyser::process(source_range location, node_record_initialisation& n)
 {
     auto* r = get_type_from_node<record_type>(parse_context.types[to_index(n.type_spec)]);
-    assert(r != nullptr && "Compiler error, semantics check should be on a record initialisation");
+    CAPY_ASSERT(r != nullptr, "Compiler error, semantics check should be on a record initialisation");
 
     std::unordered_set<std::string> expected_fields;
     expected_fields.reserve(r->fields.size());
@@ -411,7 +411,7 @@ void semantic_analyser::process(source_range location, node_function_definition&
     auto declared_return_type = parse_context.function_return_type(n.function_head->signature.function_type);
     if (!declared_return_type.has_value())
     {
-        assert(false && "In a node_function_definition, the function_type should be a function and have a return type");
+        CAPY_FAIL("In a node_function_definition, the function_type should be a function and have a return type");
         append_error_at(
             location.start,
             "Fatal parser error in semantics check from this source location"

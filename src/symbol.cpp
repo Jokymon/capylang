@@ -1,5 +1,4 @@
 #include "symbol.hpp"
-#include <cassert>
 #include <ranges>
 
 bool function_type::is_call_signature_eq(const function_type& other)

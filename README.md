@@ -194,3 +194,6 @@ The following guiding principles will more likely get your PR accepted:
    both backends.
  * Use clang-format to get consistent formatting of your source code. The
    required clang-format version is given at the top of the .clang-format file.
+ * Use the CAPY_FAIL and CAPY_ASSERT macros for any situation that should really
+   not happen. In a lot of cases "should not happen" means, that a previous
+   compiler pass should have taken care that this situation doesn't occur.

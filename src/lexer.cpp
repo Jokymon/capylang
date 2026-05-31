@@ -1,5 +1,5 @@
 #include "lexer.hpp"
-#include <assert.h>
+#include "tools.hpp"
 
 const uint32_t MAX_ONE_B = 0x80;
 const uint32_t MAX_TWO_B = 0x800;
@@ -224,7 +224,7 @@ operator_type op_from_symbol(const token_symbol& symbol)
         case token_symbol::sym_kw_as:
             return op_conversion;
         default:
-            assert(false && "Unexpected operator symbol");
+            CAPY_FAIL("Unexpected operator symbol");
             return op_conversion;
     }
 }

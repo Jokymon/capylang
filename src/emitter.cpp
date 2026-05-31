@@ -2,8 +2,8 @@
 #include "lower_cabi.hpp"
 #include "wasm_ir.hpp"
 #include "semantics.hpp"
+#include "tools.hpp"
 #include <algorithm>
-#include <cassert>
 #include <iomanip>
 #include <ranges>
 #include <sstream>
@@ -72,7 +72,7 @@ wasm_type from_type_kind(context& ctx, type_id idx)
                 }
                 else
                 {
-                    assert(false && "Encountered unresolved type variable when getting WASM type");
+                    CAPY_FAIL("Encountered unresolved type variable when getting WASM type");
                     return wasm_type::none;
                 }
             }
@@ -137,7 +137,7 @@ size_t type_size(context& ctx, type_id idx)
                 }
                 else
                 {
-                    assert(false && "Encountered unresolved type variable in when getting type size");
+                    CAPY_FAIL("Encountered unresolved type variable in when getting type size");
                     return 0;
                 }
             }
@@ -155,7 +155,7 @@ std::optional<size_t> record_field_offset(context& ctx, type_id idx, const std::
 
     const auto& type_spec = ctx.types[to_index(idx)];
     auto* r = get_type_from_node<record_type>(type_spec);
-    assert(r != nullptr && "Compiler error");
+    CAPY_ASSERT(r != nullptr, "Compiler error");
 
     size_t offset = 0;
     for (const auto& field_definition : r->fields)
@@ -240,7 +240,7 @@ void emitter::emit(const node_import_definition& import_def)
 
     auto function_type_entry = parse_context.types[to_index(import_def.function_head->signature.function_type)];
     auto* func_type = get_type_from_node<function_type>(function_type_entry);
-    assert(func_type != nullptr && "Compiler error");
+    CAPY_ASSERT(func_type != nullptr, "Compiler error");
 
     const auto& parameter_names = import_def.function_head->signature.parameters;
     for (auto [param_name, param_typ] : std::views::zip(parameter_names, func_type->parameter_types))
@@ -395,7 +395,7 @@ void emitter::emit(const node_function_call& func_call)
         }
         else
         {
-            assert(false && "Unknown intrinsic");
+            CAPY_FAIL("Unknown intrinsic");
         }
     }
     else
@@ -477,7 +477,7 @@ void emitter::emit(const node_field_deref& field_deref)
             field_deref.object_type,
             field_deref.fieldname
         );
-        assert(maybe_size.has_value() && "A record field should have its offset calculated by this point");
+        CAPY_ASSERT(maybe_size.has_value(), "A record field should have its offset calculated by this point");
 
         cur_block->load(wasm_type::i32, maybe_size.value());
     }
@@ -540,7 +540,7 @@ void emitter::emit(const node_break_statement&)
     }
     else
     {
-        assert(false && "Trying to break from inside non-loop block; this should already have been caught by semantic check");
+        CAPY_FAIL("Trying to break from inside non-loop block; this should already have been caught by semantic check");
     }
 }
 
@@ -624,7 +624,7 @@ void emitter::emit(const node_binary_expression& root)
                 break;
             }
         case op_conversion:
-            assert(false && "Conversions should not appear as simple expressions");
+            CAPY_FAIL("Conversions should not appear as simple expressions");
             break;
     }
 }

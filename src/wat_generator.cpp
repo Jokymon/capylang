@@ -1,5 +1,5 @@
 #include "wat_generator.hpp"
-#include <assert.h>
+#include "tools.hpp"
 #include <iomanip>
 #include <sstream>
 #include <variant>
@@ -25,7 +25,7 @@ std::string repr_wasm_type(wasm_type typ)
         case wasm_type::f64:
             return "f64";
         default:
-            assert(false && "Unexpected wasm_type in repr_wasm_type");
+            CAPY_FAIL("Unexpected wasm_type in repr_wasm_type");
             return "";
     }
 }

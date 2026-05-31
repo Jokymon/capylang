@@ -1,5 +1,5 @@
 #include "lir.hpp"
-#include <cassert>
+#include "tools.hpp"
 #include <iostream>
 
 inline std::ostream& operator<<(std::ostream& o, lir_binary_op op)
@@ -92,7 +92,7 @@ lir_binary_op from_op_type(operator_type op)
 
         case op_assignment:
         case op_conversion:
-            assert(false && "This operator type shouldn't be converted to LIR");
+            CAPY_FAIL("This operator type shouldn't be converted to LIR");
     }
 }
 
@@ -196,10 +196,10 @@ type_id lir_assigned_node_type(const lir_node& node, context& ctx)
             else if constexpr (std::is_same_v<T, lir_function_call>)
             {
                 const auto& sym = ctx.symbol_at(n.symbol_ref);
-                assert(sym.kind == symbol_kind::function && "Compiler Error: LIR function call should resolve to function symbol");
+                CAPY_ASSERT(sym.kind == symbol_kind::function, "Compiler Error: LIR function call should resolve to function symbol");
 
                 auto return_type = ctx.function_return_type(sym.signature.function_type);
-                assert(return_type.has_value() && "Compiler Error: LIR function call type should have a valid return type");
+                CAPY_ASSERT(return_type.has_value(), "Compiler Error: LIR function call type should have a valid return type");
                 return return_type.value();
             }
             else if constexpr (std::is_same_v<T, lir_cast_expression>)
@@ -224,7 +224,7 @@ type_id lir_assigned_node_type(const lir_node& node, context& ctx)
             }
             else
             {
-                assert(false && "Compiler error: LIR encountered unhandled type");
+                CAPY_FAIL("Compiler error: LIR encountered unhandled type");
                 return ILLEGAL_TYPE;
             }
         },
@@ -283,7 +283,7 @@ lir_place get_place(const node_expr& expr)
             }
             else
             {
-                assert(false && "Unsupported");
+                CAPY_FAIL("Unsupported");
                 return lir_place{};
             }
         },
@@ -378,7 +378,7 @@ lir_node_list lir_generator::generate(const node_var_reference& node)
 lir_node_list lir_generator::generate(const node_pointer_deref& node)
 {
     lir_node_list result = generate(*node.pointer_expression);
-    assert(result.size() >= 1 && "Pointer expression of pointer deref should contain some nodes");
+    CAPY_ASSERT(result.size() >= 1, "Pointer expression of pointer deref should contain some nodes");
 
     if (auto* load_expr = std::get_if<lir_load_expression>(&result.back()->value))
     {
@@ -394,7 +394,7 @@ lir_node_list lir_generator::generate(const node_pointer_deref& node)
         // If it really is a variable, then the pointer_expression has already returned a load
         // expression and we end up in the then-part above. If its not a variable, then this is
         // unexpected here.
-        assert(false && "pointer dereferencing should only happen on existing load expressions");
+        CAPY_FAIL("pointer dereferencing should only happen on existing load expressions");
     }
 
     return result;
@@ -409,7 +409,7 @@ lir_node_list lir_generator::generate(const node_let_expression& node)
     }
 
     std::unique_ptr<lir_node> init_expr = nullptr;
-    assert(init_expressions.size() <= 1 && "There should be maximum of one init expression");
+    CAPY_ASSERT(init_expressions.size() <= 1, "There should be maximum of one init expression");
     if (init_expressions.size() >= 1)
     {
         init_expr = std::move(init_expressions[0]);
@@ -526,7 +526,7 @@ lir_node_list lir_generator::generate(const node_record_initialisation& node)
 lir_node_list lir_generator::generate(const node_field_deref& node)
 {
     lir_node_list result = generate(*node.object);
-    assert(result.size() == 1 && "Field dereference expression should contain exactly one node");
+    CAPY_ASSERT(result.size() == 1, "Field dereference expression should contain exactly one node");
 
     if (auto* load_expr = std::get_if<lir_load_expression>(&result.back()->value))
     {
@@ -556,7 +556,7 @@ lir_node_list lir_generator::generate(const node_field_deref& node)
         // If it really is a variable, then the object has already returned a load
         // expression and we end up in the then-part above. If its not a variable, then this is
         // unexpected here.
-        assert(false && "Field dereferencing should only happen on existing load expressions");
+        CAPY_FAIL("Field dereferencing should only happen on existing load expressions");
     }
 
     return result;
@@ -568,7 +568,7 @@ lir_node_list lir_generator::generate(const node_function_call& node)
     for (const auto& expression : node.parameter)
     {
         auto generated_code = generate(*expression);
-        assert(generated_code.size() == 1 && "Function call operands should only generate one LIR node");
+        CAPY_ASSERT(generated_code.size() == 1, "Function call operands should only generate one LIR node");
         arguments.push_back(std::move(generated_code[0]));
     }
 
@@ -585,7 +585,7 @@ lir_node_list lir_generator::generate(const node_function_call& node)
 lir_node_list lir_generator::generate(const node_cast_expression& node)
 {
     lir_node_list expressions = generate(*node.expression);
-    assert(expressions.size() == 1 && "LIR generation for cast expression should produce exactly one expression");
+    CAPY_ASSERT(expressions.size() == 1, "LIR generation for cast expression should produce exactly one expression");
     lir_cast_expression stmt{
         .expression = std::move(expressions[0]),
         .cast_type = parse_context.resolved_type(node.cast_type)
@@ -598,7 +598,7 @@ lir_node_list lir_generator::generate(const node_cast_expression& node)
 lir_node_list lir_generator::generate(const node_discard_expression& node)
 {
     lir_node_list expressions = generate(*node.expression);
-    assert(expressions.size() == 1 && "LIR generation for cast expression should produce exactly one expression");
+    CAPY_ASSERT(expressions.size() == 1, "LIR generation for cast expression should produce exactly one expression");
     lir_discard_expression stmt{
         .expression = std::move(expressions[0])
     };
@@ -634,12 +634,12 @@ lir_node_list lir_generator::generate(const node_unary_expression& node)
 lir_node_list lir_generator::generate(const node_binary_expression& node)
 {
     auto right = generate(*node.right);
-    assert(right.size() == 1 && "Generated LIR for right binary operand should have returned exactly one node");
+    CAPY_ASSERT(right.size() == 1, "Generated LIR for right binary operand should have returned exactly one node");
 
     if (node.operation != op_assignment)
     {
         auto left = generate(*node.left);
-        assert(left.size() == 1 && "Generated LIR for left binary operand should have returned exactly one node");
+        CAPY_ASSERT(left.size() == 1, "Generated LIR for left binary operand should have returned exactly one node");
         lir_binary_expression expr{
             .operation = from_op_type(node.operation),
             .left = std::move(left[0]),

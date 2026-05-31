@@ -1,6 +1,6 @@
 #include "lower_cabi.hpp"
+#include "tools.hpp"
 #include <ranges>
-#include <cassert>
 
 lower_cabi::lower_cabi(context& ctx)
 : parse_context(ctx)
@@ -16,12 +16,12 @@ void lower_cabi::lower_function_arguments(const node_function_head& func_head, a
     for (auto [param_name, param_typ] : std::views::zip(parameter_names, func_type.parameter_types))
     {
         type_id resolved_param_typ = parse_context.resolved_type(param_typ);
-        assert(parse_context.is_resolved(resolved_param_typ) && "In emitter stage, all required types should be resolved");
+        CAPY_ASSERT(parse_context.is_resolved(resolved_param_typ), "In emitter stage, all required types should be resolved");
 
         const auto& type_entry = parse_context.types[to_index(resolved_param_typ)];
         // when the type is resolved, we know that it can't be a type variable,
         // let's still make sure it really is so
-        assert(std::holds_alternative<type_kind>(type_entry) && "Unexpected type variable in resolved type");
+        CAPY_ASSERT(std::holds_alternative<type_kind>(type_entry), "Unexpected type variable in resolved type");
         const auto& type_spec = std::get<type_kind>(type_entry);
 
         lower_function_argument(type_spec, param_name, args);
@@ -69,7 +69,7 @@ void lower_cabi::lower_function_argument(const type_kind& ty, const std::string&
                         args.push_back({basename + "_size", wasm_type::i32});
                         break;
                     default:
-                        assert(false && "Unknown primitive type in function argument lowering");
+                        CAPY_FAIL("Unknown primitive type in function argument lowering");
                         break;
                 }
             }
@@ -81,7 +81,7 @@ void lower_cabi::lower_function_argument(const type_kind& ty, const std::string&
             // TODO: for much later also consider function passing
             else
             {
-                assert(false && "Unhandled type in function argument lowering");
+                CAPY_FAIL("Unhandled type in function argument lowering");
             }
         },
         ty

@@ -1,7 +1,7 @@
 #include "wasm_generator.hpp"
 #include "wasm_mnemonics.hpp"
+#include "tools.hpp"
 #include <algorithm>
-#include <cassert>
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
@@ -115,7 +115,7 @@ char encode_wasm_type(wasm_type type)
         case wasm_type::f64:
             return '\x7C';
         default:
-            assert(false && "Trying to encode an unknown WASM type");
+            CAPY_FAIL("Trying to encode an unknown WASM type");
             // TODO shouldn't happen
             return '\x42';
     }
@@ -725,7 +725,7 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
                        else if constexpr (std::is_same_v<T, wasm_op_label>)
                        {
                            uint32_t block_label = resolve_block_label(block, t.label, 0);
-                           assert(block_label != std::numeric_limits<uint32_t>::max() || "Can't resolve block label in jump instruction");
+                           CAPY_ASSERT(block_label != std::numeric_limits<uint32_t>::max(), "Can't resolve block label in jump instruction");
 
                            switch (t.op)
                            {

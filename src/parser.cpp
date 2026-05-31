@@ -1,6 +1,6 @@
 #include "parser.hpp"
 #include "diagnostics.hpp"
-#include <assert.h>
+#include "tools.hpp"
 #include <format>
 #include <limits>
 #include <memory>
@@ -453,7 +453,7 @@ node_function_definition parser::parse_function_definition()
 
     auto function_type_entry = parse_context.types[to_index(function_head.signature.function_type)];
     auto* func_type = get_type_from_node<function_type>(function_type_entry);
-    assert(func_type != nullptr && "Compiler error");
+    CAPY_ASSERT(func_type != nullptr, "Compiler error");
 
     const auto& parameter_names = function_head.signature.parameters;
     for (auto [param_name, param_typ] : std::views::zip(parameter_names, func_type->parameter_types))
