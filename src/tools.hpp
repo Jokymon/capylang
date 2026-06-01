@@ -3,17 +3,17 @@
 #include <sstream>
 #include <string>
 
-#define CAPY_ASSERT(cond, msg)                                           \
-    {                                                                    \
-        if (!(cond))                                                     \
-        {                                                                \
-            printf("Failure in %s:%u: %s\n", __FILE__, __LINE__, (msg)); \
-            assert((cond));                                              \
-        }                                                                \
+#define CAPY_ASSERT(cond, msg, ...)                                                                \
+    {                                                                                              \
+        if (!(cond))                                                                               \
+        {                                                                                          \
+            printf("Failure in %s:%u: " #msg "\n", __FILE__, __LINE__ __VA_OPT__(, ) __VA_ARGS__); \
+            assert((cond));                                                                        \
+        }                                                                                          \
     }
 
-#define CAPY_FAIL(msg)                                           \
-    printf("Failure in %s:%u: %s\n", __FILE__, __LINE__, (msg)); \
+#define CAPY_FAIL(msg, ...)                                                                \
+    printf("Failure in %s:%u: " #msg "\n", __FILE__, __LINE__ __VA_OPT__(, ) __VA_ARGS__); \
     assert(false);
 
 template <typename Iter>

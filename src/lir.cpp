@@ -92,7 +92,7 @@ lir_binary_op from_op_type(operator_type op)
 
         case op_assignment:
         case op_conversion:
-            CAPY_FAIL("This operator type shouldn't be converted to LIR");
+            CAPY_FAIL("This operator type shouldn't be converted to LIR; enumval=%u", uint32_t(op));
     }
 }
 
@@ -224,7 +224,7 @@ type_id lir_assigned_node_type(const lir_node& node, context& ctx)
             }
             else
             {
-                CAPY_FAIL("Compiler error: LIR encountered unhandled type");
+                CAPY_FAIL("Compiler error: LIR encountered unhandled type; index=%lu", node.value.index());
                 return ILLEGAL_TYPE;
             }
         },
@@ -269,7 +269,7 @@ lir_place get_place(const node_pointer_deref& node)
 lir_place get_place(const node_expr& expr)
 {
     return std::visit(
-        [](auto& arg)
+        [&](auto& arg)
         {
             using T = std::decay_t<decltype(arg)>;
 
@@ -283,7 +283,7 @@ lir_place get_place(const node_expr& expr)
             }
             else
             {
-                CAPY_FAIL("Unsupported");
+                CAPY_FAIL("LIR can't turn this node type into a place. index=%lu", expr.value.index());
                 return lir_place{};
             }
         },
