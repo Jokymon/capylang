@@ -270,14 +270,8 @@ void semantic_analyser::process(source_range location, node_record_initialisatio
 
 void semantic_analyser::process(source_range location, node_field_deref& n)
 {
-    if (!parse_context.is_record_type(n.object_type))
-    {
-        append_error_at(
-            location.start,
-            "Dereferencing non-record variable or field '" + n.repr_obj() + "'"
-        );
-        return;
-    }
+    visit(*n.object);
+    n.object_type = assigned_node_type(*n.object, parse_context);
 
     if (parse_context.is_primitive_type(n.object_type, primitive_type::String))
     {
@@ -291,6 +285,15 @@ void semantic_analyser::process(source_range location, node_field_deref& n)
     }
     else
     {
+        if (!parse_context.is_record_type(n.object_type))
+        {
+            append_error_at(
+                location.start,
+                "Dereferencing non-record variable or field '" + n.repr_obj() + "'"
+            );
+            return;
+        }
+
         auto field_type = parse_context.record_field_type(n.object_type, n.fieldname);
         if (!field_type.has_value())
         {

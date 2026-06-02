@@ -937,7 +937,7 @@ node_expr parser::parse_record_initialisation(source_range name_range, const std
     );
 }
 
-node_expr parser::parse_field_deref(type_id base_type, node_expr object)
+node_expr parser::parse_field_deref(node_expr object)
 {
     // eat the dot '.'
     capy_lexer->expect<token_symbol>();
@@ -950,7 +950,7 @@ node_expr parser::parse_field_deref(type_id base_type, node_expr object)
             object.location.end,
             std::make_unique<node_expr>(std::move(object)),
             "",
-            base_type
+            ILLEGAL_TYPE
         );
     }
     auto field_name = capy_lexer->expect<token_identifier>();
@@ -961,29 +961,12 @@ node_expr parser::parse_field_deref(type_id base_type, node_expr object)
         field_range.end,
         std::make_unique<node_expr>(std::move(object)),
         field_name.name,
-        base_type
+        ILLEGAL_TYPE
     );
 
     if (capy_lexer->ahead_is_sym(token_symbol::sym_period))
     {
-        if (!parse_context.is_record_type(base_type))
-        {
-            // TODO: when are these errors even triggered? In the current tests
-            // such errors are only reported from semantic checks
-            append_error("Can't dereference field '" + field_name.name + "'");
-            // After the error, just return what we have so far
-            return node;
-        }
-        auto field_type = parse_context.record_field_type(base_type, field_name.name);
-        if (!field_type.has_value())
-        {
-            // TODO: when are these errors even triggered? In the current tests
-            // such errors are only reported from semantic checks
-            append_error("Record doesn't contain a field named '" + field_name.name + "'");
-            return node;
-        }
-
-        node = parse_field_deref(field_type.value(), std::move(node));
+        node = parse_field_deref(std::move(node));
     }
 
     return node;
@@ -1023,9 +1006,8 @@ node_expr parser::parse_primary()
                 var.value(),
                 assign_context::rhs
             );
-            auto var_type = parse_context.symbol_at(var.value()).symbol_type;
 
-            return parse_field_deref(var_type, std::move(object));
+            return parse_field_deref(std::move(object));
         }
         else
         {
