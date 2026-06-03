@@ -53,6 +53,8 @@ wasm_type from_type_kind(context& ctx, type_id idx)
                     } else if constexpr (std::is_same_v<K, pointer_type>) {
                         return wasm_type::i32;
                     } else if constexpr (std::is_same_v<K, record_type>) {
+                        // TODO: this will no longer hold when we start with
+                        // local variable based records
                         // records are stored as pointers
                         return wasm_type::i32;
                     } else if constexpr (std::is_same_v<K, function_type>) {
@@ -148,12 +150,16 @@ size_t type_size(context& ctx, type_id idx)
 
 std::optional<size_t> record_field_offset(context& ctx, type_id idx, const std::string& field_name)
 {
-    if (!ctx.is_record_type(idx))
+    auto rec_type = ctx.record_behind(idx);
+    CAPY_ASSERT(rec_type.has_value(), "Unexpected failure in extracting pointer type for record");
+
+    type_id r_type = rec_type.value();
+    if (!ctx.is_record_type(r_type))
     {
         return std::nullopt;
     }
 
-    const auto& type_spec = ctx.types[to_index(idx)];
+    const auto& type_spec = ctx.types[to_index(r_type)];
     auto* r = get_type_from_node<record_type>(type_spec);
     CAPY_ASSERT(r != nullptr, "Compiler error");
 
@@ -419,7 +425,11 @@ void emitter::emit(const node_let_expression& let_expression)
 
 void emitter::emit(const node_record_initialisation& record_init)
 {
-    size_t record_size = type_size(parse_context, record_init.type_spec);
+    auto type_spec = parse_context.record_behind(record_init.type_spec);
+    CAPY_ASSERT(type_spec.has_value(), "Unexpected failure in extracting pointer type for record");
+    type_id r_type = type_spec.value();
+
+    size_t record_size = type_size(parse_context, r_type);
     cur_block->const_val(wasm_type::i32, 0);
     cur_block->const_val(wasm_type::i32, 0);
     cur_block->const_val(wasm_type::i32, 4);
@@ -427,8 +437,8 @@ void emitter::emit(const node_record_initialisation& record_init)
     cur_block->call("cabi_realloc");
     cur_block->local_set("_rec_ptr");
 
-    const auto& type_spec = parse_context.types[to_index(record_init.type_spec)];
-    auto* rec_type = get_type_from_node<record_type>(type_spec);
+    const auto& rec_type_spec = parse_context.types[to_index(r_type)];
+    auto* rec_type = get_type_from_node<record_type>(rec_type_spec);
 
     size_t offset = 0;
     for (const auto& field : rec_type->fields)

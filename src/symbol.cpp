@@ -188,6 +188,21 @@ bool context::resolve(type_id idx1, type_id idx2)
     return false;
 }
 
+std::optional<type_id> context::record_behind(type_id record_or_pointer_type)
+{
+    if (is_pointer_type(record_or_pointer_type))
+    {
+        const auto& type_spec = types[to_index(record_or_pointer_type)];
+        auto* p_type = get_type_from_node<pointer_type>(type_spec);
+        if (p_type == nullptr)
+        {
+            return std::nullopt;
+        }
+        return p_type->to;
+    }
+    return record_or_pointer_type;
+}
+
 std::optional<type_id> context::record_field_type(type_id record_type_idx, const std::string& field_name)
 {
     auto t = types[to_index(record_type_idx)];

@@ -36,7 +36,7 @@ private:
     node_expr parse_while_expression();
     node_expr parse_let_expression();
     node_expr parse_record_definition();
-    node_expr parse_record_initialisation(source_range name_range, const std::string& record_name);
+    node_expr parse_record_initialisation(source_range name_range, const std::string& record_name, bool is_allocated);
     node_expr parse_field_deref(node_expr object);
     node_expr parse_primary();
     type_id parse_type_reference();

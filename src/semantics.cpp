@@ -88,7 +88,11 @@ type_id assigned_node_type(const node_expr& node, context& ctx)
             }
             else if constexpr (std::is_same_v<T, node_field_deref>)
             {
-                auto field_type = ctx.record_field_type(n.object_type, n.fieldname);
+                auto rec_type = ctx.record_behind(n.object_type);
+                CAPY_ASSERT(rec_type.has_value(), "Base types for field derefs must either be records or pointers");
+                type_id obj_type = rec_type.value();
+
+                auto field_type = ctx.record_field_type(obj_type, n.fieldname);
                 if (field_type.has_value())
                 {
                     return field_type.value();
@@ -226,7 +230,9 @@ void semantic_analyser::process(source_range location, node_record_definition& n
 
 void semantic_analyser::process(source_range location, node_record_initialisation& n)
 {
-    auto* r = get_type_from_node<record_type>(parse_context.types[to_index(n.type_spec)]);
+    auto rec_type = parse_context.record_behind(n.type_spec);
+    CAPY_ASSERT(rec_type.has_value(), "Compiler error, semantics check should be on a record initialisation");
+    auto* r = get_type_from_node<record_type>(parse_context.types[to_index(rec_type.value())]);
     CAPY_ASSERT(r != nullptr, "Compiler error, semantics check should be on a record initialisation");
 
     std::unordered_set<std::string> expected_fields;
@@ -285,7 +291,8 @@ void semantic_analyser::process(source_range location, node_field_deref& n)
     }
     else
     {
-        if (!parse_context.is_record_type(n.object_type))
+        auto rec_type = parse_context.record_behind(n.object_type);
+        if (!rec_type.has_value() || !parse_context.is_record_type(rec_type.value()))
         {
             append_error_at(
                 location.start,
@@ -294,7 +301,9 @@ void semantic_analyser::process(source_range location, node_field_deref& n)
             return;
         }
 
-        auto field_type = parse_context.record_field_type(n.object_type, n.fieldname);
+        type_id obj_typ = rec_type.value();
+        auto field_type = parse_context.record_field_type(obj_typ, n.fieldname);
+
         if (!field_type.has_value())
         {
             append_error_at(

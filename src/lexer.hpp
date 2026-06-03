@@ -35,6 +35,7 @@ struct token_symbol : public located_token
 {
     enum symbol_type
     {
+        sym_kw_allocate,
         sym_kw_as,
         sym_kw_break,
         sym_kw_else,

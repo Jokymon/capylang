@@ -295,6 +295,12 @@ struct context
     type_id resolved_type(type_id type_idx) const;
     bool resolve(type_id idx1, type_id idx2);
 
+    // Syntactically dereferencings of records and records behind pointers look
+    // the same and end up in the same AST nodes, we need a way to get to the
+    // actual record definition easily for both cases. The function `record_behind()`
+    // does exactly that and either gives us the record type id for the given record
+    // type or it "dereferences" the pointer to a record and gives that record type.
+    std::optional<type_id> record_behind(type_id record_or_pointer_type);
     std::optional<type_id> record_field_type(type_id record_type_idx, const std::string& field_name);
     std::optional<type_id> function_return_type(type_id function_type_idx);
     std::optional<primitive_type> primitive_type_of(type_id type_idx) const;

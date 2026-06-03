@@ -138,3 +138,65 @@ symbol table as the source of truth for type information.
   only carries fully reified types.
 - Record field initializers may eventually need temporary values to preserve
   source evaluation order when field definition order differs from code order.
+
+## Record lowering
+
+Records are representable in two forms, (1) the "value-based" representation and
+(2) the purely pointer-based represenation. When specifying a variable to be
+of a plain record type, then the first form is used. In this form, lowering
+happens according to the rules of `flatten_functype()` described in the
+component model "CanonicalABI". This means that some records might be lowered
+into a list of local variables while bigger records will be lowered into linear
+memory based storage.
+When a variable is specified as pointer to a record, then the entire record will
+always be represented in linear memory and the corresponding memory will be
+automatically allocated at the time of record initialisation.
+
+TODO: When exactly will this memory be freed again? Should we just treat it all
+as "value-semantics", would that help in deciding when to throw away?
+
+The first form is useful when adhering to the component level specification and
+can optimize record field access when we don't need to dereference record
+fields. The second form on the other hand might be needed when adopting WASI
+APIs which use pointers even to smaller records.
+
+How should the record initialisation for pointer-based records look like?
+Options:
+ * **(1)** Just make it look like "normal" record initialisations and let the
+compiler introduce any necessary helper-nodes which tell the emitter/backend
+that a memory allocation is needed.
+ * **(2)** Introduce some special syntax marking the `rectype{}` "constructor" as
+something that should return a pointer.
+   * **(a)** Use a symbol to mark a pointer based creation, such as `^rectype{}`
+     `*rectype{}` or even as postfix symbol to the type.
+   * **(b)** Use a keyword to indicate the process of allocation, like `new`,
+     `alloc` or similar.
+   * **(c)** Use an explicit function call with some form of generic type as in
+     `create<rectype>(...)` or `allocate<rectype>(...)`.
+
+### Decision
+
+For the moment we start with a simple, straight-forward and established concept.
+We use option **2b** which makes the initialisation as pointer explicit. This
+means that we don't have to introduce some weird implicit structure generation
+in the background and make the whole process clearly visible to the programmer.
+
+On the other hand, though it is a simple syntactic model, it introduces a bunch
+of AST, and other constructs in the whole compiler which might have to be
+removed again in the future. Also, this syntax with a prepended keyword breaks
+out of the current concept of functions with parameters and thus introduces a
+new precedent for syntax constructs, that we might not want to keep longterm.
+
+==> The big challenge is, that we now have a mix of pointers and records when
+    looking at field dereferences. This is currently addressed through the
+    helper function `record_behind()` in the `context` class.
+
+### Implementation steps
+
+1. Migrate the current code base to this new concept such that all existing
+   record uses are actually of form 2, the pointer based approach. That is what
+   is currently assumed anyways. **DONE**
+2. Add support for value-based record representation. This is not yet supported
+   and would need to be implemented.
+3. Migrate the currently one-of "scalar"-type string to this new value-based
+   record type.

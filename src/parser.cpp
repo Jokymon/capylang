@@ -887,13 +887,17 @@ node_expr parser::parse_record_definition()
     );
 }
 
-node_expr parser::parse_record_initialisation(source_range name_range, const std::string& record_name)
+node_expr parser::parse_record_initialisation(source_range name_range, const std::string& record_name, bool is_allocated)
 {
-    auto record_type = current_scope->lookup_type(record_name);
-    if (!record_type.has_value())
+    auto rec_type = current_scope->lookup_type(record_name);
+    if (!rec_type.has_value())
     {
         append_error("Trying to initialise record of unknown type '" + record_name + "'");
-        record_type = parse_context.intern_primitive(primitive_type::Void);
+        rec_type = parse_context.intern_primitive(primitive_type::Void);
+    }
+    else if (is_allocated)
+    {
+        rec_type = parse_context.intern(pointer_type{rec_type.value()});
     }
 
     // skipping the opening '{'
@@ -932,7 +936,7 @@ node_expr parser::parse_record_initialisation(source_range name_range, const std
     return make_located<node_record_initialisation>(
         name_range.start,
         end_range.end,
-        record_type.value(),
+        rec_type.value(),
         std::move(fields)
     );
 }
@@ -988,7 +992,7 @@ node_expr parser::parse_primary()
         // before the opening '{' is a type, then this must be a record initialisation
         else if (current_scope->lookup_type(id.name).has_value() && capy_lexer->ahead_is_sym(token_symbol::sym_curly_open))
         {
-            return parse_record_initialisation(id_range, id.name);
+            return parse_record_initialisation(id_range, id.name, false);
         }
         else if (capy_lexer->ahead_is_sym(token_symbol::sym_period))
         {
@@ -1035,6 +1039,31 @@ node_expr parser::parse_primary()
                 assign_context::rhs
             );
         }
+    }
+    else if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_allocate))
+    {
+        capy_lexer->expect_symbol(token_symbol::sym_kw_allocate);
+        if (capy_lexer->ahead_is<token_identifier>())
+        {
+            auto id = capy_lexer->expect<token_identifier>();
+            auto id_range = id.location;
+
+            if (current_scope->lookup_type(id.name).has_value() && capy_lexer->ahead_is_sym(token_symbol::sym_curly_open))
+            {
+                return parse_record_initialisation(id_range, id.name, true);
+            }
+        }
+        else
+        {
+            append_error("After `allocate`, a record initialisation is required");
+        }
+        std::vector<node_field_initialisation> fields;
+        return make_located<node_record_initialisation>(
+            capy_lexer->current_source_position(),
+            capy_lexer->current_source_position(),
+            ILLEGAL_TYPE,
+            std::move(fields)
+        );
     }
     else if (capy_lexer->ahead_is_sym(token_symbol::sym_star))
     {

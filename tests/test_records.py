@@ -13,7 +13,7 @@ record s {
 
 @export
 fn _start() {
-    let v: s = s{
+    let v: *s = allocate s{
         field1=18u32,
     };
     proc_exit(v.field1)
@@ -34,15 +34,15 @@ record s2 {
 };
 
 record s1 {
-    sub: s2,
+    sub: *s2,
 };
 
 @export
 fn _start() {
-    let v2: s2 = s2{
+    let v2: *s2 = allocate s2{
         field1=18u32,
     };
-    let v1: s1 = s1{
+    let v1: *s1 = allocate s1{
         sub=v2,
     };
     proc_exit(v1.sub.field1)
@@ -65,7 +65,7 @@ record s {
 
 @export
 fn _start() {
-    let v: s = s{
+    let v: *s = allocate s{
         field1=18u32,
     };
     proc_exit(v.)
@@ -111,7 +111,7 @@ record s {
 
 @export
 fn _start() {
-    let v: s = s{
+    let v: *s = allocate s{
         field1=w,
     };
     proc_exit(v.field1)
@@ -138,7 +138,7 @@ record s {
 @export
 fn _start() {
     let w: u32 = 3u32;
-    let v: s = s{
+    let v: *s = allocate s{
         field1=w.a,
     };
     proc_exit(v.field1)
@@ -164,7 +164,7 @@ record s {
 
 @export
 fn _start() {
-    let v: s = s{
+    let v: *s = allocate s{
         field1=18u32,
     };
     proc_exit(v.fld)
@@ -190,7 +190,7 @@ record s {
 
 @export
 fn _start() {
-    let v: s = s{
+    let v: *s = allocate s{
         field1=12u32,
         fld=18u32,
     };
@@ -217,7 +217,7 @@ record s {
 
 @export
 fn _start() {
-    let v: s = s{
+    let v: *s = allocate s{
     };
     proc_exit(v.field1)
 }
@@ -227,7 +227,7 @@ fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:10:16: Record field 'field1' not initialised\n"
+        == "filename:10:26: Record field 'field1' not initialised\n"
     )
 
 
@@ -243,7 +243,7 @@ record s {
 
 @export
 fn _start() {
-    let v: s = s{
+    let v: *s = allocate s{
         field1=12u32,
         extra=18u32,
     };
@@ -255,5 +255,5 @@ fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:11:16: Record field 'field2' not initialised\nfilename:13:9: Unknown record field 'extra'\n"
+        == "filename:11:26: Record field 'field2' not initialised\nfilename:13:9: Unknown record field 'extra'\n"
     )

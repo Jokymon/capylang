@@ -67,6 +67,8 @@ std::string token_symbol::to_string() const
 {
     switch (sym_type)
     {
+        case sym_kw_allocate:
+            return "allocate";
         case sym_kw_as:
             return "as";
         case sym_kw_break:
@@ -739,6 +741,10 @@ token lexer::parse_identifier_or_keyword()
     else if (id_name == "return")
     {
         return token_symbol{start_position, look_ahead_position, token_symbol::sym_kw_return};
+    }
+    else if (id_name == "allocate")
+    {
+        return token_symbol{start_position, look_ahead_position, token_symbol::sym_kw_allocate};
     }
     else if (id_name == "as")
     {

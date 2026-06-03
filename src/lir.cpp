@@ -495,6 +495,7 @@ lir_node_list lir_generator::generate(const node_record_definition& node)
 lir_node_list lir_generator::generate(const node_record_initialisation& node)
 {
     std::vector<std::unique_ptr<lir_node>> init_values;
+    // TODO: node.type_spec can also be a pointer in record initialisations
     const auto& type_spec = parse_context.types[to_index(node.type_spec)];
     auto* rec_type = get_type_from_node<record_type>(type_spec);
 
