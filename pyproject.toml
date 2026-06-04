@@ -5,8 +5,8 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "pytest>=8.4.1",
-    "antlr4-python3-runtime==4.13.0",
+    "pytest>=9.0.3",
+    "antlr4-python3-runtime==4.13.2",
     "antlr4-tools==0.2.2"
 ]
 
@@ -14,6 +14,8 @@ dependencies = [
 markers = [
     "good: tests for capy code that compiles and runs",
     "parse_error: source code that fails the parsing step",
+    "tooling: tests for tooling outside of the actual compiler",
+    "no_compile_matrix: opt out of compile backend parametrization",
 ]
 
 [dependency-groups]

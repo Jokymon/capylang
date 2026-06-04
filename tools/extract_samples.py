@@ -22,7 +22,7 @@ def list_tests(path="tests"):
                 plugins=[CollectorPlugin()])
 
 
-if __name__ == "__main__":
+def main():
     corpus_dir = pathlib.Path("corpus")
     if not corpus_dir.exists():
         corpus_dir.mkdir()
@@ -43,3 +43,7 @@ if __name__ == "__main__":
             continue
         with open(corpus_dir / "fail" / (t.function.__name__ + ".capy"), "w") as f:
             f.write(t.function.__doc__)
+
+
+if __name__ == "__main__":
+    main()

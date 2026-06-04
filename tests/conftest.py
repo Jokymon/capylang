@@ -47,6 +47,21 @@ def run_compile_wasm(source_path, _wat_path, wasm_path) -> tuple[int, str]:
     return res.returncode, res.stderr.decode()
 
 
-@pytest.fixture(params=[run_compile_wat, run_compile_wasm], autouse=True)
-def compile_func(request):
-    tools.set_compile_func(request.param)
+def pytest_generate_tests(metafunc):
+    if "setup_compile_environment" not in metafunc.fixturenames:
+        return
+    if metafunc.definition.get_closest_marker("no_compile_matrix") is not None:
+        return
+    metafunc.parametrize(
+        "setup_compile_environment",
+        [run_compile_wat, run_compile_wasm],
+        indirect=True,
+        ids=["run_compile_wat", "run_compile_wasm"],
+    )
+
+
+@pytest.fixture(autouse=True)
+def setup_compile_environment(request):
+    compile_func = getattr(request, "param", None)
+    if compile_func is not None:
+        tools.set_compile_func(compile_func)
