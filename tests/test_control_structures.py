@@ -101,6 +101,9 @@ fn _start() {
 
 @pytest.mark.good
 def test_if_is_an_expression_with_return():
+    # TODO: the ; to terminate the let-expression, after the 'if' is accepted
+    # by the handwritten parser, but shouldn't be and the ANTLR grammar
+    # correctly refuses it
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
@@ -111,7 +114,7 @@ fn _start() {
         10u32
     } else {
         12u32
-    }
+    };
     proc_exit(result)
 }"""
     exit_code, _ = tools.run_test_code(tools.get_doc_str())

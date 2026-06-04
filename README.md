@@ -117,6 +117,25 @@ They can also be run with a WebAssembly runtime, for example by running
 wasmtime run build/capylang-unit-tests.wasm
 ```
 
+## Working with the ANTLR grammar
+
+Make sure, you have installed all the dependencies according to `pyproject.toml`
+and run the Python-based `antlr4` tool one time a version number to install the
+necessary Java files:
+
+```bash
+uv run antlr4 -v 4.13.2
+```
+
+Newer ANTLR4 versions might work, but 4.13.2 was successfully used and has
+proven to work.
+
+Now to build the Python-based parser code, run
+
+```bash
+uv run antlr4 -Dlanguage=Python3 ./grammar/CapylangParserGrammar.g4 ./grammar/CapylangLexerGrammar.g4
+```
+
 ## Playground
 
 The directory `playground` contains a simple web application and a Python-based

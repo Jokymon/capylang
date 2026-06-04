@@ -18,12 +18,14 @@ fn _start() {
 
 @pytest.mark.good
 def test_memory_grow_intrinsic():
+    # TODO: a missing ; after memory_grow() would be incorrectly accepted by the
+    # handwritten parser but is correctly refused by the ANTLR grammar
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 
 @export
 fn _start() {
-    let old_size: s32 = memory_grow(4)
+    let old_size: s32 = memory_grow(4);
     if (old_size==-1) {
         // This shouldn't happen and is just used to better identify bigger
         // problems; growing the memory should normally succeed and then return
