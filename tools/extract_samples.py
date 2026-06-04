@@ -1,3 +1,6 @@
+# This script extracts the capylang source code from all pytest-based tests,
+# splits them up according to the pytest markers 'good' and 'parse_error' and
+# puts according sources in the folders ./corpus/pass and ./corpus/fail
 import pathlib
 import pytest
 

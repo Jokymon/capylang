@@ -18,7 +18,7 @@ def antlr4_cli_wrapper():
 def generate_parser_files():
     # Overwrite sys.argv for the antlr4 toolrunning
     old_sys_argv = sys.argv
-    sys.argv = [ sys.argv[0], "-Dlanguage=Python3", "./grammar/CapylangParserGrammar.g4", "./grammar/CapylangLexerGrammar.g4", "-o", "antlr-tooling" ]
+    sys.argv = [ sys.argv[0], "-Dlanguage=Python3", "./grammar/CapylangParserGrammar.g4", "./grammar/CapylangLexerGrammar.g4", "-o", "tools" ]
     cp = antlr4_cli_wrapper()
     sys.argv = old_sys_argv
     return cp
