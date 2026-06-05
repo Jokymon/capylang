@@ -25,6 +25,12 @@ jobs:
       - name: Setup uv
         uses: astral-sh/setup-uv@v4
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
       - name: Install Ninja
         shell: pwsh
         run: choco install ninja --no-progress -y
@@ -77,6 +83,10 @@ jobs:
       - name: Install Python dependencies
         shell: pwsh
         run: uv sync --frozen
+
+      - name: Initialize ANTLR toolchain
+        shell: pwsh
+        run: uv run antlr4 -v 4.13.2
 
       - name: Run pytest compiler tests
         shell: pwsh
@@ -132,6 +142,12 @@ jobs:
       - name: Setup uv
         uses: astral-sh/setup-uv@v4
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
       - name: Install Ninja
         run: |
           sudo apt-get update
@@ -173,6 +189,9 @@ jobs:
 
       - name: Install Python dependencies
         run: uv sync --frozen
+
+      - name: Initialize ANTLR toolchain
+        run: uv run antlr4 -v 4.13.2
 
       - name: Run pytest compiler tests
         run: uv run pytest tests/
