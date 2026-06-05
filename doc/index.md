@@ -6,6 +6,7 @@ which design choices currently shape the implementation.
 The published documentation is intentionally small for now and focuses on the
 core compiler pipeline:
 
+- [Charta for the compiler](charta.md) gives the guiding principles and core ideas for this project
 - [Compiler pipeline](compiler-pipeline.md) describes the major compilation
   stages and the responsibilities of each pass.
 - [Design decisions](design-decisions.md) records architectural choices that
