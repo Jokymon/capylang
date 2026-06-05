@@ -5,6 +5,9 @@ on:
     branches:
       - main
   pull_request:
+  release:
+    types:
+      - published
 
 jobs:
   build-and-test-windows:
@@ -78,6 +81,41 @@ jobs:
       - name: Run pytest compiler tests
         shell: pwsh
         run: uv run pytest tests/
+
+  package-vscode-extension:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install vsce
+        run: npm install -g @vscode/vsce
+
+      - name: Package VSCode extension
+        working-directory: capylang
+        run: vsce package
+
+      - name: Upload VSIX as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: capylang-vscode-extension
+          path: capylang/*.vsix
+          if-no-files-found: error
+
+      - name: Attach VSIX to GitHub release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: capylang/*.vsix
 
   build-and-test-linux:
     runs-on: ubuntu-latest
