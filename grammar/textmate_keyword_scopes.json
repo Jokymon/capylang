@@ -1,0 +1,15 @@
+{
+  "KW_ALLOCATE": "keyword.other.capy",
+  "KW_BREAK": "keyword.control.capy",
+  "KW_ELSE": "keyword.control.capy",
+  "KW_FN": "keyword.other.fn.capy",
+  "KW_GLOBAL": "keyword.other.capy",
+  "KW_IF": "keyword.control.capy",
+  "KW_IMPORT": "keyword.other.capy",
+  "KW_LET": "keyword.other.capy storage.type.capy",
+  "KW_MUT": "storage.modifier.capy",
+  "KW_RECORD": "keyword.declaration.struct.capy storage.type.capy",
+  "KW_RETURN": "keyword.control.capy",
+  "KW_WHILE": "keyword.control.capy",
+  "OP_CONV": "keyword.other.capy"
+}

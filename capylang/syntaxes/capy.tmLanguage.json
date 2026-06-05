@@ -25,14 +25,14 @@
 		"comments": {
 			"patterns": [
 				{
-          			"captures": {
-            			"1": {
-              				"name": "punctuation.definition.comment.capy"
-            			}
-          			},
-          			"match": "(//).*$",
-          			"name": "comment.line.double-slash.capy"
-        		}
+					"captures": {
+						"1": {
+							"name": "punctuation.definition.comment.capy"
+						}
+					},
+					"match": "(//).*$",
+					"name": "comment.line.double-slash.capy"
+				}
 			]
 		},
 		"constants": {
@@ -63,25 +63,29 @@
 		"keywords": {
 			"patterns": [
 				{
-					"name": "keyword.control.capy",
-					"match": "\\b(if|else|while|for|return)\\b"
-				},
-				{
-					"match": "\\b(let)\\b",
-					"name": "keyword.other.capy storage.type.capy"
-				},
-				{
-          			"match": "\\b(record)\\b",
-          			"name": "keyword.declaration.struct.capy storage.type.capy"
-        		},
-				{
 					"name": "keyword.other.capy",
-					"match": "\\b(import|as)\\b"
+					"match": "\\b(allocate|global|import|as)\\b"
 				},
-        		{
-          			"match": "\\bfn\\b",
-          			"name": "keyword.other.fn.capy"
-        		}			
+				{
+					"name": "keyword.control.capy",
+					"match": "\\b(break|else|if|return|while)\\b"
+				},
+				{
+					"name": "keyword.other.fn.capy",
+					"match": "\\b(fn)\\b"
+				},
+				{
+					"name": "keyword.other.capy storage.type.capy",
+					"match": "\\b(let)\\b"
+				},
+				{
+					"name": "storage.modifier.capy",
+					"match": "\\b(mut)\\b"
+				},
+				{
+					"name": "keyword.declaration.struct.capy storage.type.capy",
+					"match": "\\b(record)\\b"
+				}
 			]
 		},
 		"types": {
