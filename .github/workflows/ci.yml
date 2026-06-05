@@ -193,5 +193,8 @@ jobs:
       - name: Initialize ANTLR toolchain
         run: uv run antlr4 -v 4.13.2
 
+      - name: Generate grammar artifacts
+        run: uv run antlr4 -Dlanguage=Python3 ./grammar/CapylangParserGrammar.g4 ./grammar/CapylangLexerGrammar.g4
+
       - name: Run pytest compiler tests
         run: uv run pytest tests/
