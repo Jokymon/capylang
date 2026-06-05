@@ -136,6 +136,29 @@ Now to build the Python-based parser code, run
 uv run antlr4 -Dlanguage=Python3 ./grammar/CapylangParserGrammar.g4 ./grammar/CapylangLexerGrammar.g4
 ```
 
+## Capylang VSCode extension
+
+The folder `./capylang` consists of a sub project which represents the code for a Capylang language extension to be
+used in VSCode.
+
+To build the package, make sure, you have the NPM package `vsce` installed through `npm install -g @vscode/vsce`, then
+run
+
+```bash
+cd capylang
+vsce package
+```
+
+Once a package is built and the VSIX file is present in the `./capylang` folder, you can install it in your VSCode from
+the command line using
+
+```bash
+code --install-extension ./capylang-......vsix
+```
+
+Make sure, to replace the dots `.....` with the correct version number. After that, VSCode should be restartet for the
+any changes in the extension to take effect.
+
 ## Playground
 
 The directory `playground` contains a simple web application and a Python-based
