@@ -1,0 +1,36 @@
+{
+	"name": "client",
+	"description": "The Capylang language client",
+	"author": "Silvan Wegmann",
+	"license": "MIT",
+	"version": "0.0.3",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Jokymon/capylang"
+	},
+	"publisher": "silvan-wegmann",
+	"categories": [],
+	"keywords": [
+		"WASM",
+		"Capylang",
+		"LSP",
+		"Language Server"
+	],
+	"engines": {
+		"vscode": "^1.100.0"
+	},
+	"main": "./out/extensions.js",
+	"dependencies": {
+		"@vscode/wasm-wasi-lsp": "0.1.0-pre.8"
+	},
+	"devDependencies": {
+		"@types/vscode": "^1.105.0",
+		"@types/node": "^25.9.3"
+	},
+	"scripts": {
+		"compile": "tsc -b",
+		"watch": "tsc -b -w",
+		"lint": "eslint",
+		"esbuild": "^0.25.0"
+	}
+}

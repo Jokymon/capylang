@@ -3,6 +3,7 @@
   "displayName": "Capylang",
   "description": "Syntax highlighting for the Capybara language",
   "version": "0.0.2",
+  "main": "./client/out/extensions.js",
   "engines": {
     "vscode": "^1.104.0"
   },
@@ -22,8 +23,20 @@
       "path": "./syntaxes/capy.tmLanguage.json"
     }]
   },
+  "extensionDependencies": [
+    "ms-vscode.wasm-wasi-core"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/Jokymon/capylang"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.0"
+  },
+  "scripts": {
+    "postinstall": "cd client && npm install && cd ..",
+    "vscode:prepublish": "npm run build",
+    "build": "cd client && npm run compile && cd ../server && npm run build && cd .."
   }
 }

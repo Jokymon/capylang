@@ -1,0 +1,10 @@
+{
+    "private": true,
+    "name": "server",
+    "displayName": "Capylang WASM LSP server",
+    "version": "0.0.3",
+    "author": "Silvan Wegmann",
+    "scripts": {
+        "build": "cmake -B build -S . -G\"Ninja\" --toolchain ../../cmake/wasm-wasip-clang.cmake && cd build && cmake --build . && cd .."
+    }
+}

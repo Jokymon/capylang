@@ -44,3 +44,14 @@ set(CMAKE_EXECUTABLE_SUFFIX_C .wasm)
 set(CMAKE_EXECUTABLE_SUFFIX_CXX .wasm)
 
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lc++abi -lc++")
+
+if(NOT DEFINED CMAKE_CROSSCOMPILING_EMULATOR)
+    find_program(CAPYLANG_WASMTIME
+        NAMES wasmtime wasmtime.exe
+    )
+
+    if(CAPYLANG_WASMTIME)
+        set(CMAKE_CROSSCOMPILING_EMULATOR "${CAPYLANG_WASMTIME};run" CACHE STRING "Command used to execute WASM binaries during build and test steps")
+    endif()
+endif()
+
