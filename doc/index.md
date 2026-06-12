@@ -13,7 +13,4 @@ core compiler pipeline:
   affect the language and compiler implementation.
 - [Roadmap](roadmap.md) collects open compiler work that is relevant for future
   implementation and documentation.
-
-The repository also contains additional draft material under `doc/`, such as
-`lir_examples.md`, imported component model references, and idea sketches. Those
-are currently treated as working notes and are not part of the published site.
+- [Journey](journey.md) describes some of the bigger milestones and roadblocks encountered along the way
