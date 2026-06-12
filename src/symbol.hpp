@@ -261,7 +261,7 @@ enum class symbol_kind
 
 struct function_parameter
 {
-    source_position location;
+    source_range location;
     std::string name;
 };
 
@@ -274,7 +274,7 @@ struct function_signature
 struct symbol
 {
     std::string name;
-    source_position location;
+    source_range location;
     type_id symbol_type;
     function_signature signature;
     symbol_kind kind;

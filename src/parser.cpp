@@ -75,7 +75,7 @@ parser::parser(diagnostic_bag& diagnostics, std::shared_ptr<lexer> l, context& c
 {
     error_symbol = parse_context.create_symbol(symbol{
         .name = "_error",
-        .location = source_position{__FILE__, __LINE__, 0},
+        .location = source_range{.start = source_position{__FILE__, __LINE__, 0}, .end = source_position{__FILE__, __LINE__, 0}},
         .symbol_type = ILLEGAL_TYPE,
         .signature = function_signature{},
         .kind = symbol_kind::error,
@@ -110,7 +110,7 @@ void parser::populate_intrinsics()
     current_scope->symbol_table["memory_size"] =
         parse_context.create_symbol(symbol{
             .name = "memory_size",
-            .location = source_position{__FILE__, __LINE__, 0},
+            .location = source_range{.start = source_position{__FILE__, __LINE__, 0}, .end = source_position{__FILE__, __LINE__, 0}},
             .symbol_type = mem_size_sig.function_type,
             .signature = mem_size_sig,
             .kind = symbol_kind::function,
@@ -128,7 +128,7 @@ void parser::populate_intrinsics()
     current_scope->symbol_table["memory_grow"] =
         parse_context.create_symbol(symbol{
             .name = "memory_grow",
-            .location = source_position{__FILE__, __LINE__, 0},
+            .location = source_range{.start = source_position{__FILE__, __LINE__, 0}, .end = source_position{__FILE__, __LINE__, 0}},
             .symbol_type = mem_grow_sig.function_type,
             .signature = mem_grow_sig,
             .kind = symbol_kind::function,
@@ -144,7 +144,7 @@ void parser::populate_intrinsics()
     current_scope->symbol_table["unreachable"] =
         parse_context.create_symbol(symbol{
             .name = "unreachable",
-            .location = source_position{__FILE__, __LINE__, 0},
+            .location = source_range{.start = source_position{__FILE__, __LINE__, 0}, .end = source_position{__FILE__, __LINE__, 0}},
             .symbol_type = unreachable_sig.function_type,
             .signature = unreachable_sig,
             .kind = symbol_kind::function,
@@ -295,7 +295,7 @@ void parser::parse_parameters(function_signature& signature, function_type& func
     while (capy_lexer->ahead_is<token_identifier>())
     {
         auto param_name = capy_lexer->expect<token_identifier>();
-        signature.parameters.emplace_back(function_parameter{param_name.location.start, param_name.name});
+        signature.parameters.emplace_back(function_parameter{param_name.location, param_name.name});
 
         if (!capy_lexer->expect_symbol(token_symbol::sym_colon))
         {
@@ -347,7 +347,7 @@ node_import_definition parser::parse_import_definition()
 
         auto function_alias_symbol_id = parse_context.create_symbol(symbol{
             .name = alias_token.name,
-            .location = alias_token.location.start,
+            .location = alias_token.location,
             .symbol_type = function_head.signature.function_type,
             .signature = function_head.signature,
             .kind = symbol_kind::function,
@@ -401,7 +401,7 @@ node_global_definition parser::parse_global()
 
     auto global_symbol = symbol{
         .name = variable_name.name,
-        .location = variable_name.location.start,
+        .location = variable_name.location,
         .symbol_type = type_spec,
         .kind = symbol_kind::global_var,
         .mutab = is_mutable,
@@ -504,7 +504,7 @@ node_function_head parser::parse_function_head()
 
     auto function_symbol_id = parse_context.create_symbol(symbol{
         .name = function_name.name,
-        .location = function_name.location.start,
+        .location = function_name.location,
         .symbol_type = signature.function_type,
         .signature = signature,
         .kind = symbol_kind::function,
@@ -801,7 +801,7 @@ node_expr parser::parse_let_expression()
 
     auto new_symbol = symbol{
         .name = variable_name.name,
-        .location = variable_name.location.start,
+        .location = variable_name.location,
         .symbol_type = type_spec,
         .kind = symbol_kind::local_var,
         .mutab = is_mutable,
