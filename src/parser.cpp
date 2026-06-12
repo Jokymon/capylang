@@ -75,6 +75,7 @@ parser::parser(diagnostic_bag& diagnostics, std::shared_ptr<lexer> l, context& c
 {
     error_symbol = parse_context.create_symbol(symbol{
         .name = "_error",
+        .location = source_position{__FILE__, __LINE__, 0},
         .symbol_type = ILLEGAL_TYPE,
         .signature = function_signature{},
         .kind = symbol_kind::error,
@@ -109,6 +110,7 @@ void parser::populate_intrinsics()
     current_scope->symbol_table["memory_size"] =
         parse_context.create_symbol(symbol{
             .name = "memory_size",
+            .location = source_position{__FILE__, __LINE__, 0},
             .symbol_type = mem_size_sig.function_type,
             .signature = mem_size_sig,
             .kind = symbol_kind::function,
@@ -121,11 +123,12 @@ void parser::populate_intrinsics()
     mem_grow_type.parameter_types.push_back(parse_context.intern_primitive(primitive_type::U32));
     mem_grow_type.return_type = parse_context.intern_primitive(primitive_type::S32);
     function_signature mem_grow_sig;
-    mem_grow_sig.parameters.push_back("additional_blocks");
+    mem_grow_sig.parameters.push_back(function_parameter{source_position{__FILE__, __LINE__, 0}, "additional_blocks"});
     mem_grow_sig.function_type = parse_context.intern(mem_grow_type);
     current_scope->symbol_table["memory_grow"] =
         parse_context.create_symbol(symbol{
             .name = "memory_grow",
+            .location = source_position{__FILE__, __LINE__, 0},
             .symbol_type = mem_grow_sig.function_type,
             .signature = mem_grow_sig,
             .kind = symbol_kind::function,
@@ -141,6 +144,7 @@ void parser::populate_intrinsics()
     current_scope->symbol_table["unreachable"] =
         parse_context.create_symbol(symbol{
             .name = "unreachable",
+            .location = source_position{__FILE__, __LINE__, 0},
             .symbol_type = unreachable_sig.function_type,
             .signature = unreachable_sig,
             .kind = symbol_kind::function,
@@ -291,7 +295,7 @@ void parser::parse_parameters(function_signature& signature, function_type& func
     while (capy_lexer->ahead_is<token_identifier>())
     {
         auto param_name = capy_lexer->expect<token_identifier>();
-        signature.parameters.emplace_back(param_name.name);
+        signature.parameters.emplace_back(function_parameter{param_name.location.start, param_name.name});
 
         if (!capy_lexer->expect_symbol(token_symbol::sym_colon))
         {
@@ -343,6 +347,7 @@ node_import_definition parser::parse_import_definition()
 
         auto function_alias_symbol_id = parse_context.create_symbol(symbol{
             .name = alias_token.name,
+            .location = alias_token.location.start,
             .symbol_type = function_head.signature.function_type,
             .signature = function_head.signature,
             .kind = symbol_kind::function,
@@ -396,6 +401,7 @@ node_global_definition parser::parse_global()
 
     auto global_symbol = symbol{
         .name = variable_name.name,
+        .location = variable_name.location.start,
         .symbol_type = type_spec,
         .kind = symbol_kind::global_var,
         .mutab = is_mutable,
@@ -455,18 +461,19 @@ node_function_definition parser::parse_function_definition()
     auto* func_type = get_type_from_node<function_type>(function_type_entry);
     CAPY_ASSERT(func_type != nullptr, "Compiler error");
 
-    const auto& parameter_names = function_head.signature.parameters;
-    for (auto [param_name, param_typ] : std::views::zip(parameter_names, func_type->parameter_types))
+    const auto& parameters = function_head.signature.parameters;
+    for (auto [param, param_typ] : std::views::zip(parameters, func_type->parameter_types))
     {
         auto param_symbol_id = parse_context.create_symbol(symbol{
-            .name = param_name,
+            .name = param.name,
+            .location = param.location,
             .symbol_type = param_typ,
             .kind = symbol_kind::argument,
             .mutab = false,
             .is_assigned = true, // function parameters are 'assigned' from the function call
             .is_intrinsic = false,
         });
-        current_scope->symbol_table[param_name] = param_symbol_id;
+        current_scope->symbol_table[param.name] = param_symbol_id;
     }
 
     std::vector<std::unique_ptr<node_expr>> function_body;
@@ -497,6 +504,7 @@ node_function_head parser::parse_function_head()
 
     auto function_symbol_id = parse_context.create_symbol(symbol{
         .name = function_name.name,
+        .location = function_name.location.start,
         .symbol_type = signature.function_type,
         .signature = signature,
         .kind = symbol_kind::function,
@@ -793,6 +801,7 @@ node_expr parser::parse_let_expression()
 
     auto new_symbol = symbol{
         .name = variable_name.name,
+        .location = variable_name.location.start,
         .symbol_type = type_spec,
         .kind = symbol_kind::local_var,
         .mutab = is_mutable,

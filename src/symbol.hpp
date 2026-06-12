@@ -1,4 +1,5 @@
 #pragma once
+#include "locations.hpp"
 #include <compare>
 #include <cstdint>
 #include <functional>
@@ -258,15 +259,22 @@ enum class symbol_kind
     function
 };
 
+struct function_parameter
+{
+    source_position location;
+    std::string name;
+};
+
 struct function_signature
 {
-    std::vector<std::string> parameters;
+    std::vector<function_parameter> parameters;
     type_id function_type;
 };
 
 struct symbol
 {
     std::string name;
+    source_position location;
     type_id symbol_type;
     function_signature signature;
     symbol_kind kind;

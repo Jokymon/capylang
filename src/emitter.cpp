@@ -248,10 +248,10 @@ void emitter::emit(const node_import_definition& import_def)
     auto* func_type = get_type_from_node<function_type>(function_type_entry);
     CAPY_ASSERT(func_type != nullptr, "Compiler error");
 
-    const auto& parameter_names = import_def.function_head->signature.parameters;
-    for (auto [param_name, param_typ] : std::views::zip(parameter_names, func_type->parameter_types))
+    const auto& parameters = import_def.function_head->signature.parameters;
+    for (auto [param, param_typ] : std::views::zip(parameters, func_type->parameter_types))
     {
-        args.push_back({param_name, from_type_kind(parse_context, param_typ)});
+        args.push_back({param.name, from_type_kind(parse_context, param_typ)});
     }
 
     std::string imported_function_name = import_def.function_head->name;
