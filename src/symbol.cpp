@@ -203,6 +203,24 @@ std::optional<type_id> context::record_behind(type_id record_or_pointer_type)
     return record_or_pointer_type;
 }
 
+std::optional<type_id> context::find_base_type(type_id pointer_type_idx)
+{
+    auto t = types[to_index(pointer_type_idx)];
+    if (!std::holds_alternative<type_kind>(t))
+        return std::nullopt;
+
+    auto kind = std::get<type_kind>(t);
+    if (std::holds_alternative<pointer_type>(kind))
+    {
+        const pointer_type& p = std::get<pointer_type>(kind);
+        return find_base_type(p.to);
+    }
+    else
+    {
+        return pointer_type_idx;
+    }
+}
+
 std::optional<type_id> context::record_field_type(type_id record_type_idx, const std::string& field_name)
 {
     auto t = types[to_index(record_type_idx)];

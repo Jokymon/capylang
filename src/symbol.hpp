@@ -309,6 +309,10 @@ struct context
     // does exactly that and either gives us the record type id for the given record
     // type or it "dereferences" the pointer to a record and gives that record type.
     std::optional<type_id> record_behind(type_id record_or_pointer_type);
+    // find the base type for the given type index; find_base_type() expects a
+    // resolved type rather than a type variable. For pointer types the function
+    // removes all the pointer elements until it reaches a non-pointer pointer.
+    std::optional<type_id> find_base_type(type_id pointer_type_idx);
     std::optional<type_id> record_field_type(type_id record_type_idx, const std::string& field_name);
     std::optional<type_id> function_return_type(type_id function_type_idx);
     std::optional<primitive_type> primitive_type_of(type_id type_idx) const;
