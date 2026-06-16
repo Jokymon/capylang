@@ -304,24 +304,7 @@ void emitter::emit(const node_function_definition& func_def)
     }
     cur_block = &func.body();
 
-    for (const auto& [identifier, symbol_id] : func_def.function_scope->symbol_table)
-    {
-        const auto& symbol = parse_context.symbol_at(symbol_id);
-        if (symbol.kind == symbol_kind::local_var)
-        {
-            if (parse_context.is_primitive_type(symbol.symbol_type, primitive_type::String))
-            {
-                func.allocate_local((identifier + "_ptr").c_str(), wasm_type::i32);
-                func.allocate_local((identifier + "_size").c_str(), wasm_type::i32);
-            }
-            else
-            {
-                auto t = from_type_kind(parse_context, symbol.symbol_type);
-                func.allocate_local(identifier.c_str(), t);
-            }
-        }
-    }
-    func.allocate_local("_rec_ptr", wasm_type::i32);
+    lowering->lower_local_variables(func_def, func);
 
     for (const auto& expression : func_def.code)
     {
