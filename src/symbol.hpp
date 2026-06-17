@@ -291,10 +291,10 @@ struct context
     type_id intern(const type_kind& type);
     type_id create_type_var();
 
-    bool is_primitive_type(type_id type_idx, primitive_type p_type);
-    bool is_record_type(type_id type_idx);
-    bool is_pointer_type(type_id type_idx);
-    bool is_type_var(type_id type_idx);
+    bool is_primitive_type(type_id type_idx, primitive_type p_type) const;
+    bool is_record_type(type_id type_idx) const;
+    bool is_pointer_type(type_id type_idx) const;
+    bool is_type_var(type_id type_idx) const;
 
     bool is_resolved(type_id type_idx) const;
     // Try to get the resolved type of a type_var by following through all the

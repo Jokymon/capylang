@@ -90,13 +90,13 @@ type_id context::create_type_var()
     return id;
 }
 
-bool context::is_primitive_type(type_id type_idx, primitive_type p_type)
+bool context::is_primitive_type(type_id type_idx, primitive_type p_type) const
 {
     auto primitive = primitive_type_of(type_idx);
     return primitive.has_value() && primitive.value() == p_type;
 }
 
-bool context::is_record_type(type_id type_idx)
+bool context::is_record_type(type_id type_idx) const
 {
     auto t = types[to_index(type_idx)];
     if (!std::holds_alternative<type_kind>(t))
@@ -108,14 +108,14 @@ bool context::is_record_type(type_id type_idx)
             std::get<primitive_type>(kind) == primitive_type::String);
 }
 
-bool context::is_pointer_type(type_id type_idx)
+bool context::is_pointer_type(type_id type_idx) const
 {
     auto t = types[to_index(type_idx)];
     auto* p = get_type_from_node<pointer_type>(t);
     return p != nullptr;
 }
 
-bool context::is_type_var(type_id type_idx)
+bool context::is_type_var(type_id type_idx) const
 {
     auto t = types[to_index(type_idx)];
     return std::holds_alternative<type_var>(t);
