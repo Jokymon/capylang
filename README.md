@@ -239,3 +239,8 @@ The following guiding principles will more likely get your PR accepted:
  * Use the CAPY_FAIL and CAPY_ASSERT macros for any situation that should really
    not happen. In a lot of cases "should not happen" means, that a previous
    compiler pass should have taken care that this situation doesn't occur.
+ * Use the `overloaded` template in `src/tools.hpp` to visit `std::variant`s.
+   Although the code base may still contain places where the awkward combination
+   of `std::visit` and `if constexpr (std::is_same_v<)` is used, it is advised
+   to use `overloaded` at least for new code and to replace existing code where
+   you are working on anyways.

@@ -16,6 +16,13 @@
     printf("Failure in %s:%u: " #msg "\n", __FILE__, __LINE__ __VA_OPT__(, ) __VA_ARGS__); \
     assert(false);
 
+// helper type for the visitor
+template <class... Ts>
+struct overloaded : Ts...
+{
+    using Ts::operator()...;
+};
+
 template <typename Iter>
 std::string join(Iter begin, Iter end, std::string const& separator)
 {
