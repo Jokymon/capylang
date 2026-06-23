@@ -17,10 +17,15 @@ DEF_NODE(lir, string_literal, lir_base)
     DEF_SCALAR_FIELD(uint32_t, size)
 DEF_END
 
-DEF_NODE(lir, record_init, lir_base)
-    DEF_SCALAR_WITH_CONTEXT(type_id, record_type)
-    // field initialisation expressions in record definition field order
-    DEF_NODE_LIST_FIELD(lir, lir_node, values)
+DEF_NODE(lir, field_initialisation, lir_base)
+    DEF_SCALAR_FIELD(size_t, field_index)
+    DEF_NODE_FIELD(lir, lir_node, value)
+DEF_END
+
+DEF_NODE(lir, store_record_expression, lir_base)
+    DEF_SCALAR_FIELD(lir_place, target)
+    DEF_LIST_FIELD(lir, lir_field_initialisation, initialisations)
+    DEF_SCALAR_WITH_CONTEXT(type_id, stored_type)
 DEF_END
 
 DEF_NODE(lir, load_expression, lir_base)

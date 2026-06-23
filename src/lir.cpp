@@ -173,9 +173,9 @@ type_id lir_assigned_node_type(const lir_node& node, context& ctx)
             {
                 return ctx.intern_primitive(primitive_type::String);
             }
-            else if constexpr (std::is_same_v<T, lir_record_init>)
+            else if constexpr (std::is_same_v<T, lir_store_record_expression>)
             {
-                return n.record_type;
+                return ctx.intern_primitive(primitive_type::Void);
             }
             else if constexpr (std::is_same_v<T, lir_load_expression>)
             {
@@ -402,28 +402,77 @@ lir_node_list lir_generator::generate(const node_pointer_deref& node)
 
 lir_node_list lir_generator::generate(const node_let_expression& node)
 {
-    lir_node_list init_expressions;
+    auto target = get_place(node);
+    lir_node_list result;
+
     if (node.init_expression)
     {
-        init_expressions = generate(*node.init_expression);
+        node.init_expression->value.visit(
+            [&](const auto& inite) -> void
+            {
+                using INIT_TYPE = std::decay_t<decltype(inite)>;
+
+                if constexpr (std::is_same_v<INIT_TYPE, node_record_initialisation>)
+                {
+                    std::vector<lir_field_initialisation> initialisations;
+                    auto record_type_id = parse_context.record_behind(inite.type_spec);
+                    CAPY_ASSERT(record_type_id.has_value(), "LIR: the record initialisation should be on a record type or pointer to record type");
+
+                    const auto& type_spec = parse_context.types[to_index(record_type_id.value())];
+                    auto* rec_type = get_type_from_node<record_type>(type_spec);
+
+                    for (const auto& init : inite.initialisations)
+                    {
+                        size_t field_index = 0;
+                        for (const auto& field_def : rec_type->fields)
+                        {
+                            if (init.field_name == field_def.first)
+                            {
+                                auto field_init_expr = generate(*init.init_expression);
+                                initialisations.push_back(
+                                    lir_field_initialisation{{}, field_index, std::move(field_init_expr[0])}
+                                );
+                                break;
+                            }
+                            field_index++;
+                        }
+                    }
+
+                    lir_store_record_expression expr{
+                        .target = target,
+                        .initialisations = std::move(initialisations),
+                        .stored_type = record_type_id.value()
+                    };
+                    result.push_back(std::make_unique<lir_node>(std::move(expr)));
+                }
+                else
+                {
+                    lir_node_list init_expressions;
+                    if (node.init_expression)
+                    {
+                        init_expressions = generate(*node.init_expression);
+                    }
+
+                    std::unique_ptr<lir_node> init_expr = nullptr;
+                    CAPY_ASSERT(init_expressions.size() <= 1, "There should be maximum of one init expression");
+                    if (init_expressions.size() >= 1)
+                    {
+                        init_expr = std::move(init_expressions[0]);
+                    }
+
+                    auto& sym = parse_context.symbol_at(node.symbol_ref);
+                    lir_store_expression stmt{
+                        .target = target,
+                        .value = std::move(init_expr),
+                        .stored_type = parse_context.resolved_type(sym.symbol_type)
+                    };
+
+                    result.push_back(std::make_unique<lir_node>(std::move(stmt)));
+                }
+            }
+        );
     }
 
-    std::unique_ptr<lir_node> init_expr = nullptr;
-    CAPY_ASSERT(init_expressions.size() <= 1, "There should be maximum of one init expression");
-    if (init_expressions.size() >= 1)
-    {
-        init_expr = std::move(init_expressions[0]);
-    }
-
-    auto& sym = parse_context.symbol_at(node.symbol_ref);
-    lir_store_expression stmt{
-        .target = get_place(node),
-        .value = std::move(init_expr),
-        .stored_type = parse_context.resolved_type(sym.symbol_type)
-    };
-
-    lir_node_list result;
-    result.push_back(std::make_unique<lir_node>(std::move(stmt)));
     return result;
 }
 
@@ -494,33 +543,8 @@ lir_node_list lir_generator::generate(const node_record_definition& node)
 
 lir_node_list lir_generator::generate(const node_record_initialisation& node)
 {
-    std::vector<std::unique_ptr<lir_node>> init_values;
-    // TODO: node.type_spec can also be a pointer in record initialisations
-    const auto& type_spec = parse_context.types[to_index(node.type_spec)];
-    auto* rec_type = get_type_from_node<record_type>(type_spec);
-
-    for (const auto& field : rec_type->fields)
-    {
-        for (const auto& field_init : node.initialisations)
-        {
-            if (field_init.field_name == field.first)
-            {
-                auto field_init_expr = generate(*field_init.init_expression);
-                init_values.push_back(std::move(field_init_expr[0]));
-                break;
-            }
-        }
-    }
-
-    // TODO: at the moment we just reorder the evaluation of the record fields. This might surprise the programmer
-    // when they used some form of ordering relevant functions with side effects. To fix this, we would have to
-    // introduce some form of LIR-local temporaries that could be a new form of lir_place maybe.
-    lir_record_init expr{
-        .record_type = parse_context.resolved_type(node.type_spec),
-        .values = std::move(init_values)
-    };
+    CAPY_FAIL("LIR generator doesn't expect record initialisations outside of direct assignments");
     lir_node_list result;
-    result.push_back(std::make_unique<lir_node>(std::move(expr)));
     return result;
 }
 
@@ -637,6 +661,7 @@ lir_node_list lir_generator::generate(const node_binary_expression& node)
     auto right = generate(*node.right);
     CAPY_ASSERT(right.size() == 1, "Generated LIR for right binary operand should have returned exactly one node");
 
+    lir_node_list result;
     if (node.operation != op_assignment)
     {
         auto left = generate(*node.left);
@@ -647,21 +672,61 @@ lir_node_list lir_generator::generate(const node_binary_expression& node)
             .right = std::move(right[0]),
             .assigned_type = parse_context.resolved_type(node.assigned_type),
         };
-        lir_node_list result;
         result.push_back(std::make_unique<lir_node>(std::move(expr)));
-        return result;
     }
     else
     {
         lir_place target = get_place(*node.left);
-        lir_store_expression expr{
-            .target = target,
-            .value = std::move(right[0])
-        };
-        lir_node_list result;
-        result.push_back(std::make_unique<lir_node>(std::move(expr)));
-        return result;
+
+        node.right->value.visit(
+            [&](const auto& rhs) -> void
+            {
+                using RHS_TYPE = std::decay_t<decltype(rhs)>;
+
+                if constexpr (std::is_same_v<RHS_TYPE, node_record_initialisation>)
+                {
+                    std::vector<lir_field_initialisation> initialisations;
+                    auto record_type_id = parse_context.record_behind(rhs.type_spec);
+                    CAPY_ASSERT(record_type_id.has_value(), "LIR: the record initialisation should be on a record type or pointer to record type");
+
+                    const auto& type_spec = parse_context.types[to_index(record_type_id.value())];
+                    auto* rec_type = get_type_from_node<record_type>(type_spec);
+
+                    for (const auto& init : rhs.initialisations)
+                    {
+                        size_t field_index = 0;
+                        for (const auto& field_def : rec_type->fields)
+                        {
+                            if (init.field_name == field_def.first)
+                            {
+                                auto field_init_expr = generate(*init.init_expression);
+                                initialisations.push_back(
+                                    lir_field_initialisation{{}, field_index, std::move(field_init_expr[0])}
+                                );
+                                break;
+                            }
+                            field_index++;
+                        }
+                    }
+
+                    lir_store_record_expression expr{
+                        .target = target,
+                        .initialisations = std::move(initialisations)
+                    };
+                    result.push_back(std::make_unique<lir_node>(std::move(expr)));
+                }
+                else
+                {
+                    lir_store_expression expr{
+                        .target = target,
+                        .value = std::move(right[0])
+                    };
+                    result.push_back(std::make_unique<lir_node>(std::move(expr)));
+                }
+            }
+        );
     };
+    return result;
 }
 
 lir_node_list lir_generator::generate(const node_break_statement& node)
