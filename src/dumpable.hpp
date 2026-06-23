@@ -189,6 +189,40 @@ void dump_parent_if_base(const Derived& def, DumpParentFn&& dump_parent)
         dump_##node_ns(os, ctx, *entry, -(abs(indent) + 4)); \
     }
 
+#elif defined(DEFINE_VISITOR_FUNCS)
+
+#undef DEF_NODE
+#define DEF_NODE(node_ns, node_name, parent) \
+    virtual void process(source_range location, node_ns##_##node_name& node) = 0;
+
+#undef DEF_BASE_NODE
+#define DEF_BASE_NODE(node_ns, node_name, parent) \
+    virtual void process(source_range location, node_ns##_##node_name& node) = 0;
+
+#undef DEF_END
+#define DEF_END
+
+#undef DEF_NO_DUMP_PLAIN
+#define DEF_NO_DUMP_PLAIN(text)
+
+#undef DEF_NO_DUMP
+#define DEF_NO_DUMP(type, name)
+
+#undef DEF_SCALAR_FIELD
+#define DEF_SCALAR_FIELD(type, name)
+
+#undef DEF_SCALAR_WITH_CONTEXT
+#define DEF_SCALAR_WITH_CONTEXT(type, name)
+
+#undef DEF_NODE_FIELD
+#define DEF_NODE_FIELD(namespace, type, name)
+
+#undef DEF_LIST_FIELD
+#define DEF_LIST_FIELD(namespace, type, name)
+
+#undef DEF_NODE_LIST_FIELD
+#define DEF_NODE_LIST_FIELD(namespace, type, name)
+
 #else
 
 #endif

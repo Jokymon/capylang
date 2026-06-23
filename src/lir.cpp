@@ -792,6 +792,111 @@ std::unique_ptr<lir_function_definition> lir_generator::generate(const node_func
     return func;
 }
 
+lir_visitor::lir_visitor()
+{
+}
+
+void lir_visitor::visit(lir_node& root)
+{
+    root.value.visit(
+        [&](auto& n) -> void
+        {
+            process(root.location, n);
+        }
+    );
+}
+
+void lir_visitor::visit_nodes(lir_module& module)
+{
+    for (const auto& import_def : module.imports)
+    {
+        process(import_def->location, *import_def);
+    }
+}
+
+void lir_visitor::visit_nodes(lir_function_definition& func_def)
+{
+    for (const auto& expression : func_def.code)
+    {
+        visit(*expression);
+    }
+}
+
+void lir_visitor::visit_nodes(lir_store_record_expression& sr_expr)
+{
+    for (const auto& init : sr_expr.initialisations)
+    {
+        visit(*init.value);
+    }
+}
+
+void lir_visitor::visit_nodes(lir_store_expression& s_expr)
+{
+    visit(*s_expr.value);
+}
+
+void lir_visitor::visit_nodes(lir_if_expression& i_expr)
+{
+    visit(*i_expr.condition);
+
+    for (const auto& expression : i_expr.then_code)
+    {
+        visit(*expression);
+    }
+
+    for (const auto& expression : i_expr.else_code)
+    {
+        visit(*expression);
+    }
+}
+
+void lir_visitor::visit_nodes(lir_while_expression& w_expr)
+{
+    visit(*w_expr.condition);
+
+    for (const auto& expression : w_expr.while_code)
+    {
+        visit(*expression);
+    }
+}
+
+void lir_visitor::visit_nodes(lir_unary_expression& expr)
+{
+    visit(*expr.expr);
+}
+
+void lir_visitor::visit_nodes(lir_binary_expression& expr)
+{
+    visit(*expr.left);
+    visit(*expr.right);
+}
+
+void lir_visitor::visit_nodes(lir_cast_expression& expr)
+{
+    visit(*expr.expression);
+}
+
+void lir_visitor::visit_nodes(lir_discard_expression& expr)
+{
+    visit(*expr.expression);
+}
+
+void lir_visitor::visit_nodes(lir_return_expression& expr)
+{
+    if (expr.expression)
+    {
+        visit(*expr.expression);
+    }
+}
+
+void lir_visitor::visit_nodes(lir_function_call& func_call)
+{
+    for (const auto& param : func_call.arguments)
+    {
+        visit(*param);
+    }
+}
+
 // --------------------------------------------------------
 
 #define DEFINE_DUMP_FUNCS

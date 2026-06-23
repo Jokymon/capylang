@@ -168,6 +168,32 @@ private:
     context& parse_context;
 };
 
+class lir_visitor
+{
+public:
+    lir_visitor();
+    void visit(lir_node& root);
+
+protected:
+    void visit_nodes(lir_module& module);
+    void visit_nodes(lir_function_definition& func_def);
+    void visit_nodes(lir_store_record_expression& sr_expr);
+    void visit_nodes(lir_store_expression& s_expr);
+    void visit_nodes(lir_if_expression& i_expr);
+    void visit_nodes(lir_while_expression& w_expr);
+    void visit_nodes(lir_unary_expression& expr);
+    void visit_nodes(lir_binary_expression& expr);
+    void visit_nodes(lir_cast_expression& expr);
+    void visit_nodes(lir_discard_expression& expr);
+    void visit_nodes(lir_return_expression& expr);
+    void visit_nodes(lir_function_call& func_call);
+
+#define DEFINE_VISITOR_FUNCS
+#include "dumpable.hpp"
+#include "lir_nodes.hpp"
+#undef DEFINE_VISITOR_FUNCS
+};
+
 // ----------------------------------------------------------
 
 void dump_lir(std::ostream& os, const context& ctx, const lir_module& module_def, int indent = 0);
