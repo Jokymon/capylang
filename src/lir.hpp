@@ -84,6 +84,7 @@ struct lir_number;
 struct lir_char_literal;
 struct lir_bool_literal;
 struct lir_string_literal;
+struct lir_allocate_record_expression;
 struct lir_store_record_expression;
 struct lir_load_expression;
 struct lir_store_expression;
@@ -102,6 +103,7 @@ using lir_node_raw = std::variant<
     lir_char_literal,
     lir_bool_literal,
     lir_string_literal,
+    lir_allocate_record_expression,
     lir_store_record_expression,
     lir_load_expression,
     lir_store_expression,

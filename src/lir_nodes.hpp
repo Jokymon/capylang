@@ -22,6 +22,10 @@ DEF_NODE(lir, field_initialisation, lir_base)
     DEF_NODE_FIELD(lir, lir_node, value)
 DEF_END
 
+DEF_NODE(lir, allocate_record_expression, lir_base)
+    DEF_SCALAR_WITH_CONTEXT(type_id, type)
+DEF_END
+
 DEF_NODE(lir, store_record_expression, lir_base)
     DEF_SCALAR_FIELD(lir_place, target)
     DEF_LIST_FIELD(lir, lir_field_initialisation, initialisations)
