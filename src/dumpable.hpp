@@ -76,38 +76,48 @@ void dump_parent_if_base(const Derived& def, DumpParentFn&& dump_parent)
 
 #ifdef DEFINE_NODES
 
+#undef DEF_NODE
 #define DEF_NODE(node_ns, node_name, parent)     \
     struct node_ns##_##node_name : public parent \
     {                                            \
         static constexpr bool is_base = false;
 
+#undef DEF_BASE_NODE
 #define DEF_BASE_NODE(node_ns, node_name, parent) \
     struct node_ns##_##node_name : public parent  \
     {                                             \
         static constexpr bool is_base = true;
 
+#undef DEF_END
 #define DEF_END \
     }           \
     ;
 
+#undef DEF_NO_DUMP
 #define DEF_NO_DUMP(type, name) \
     type name;
 
+#undef DEF_NO_DUMP_PLAIN
 #define DEF_NO_DUMP_PLAIN(text) \
     text
 
+#undef DEF_SCALAR_FIELD
 #define DEF_SCALAR_FIELD(type, name) \
     type name;
 
+#undef DEF_SCALAR_WITH_CONTEXT
 #define DEF_SCALAR_WITH_CONTEXT(type, name) \
     type name;
 
+#undef DEF_NODE_FIELD
 #define DEF_NODE_FIELD(node_ns, type, name) \
     std::unique_ptr<type> name;
 
+#undef DEF_LIST_FIELD
 #define DEF_LIST_FIELD(node_ns, type, name) \
     std::vector<type> name;
 
+#undef DEF_NODE_LIST_FIELD
 #define DEF_NODE_LIST_FIELD(node_ns, type, name) \
     std::vector<std::unique_ptr<type>> name;
 
