@@ -1,0 +1,14 @@
+@include <cstddef>
+@include <cstdint>
+@include "symbol.hpp"
+
+identifier: std::string
+number: long long
+boolean: bool
+type: type_id
+symbol: symbol_id
+function_signature: function_signature
+character: std::uint32_t
+index: std::size_t
+source_range: source_range
+scope: std::unique_ptr<scope>

@@ -1,6 +1,7 @@
 #include "args_parse.hpp"
 #include "diagnostics.hpp"
 #include "emitter.hpp"
+#include "lir_dump.hpp"
 #include "lir_generator.hpp"
 #include "normalization.hpp"
 #include "parser.hpp"
@@ -10,6 +11,26 @@
 #include "wat_generator.hpp"
 #include <iostream>
 #include <fstream>
+
+void dump_value(std::ostream& out, context& context, const source_range& range)
+{
+    out << range.start.filename << ":" << range.start.line << ":" << range.start.column;
+}
+
+void dump_value(std::ostream& out, context& context, const function_signature& sig)
+{
+    out << context.repr(sig.function_type);
+}
+
+void dump_value(std::ostream& out, context& context, const type_id& value)
+{
+    out << context.repr(value);
+}
+
+void dump_value(std::ostream& out, context& context, const symbol_id& value)
+{
+    out << context.repr(value);
+}
 
 int main(int argc, char* argv[])
 {
@@ -116,7 +137,7 @@ int main(int argc, char* argv[])
     if (args.dump_lir)
     {
         lir_generator lir_gen{parse_context};
-        dump_lir(std::cout, parse_context, lir_gen.generate(root_node));
+        lir::dump(std::cout, parse_context, lir_gen.generate(root_node));
         return 0;
     }
 

@@ -1,0 +1,181 @@
+module lir
+
+trait Location
+    location: source_range
+end
+
+trait Attributes
+    attributes: *identifier
+end
+
+node BaseVar
+    name: identifier
+    symbol_ref: symbol
+end
+
+node Deref
+end
+
+node Field
+    index: index
+end
+
+choice PlaceElem
+    Deref | Field
+end
+
+// Description of a storage place
+node Place
+    base: value BaseVar
+    projection: *value PlaceElem
+end
+
+// Literal expressions
+node Number
+    value: number
+    assigned_type: type
+end
+
+node CharLiteral
+    ch: character
+end
+
+node BoolLiteral
+    value: boolean
+end
+
+node StringLiteral
+    table_index: index
+    size: number
+end
+
+// Non-literal expressions
+node AllocateRecordExpression
+    type: type
+end
+
+node FieldInitialisation
+    field_index: index
+    value: Expr
+end
+
+node StoreRecordExpression
+    target: value Place
+    initialisations: *value FieldInitialisation
+    stored_type: type
+end
+
+node LoadExpression
+    source: value Place
+    assigned_type: type
+end
+
+node StoreExpression
+    target: value Place
+    value: Expr
+    stored_type: type
+end
+
+node IfExpression
+    condition: Expr
+    then_code: *Expr
+    else_code: *Expr
+    assigned_type: type
+end
+
+node WhileExpression
+    condition: Expr
+    while_code: *Expr
+end
+
+node FunctionCall
+    function_name: identifier
+    symbol_ref: symbol
+    arguments: *Expr
+end
+
+node CastExpression
+    expression: Expr
+    cast_type: type
+end
+
+node DiscardExpression
+    expression: Expr
+end
+
+node ReturnExpression
+    expression: Expr
+    is_explicit: boolean
+end
+
+node BreakStatement
+end
+
+node UnaryExpression
+    expr: Expr
+    assigned_type: type
+end
+
+enum BinaryOp
+    Multiply | Division | Modulus | Plus | Minus
+    | Equals | NotEquals | LessThan | LessThanEqual | GreaterThan | GreaterThanEqual
+    | AndOp | OrOp | Shl | Shr
+end
+
+node BinaryExpression
+    op: BinaryOp
+    left: Expr
+    right: Expr
+    assigned_type: type
+end
+
+choice Expr
+    Number
+    | CharLiteral
+    | BoolLiteral
+    | StringLiteral
+    | AllocateRecordExpression
+    | StoreRecordExpression
+    | LoadExpression
+    | StoreExpression
+    | IfExpression
+    | WhileExpression
+    | FunctionCall
+    | CastExpression
+    | DiscardExpression
+    | ReturnExpression
+    | BreakStatement
+    | UnaryExpression
+    | BinaryExpression
+end
+
+// Elements beyond expressions
+node FunctionHead with Location
+    name: identifier
+    signature: function_signature
+end
+
+node FunctionDefinition with Attributes
+    head: value FunctionHead
+    code: *Expr
+    function_scope: transient scope
+end
+
+node ImportDefinition with Location
+    ns_name: identifier
+    function_head: value FunctionHead
+    alias: ?identifier
+end
+
+node GlobalDefinition with Location
+    name: identifier
+    assigned_type: type
+    symbol_ref: symbol
+    init_value: number
+end
+
+node Module with Location
+    imports: *ImportDefinition
+    globals: *GlobalDefinition
+    functions: *FunctionDefinition
+end
