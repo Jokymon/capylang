@@ -370,6 +370,31 @@ std::string context::repr(type_id type_idx) const
     );
 }
 
+std::string context::repr(symbol_id sym_idx) const
+{
+    const auto& sym = symbols[to_index(sym_idx)];
+    std::string sym_kind = "";
+    switch (sym.kind)
+    {
+        case symbol_kind::error:
+            sym_kind = "error";
+            break;
+        case symbol_kind::global_var:
+            sym_kind = "global";
+            break;
+        case symbol_kind::local_var:
+            sym_kind = "local";
+            break;
+        case symbol_kind::argument:
+            sym_kind = "argument";
+            break;
+        case symbol_kind::function:
+            sym_kind = "function";
+            break;
+    }
+    return sym.name + " (" + sym_kind + "): " + repr(sym.symbol_type);
+}
+
 symbol_id context::create_symbol(symbol sym)
 {
     symbol_id id{static_cast<std::uint32_t>(symbols.size())};

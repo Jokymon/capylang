@@ -318,6 +318,7 @@ struct context
     std::optional<primitive_type> primitive_type_of(type_id type_idx) const;
 
     std::string repr(type_id type_idx) const;
+    std::string repr(symbol_id sym_idx) const;
 
     symbol_id create_symbol(symbol sym);
     symbol& symbol_at(symbol_id idx);
