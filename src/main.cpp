@@ -1,7 +1,7 @@
 #include "args_parse.hpp"
 #include "diagnostics.hpp"
 #include "emitter.hpp"
-#include "lir.hpp"
+#include "lir_generator.hpp"
 #include "normalization.hpp"
 #include "parser.hpp"
 #include "semantics.hpp"
