@@ -13,3 +13,10 @@ struct source_range
     source_position start;
     source_position end;
 };
+
+template <typename T>
+struct located
+{
+    T value;
+    source_range location;
+};

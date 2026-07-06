@@ -7,13 +7,6 @@
 #include <variant>
 #include <vector>
 
-template <typename T>
-struct located
-{
-    T value;
-    source_range location;
-};
-
 struct node_base
 {
 };
