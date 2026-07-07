@@ -1,6 +1,7 @@
 import pytest
 import sys
 sys.path.append("./tools")
+sys.path.append("./tools/grammar")  # for the Linux version :-(
 import extract_samples
 import verify_grammar
 
