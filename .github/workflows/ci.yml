@@ -110,6 +110,10 @@ jobs:
       - name: Install vsce
         run: npm install -g @vscode/vsce
 
+      - name: Install npm dependencies
+        working-directory: capylang
+        run: npm install
+
       - name: Package VSCode extension
         working-directory: capylang
         run: vsce package
