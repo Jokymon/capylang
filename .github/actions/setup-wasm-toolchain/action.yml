@@ -9,7 +9,7 @@ runs:
   using: "composite"
   steps:
     - name: "Linux: install ninja, tools and WASI SDK"
-      if: ${{ runner.os }} == 'Linux'
+      if: ${{ runner.os == 'Linux' }}
       shell: bash
       run: |
         set -e
@@ -34,7 +34,7 @@ runs:
         sudo install -m 755 "$RUNNER_TEMP/wasm-tools-1.244.0-x86_64-linux/wasm-tools" /usr/local/bin/wasm-tools || true
 
     - name: "Windows: install ninja, WASI SDK, wasmtime, wasm-tools"
-      if: ${{ runner.os }} == 'Windows'
+      if: ${{ runner.os == 'Windows' }}
       shell: pwsh
       run: |
         New-Item -ItemType Directory -Force -Path C:\sw | Out-Null
