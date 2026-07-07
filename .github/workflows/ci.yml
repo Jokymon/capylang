@@ -20,7 +20,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.14"
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v4
@@ -31,42 +31,10 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Install Ninja
-        shell: pwsh
-        run: choco install ninja --no-progress -y
-
-      - name: Install WASI SDK and sysroot
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path C:\sw | Out-Null
-          $archive = Join-Path $env:RUNNER_TEMP "wasi-sdk-29.0-x86_64-windows.tar.gz"
-          Invoke-WebRequest -Uri "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-29/wasi-sdk-29.0-x86_64-windows.tar.gz" -OutFile $archive
-          tar -xzf $archive -C C:\sw
-          Copy-Item -Path "C:\sw\wasi-sdk-29.0-x86_64-windows\share\wasi-sysroot" -Destination "C:\sw\wasi-sysroot-29.0" -Recurse -Force
-
-      - name: Install Wasmtime
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path C:\sw\bin | Out-Null
-          $archive = Join-Path $env:RUNNER_TEMP "wasmtime-v41.0.0-x86_64-windows.zip"
-          Invoke-WebRequest -Uri "https://github.com/bytecodealliance/wasmtime/releases/download/v41.0.0/wasmtime-v41.0.0-x86_64-windows.zip" -OutFile $archive
-          Expand-Archive -Path $archive -DestinationPath $env:RUNNER_TEMP -Force
-          Copy-Item -Path (Join-Path $env:RUNNER_TEMP "wasmtime-v41.0.0-x86_64-windows\wasmtime.exe") -Destination "C:\sw\bin\wasmtime.exe" -Force
-
-      - name: Install wasm-tools
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path C:\sw\bin | Out-Null
-          $archive = Join-Path $env:RUNNER_TEMP "wasm-tools-1.244.0-x86_64-windows.zip"
-          Invoke-WebRequest -Uri "https://github.com/bytecodealliance/wasm-tools/releases/download/v1.244.0/wasm-tools-1.244.0-x86_64-windows.zip" -OutFile $archive
-          Expand-Archive -Path $archive -DestinationPath $env:RUNNER_TEMP -Force
-          Copy-Item -Path (Join-Path $env:RUNNER_TEMP "wasm-tools-1.244.0-x86_64-windows\wasm-tools.exe") -Destination "C:\sw\bin\wasm-tools.exe" -Force
-
-      - name: Add tool paths
-        shell: pwsh
-        run: |
-          "C:\sw\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          "C:\sw\wasi-sdk-29.0-x86_64-windows\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Setup WASI toolchain and wasm tools
+        uses: ./.github/actions/setup-wasm-toolchain
+        with:
+          wasi-version: "29"
 
       - name: Configure
         shell: pwsh
@@ -101,6 +69,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup WASI toolchain and wasm tools
+        uses: ./.github/actions/setup-wasm-toolchain
+        with:
+          wasi-version: "29"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -141,7 +114,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.14"
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v4
@@ -152,35 +125,10 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Install Ninja
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build
-
-      - name: Install WASI SDK and sysroot
-        run: |
-          curl -L "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-29/wasi-sdk-29.0-x86_64-linux.tar.gz" -o "$RUNNER_TEMP/wasi-sdk.tar.gz"
-          sudo tar -xzf "$RUNNER_TEMP/wasi-sdk.tar.gz" -C /opt
-          if [ -d /opt/wasi-sdk-29.0 ]; then
-            sudo rm -rf /opt/wasi-sdk-29.0
-          fi
-          sudo mv /opt/wasi-sdk-29.0-x86_64-linux /opt/wasi-sdk-29.0
-          if [ -d /opt/wasi-sysroot-29.0 ]; then
-            sudo rm -rf /opt/wasi-sysroot-29.0
-          fi
-          sudo cp -R /opt/wasi-sdk-29.0/share/wasi-sysroot /opt/wasi-sysroot-29.0
-
-      - name: Install Wasmtime
-        run: |
-          curl -L "https://github.com/bytecodealliance/wasmtime/releases/download/v41.0.0/wasmtime-v41.0.0-x86_64-linux.tar.xz" -o "$RUNNER_TEMP/wasmtime.tar.xz"
-          tar -xf "$RUNNER_TEMP/wasmtime.tar.xz" -C "$RUNNER_TEMP"
-          sudo install -m 755 "$RUNNER_TEMP/wasmtime-v41.0.0-x86_64-linux/wasmtime" /usr/local/bin/wasmtime
-
-      - name: Install wasm-tools
-        run: |
-          curl -L "https://github.com/bytecodealliance/wasm-tools/releases/download/v1.244.0/wasm-tools-1.244.0-x86_64-linux.tar.gz" -o "$RUNNER_TEMP/wasm-tools.tar.gz"
-          tar -xzf "$RUNNER_TEMP/wasm-tools.tar.gz" -C "$RUNNER_TEMP"
-          sudo install -m 755 "$RUNNER_TEMP/wasm-tools-1.244.0-x86_64-linux/wasm-tools" /usr/local/bin/wasm-tools
+      - name: Setup WASI toolchain and wasm tools
+        uses: ./.github/actions/setup-wasm-toolchain
+        with:
+          wasi-version: "29"
 
       - name: Configure
         run: cmake -S . -B build -G Ninja --toolchain cmake/wasm-wasip-clang.cmake

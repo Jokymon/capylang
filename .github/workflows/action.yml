@@ -1,0 +1,56 @@
+name: "Setup WASI toolchain and wasm build tools"
+description: "Install Ninja, WASI SDK (29), wasmtime, and wasm-tools; add them to PATH. Works on ubuntu-latest and windows-latest."
+inputs:
+  wasi-version:
+    description: "WASI SDK major version to install (default 29)"
+    required: false
+    default: "29"
+runs:
+  using: "composite"
+  steps:
+    - name: Linux: install ninja, tools and WASI SDK
+      if: "${{ runner.os }} == 'Linux'"
+      run: |
+        set -e
+        sudo apt-get update
+        sudo apt-get install -y ninja-build curl tar cmake clang
+        # download and install WASI SDK
+        curl -L "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${{ inputs.wasi-version }}/wasi-sdk-${{ inputs.wasi-version }}.0-x86_64-linux.tar.gz" -o "$RUNNER_TEMP/wasi-sdk.tar.gz"
+        sudo tar -xzf "$RUNNER_TEMP/wasi-sdk.tar.gz" -C /opt
+        if [ -d /opt/wasi-sdk-${{ inputs.wasi-version }} ]; then
+          sudo rm -rf /opt/wasi-sdk-${{ inputs.wasi-version }}
+        fi
+        sudo mv /opt/wasi-sdk-${{ inputs.wasi-version }}-x86_64-linux /opt/wasi-sdk-${{ inputs.wasi-version }} || true
+        sudo cp -R /opt/wasi-sdk-${{ inputs.wasi-version }}/share/wasi-sysroot /opt/wasi-sysroot-${{ inputs.wasi-version }}
+        echo "/opt/wasi-sdk-${{ inputs.wasi-version }}/bin" >> $GITHUB_PATH
+        # wasmtime
+        curl -L "https://github.com/bytecodealliance/wasmtime/releases/download/v41.0.0/wasmtime-v41.0.0-x86_64-linux.tar.xz" -o "$RUNNER_TEMP/wasmtime.tar.xz"
+        tar -xf "$RUNNER_TEMP/wasmtime.tar.xz" -C "$RUNNER_TEMP"
+        sudo install -m 755 "$RUNNER_TEMP/wasmtime-v41.0.0-x86_64-linux/wasmtime" /usr/local/bin/wasmtime || true
+        # wasm-tools
+        curl -L "https://github.com/bytecodealliance/wasm-tools/releases/download/v1.244.0/wasm-tools-1.244.0-x86_64-linux.tar.gz" -o "$RUNNER_TEMP/wasm-tools.tar.gz"
+        tar -xzf "$RUNNER_TEMP/wasm-tools.tar.gz" -C "$RUNNER_TEMP"
+        sudo install -m 755 "$RUNNER_TEMP/wasm-tools-1.244.0-x86_64-linux/wasm-tools" /usr/local/bin/wasm-tools || true
+
+    - name: Windows: install ninja, WASI SDK, wasmtime, wasm-tools
+      if: "${{ runner.os }} == 'Windows'"
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force -Path C:\sw | Out-Null
+        choco install ninja --no-progress -y
+        $archive = Join-Path $env:RUNNER_TEMP "wasi-sdk-${{ inputs.wasi-version }}-x86_64-windows.tar.gz"
+        Invoke-WebRequest -Uri "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${{ inputs.wasi-version }}/wasi-sdk-${{ inputs.wasi-version }}.0-x86_64-windows.tar.gz" -OutFile $archive
+        tar -xzf $archive -C C:\sw
+        Copy-Item -Path "C:\sw\wasi-sdk-${{ inputs.wasi-version }}.0-x86_64-windows\share\wasi-sysroot" -Destination "C:\sw\wasi-sysroot-${{ inputs.wasi-version }}" -Recurse -Force
+        # wasmtime
+        $wasmtimeArchive = Join-Path $env:RUNNER_TEMP "wasmtime-v41.0.0-x86_64-windows.zip"
+        Invoke-WebRequest -Uri "https://github.com/bytecodealliance/wasmtime/releases/download/v41.0.0/wasmtime-v41.0.0-x86_64-windows.zip" -OutFile $wasmtimeArchive
+        Expand-Archive -Path $wasmtimeArchive -DestinationPath $env:RUNNER_TEMP -Force
+        Copy-Item -Path (Join-Path $env:RUNNER_TEMP "wasmtime-v41.0.0-x86_64-windows\wasmtime.exe") -Destination "C:\sw\bin\wasmtime.exe" -Force
+        # wasm-tools
+        $wasmToolsArchive = Join-Path $env:RUNNER_TEMP "wasm-tools-1.244.0-x86_64-windows.zip"
+        Invoke-WebRequest -Uri "https://github.com/bytecodealliance/wasm-tools/releases/download/v1.244.0/wasm-tools-1.244.0-x86_64-windows.zip" -OutFile $wasmToolsArchive
+        Expand-Archive -Path $wasmToolsArchive -DestinationPath $env:RUNNER_TEMP -Force
+        Copy-Item -Path (Join-Path $env:RUNNER_TEMP "wasm-tools-1.244.0-x86_64-windows\wasm-tools.exe") -Destination "C:\sw\bin\wasm-tools.exe" -Force
+        "C:\sw\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        "C:\sw\wasi-sdk-${{ inputs.wasi-version }}.0-x86_64-windows\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
