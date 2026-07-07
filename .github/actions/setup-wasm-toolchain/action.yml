@@ -22,7 +22,7 @@ runs:
           sudo rm -rf /opt/wasi-sdk-${{ inputs.wasi-version }}
         fi
         sudo mv /opt/wasi-sdk-${{ inputs.wasi-version }}.0-x86_64-linux /opt/wasi-sdk-${{ inputs.wasi-version }}.0 || true
-        sudo cp -R /opt/wasi-sdk-${{ inputs.wasi-version }}/share/wasi-sysroot /opt/wasi-sysroot-${{ inputs.wasi-version }}.0
+        sudo cp -R /opt/wasi-sdk-${{ inputs.wasi-version }}.0/share/wasi-sysroot /opt/wasi-sysroot-${{ inputs.wasi-version }}.0
         echo "/opt/wasi-sdk-${{ inputs.wasi-version }}.0/bin" >> $GITHUB_PATH
         # wasmtime
         curl -L "https://github.com/bytecodealliance/wasmtime/releases/download/v41.0.0/wasmtime-v41.0.0-x86_64-linux.tar.xz" -o "$RUNNER_TEMP/wasmtime.tar.xz"
