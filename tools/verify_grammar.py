@@ -20,6 +20,10 @@ def generate_parser_files():
     sys.argv = [ sys.argv[0], "-Dlanguage=Python3", "./grammar/CapylangParserGrammar.g4", "./grammar/CapylangLexerGrammar.g4", "-o", "tools" ]
     cp = antlr4_cli_wrapper()
     sys.argv = old_sys_argv
+    import os
+    print("Content of .: ", os.listdir("./"))
+    print("Content of tools: ", os.listdir("./tools"))
+    print("Content of grammar: ", os.listdir("./grammar"))
     return cp
 
 
