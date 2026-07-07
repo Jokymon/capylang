@@ -21,15 +21,9 @@ runs:
         if [ -d /opt/wasi-sdk-${{ inputs.wasi-version }} ]; then
           sudo rm -rf /opt/wasi-sdk-${{ inputs.wasi-version }}
         fi
-        echo "Content of /opt:"
-        ls /opt
-        sudo mv /opt/wasi-sdk-${{ inputs.wasi-version }}.0-x86_64-linux /opt/wasi-sdk-${{ inputs.wasi-version }} || true
-        sudo cp -R /opt/wasi-sdk-${{ inputs.wasi-version }}/share/wasi-sysroot /opt/wasi-sysroot-${{ inputs.wasi-version }}
-        echo "/opt/wasi-sdk-${{ inputs.wasi-version }}/bin" >> $GITHUB_PATH
-        echo "Content of /opt:"
-        ls /opt
-        echo "Content of GITHUBPATH:"
-        cat $GITHUB_PATH
+        sudo mv /opt/wasi-sdk-${{ inputs.wasi-version }}.0-x86_64-linux /opt/wasi-sdk-${{ inputs.wasi-version }}.0 || true
+        sudo cp -R /opt/wasi-sdk-${{ inputs.wasi-version }}/share/wasi-sysroot /opt/wasi-sysroot-${{ inputs.wasi-version }}.0
+        echo "/opt/wasi-sdk-${{ inputs.wasi-version }}.0/bin" >> $GITHUB_PATH
         # wasmtime
         curl -L "https://github.com/bytecodealliance/wasmtime/releases/download/v41.0.0/wasmtime-v41.0.0-x86_64-linux.tar.xz" -o "$RUNNER_TEMP/wasmtime.tar.xz"
         tar -xf "$RUNNER_TEMP/wasmtime.tar.xz" -C "$RUNNER_TEMP"
