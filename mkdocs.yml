@@ -8,6 +8,9 @@ strict: true
 theme:
   name: mkdocs
 
+extra_css:
+  - stylesheets/extra.css
+
 nav:
   - Overview: index.md
   - Compiler Pipeline: compiler-pipeline.md
