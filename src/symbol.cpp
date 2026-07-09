@@ -188,7 +188,7 @@ bool context::resolve(type_id idx1, type_id idx2)
     return false;
 }
 
-std::optional<type_id> context::record_behind(type_id record_or_pointer_type)
+std::optional<type_id> context::record_behind(type_id record_or_pointer_type) const
 {
     if (is_pointer_type(record_or_pointer_type))
     {
@@ -219,6 +219,24 @@ std::optional<type_id> context::find_base_type(type_id pointer_type_idx)
     {
         return pointer_type_idx;
     }
+}
+
+std::optional<type_id> context::derefed_type(type_id pointer_type_idx) const
+{
+    type_id actual_type = resolved_type(pointer_type_idx);
+    auto t = types[to_index(pointer_type_idx)];
+    // this shouldn't happen after calling resolved_type, but maybe we use this
+    // function before all type were resolved
+    if (!std::holds_alternative<type_kind>(t))
+        return std::nullopt;
+
+    auto kind = std::get<type_kind>(t);
+    if (std::holds_alternative<pointer_type>(kind))
+    {
+        const pointer_type& p = std::get<pointer_type>(kind);
+        return p.to;
+    }
+    return std::nullopt;
 }
 
 std::optional<type_id> context::record_field_type(type_id record_type_idx, const std::string& field_name)
