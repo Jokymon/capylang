@@ -46,6 +46,8 @@ lowering and code generation. The current normalizations include:
 
 - Converting a final expression without a trailing semicolon into an explicit
   `return` expression.
+- Add explicit pointer dereferencing nodes for record field accesses where they
+  are missing and where the field access is on a pointer to a record
 
 This stage is where additional syntactic sugar should be lowered into more
 uniform internal forms.

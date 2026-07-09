@@ -471,8 +471,6 @@ void emitter::emit(const node_field_deref& field_deref)
             field_deref.fieldname
         );
         CAPY_ASSERT(maybe_size.has_value(), "A record field should have its offset calculated by this point");
-
-        cur_block->load(wasm_type::i32, maybe_size.value());
     }
 }
 

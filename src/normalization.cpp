@@ -1,4 +1,5 @@
 #include "normalization.hpp"
+#include "tools.hpp"
 
 normalization::normalization(context& ctx)
 : ast_visitor()
@@ -17,7 +18,29 @@ void normalization::process(source_range, node_bool_literal&) {}
 void normalization::process(source_range, node_string_literal&) {}
 void normalization::process(source_range, node_var_reference&) {}
 void normalization::process(source_range, node_record_definition&) {}
-void normalization::process(source_range, node_field_deref&) {}
+
+void normalization::process(source_range range, node_field_deref& n)
+{
+    visit(*n.object);
+
+    if (parse_context.is_pointer_type(n.object_type))
+    {
+        // turn an implicit pointer dereferencing into an explicit one.
+        auto ptr_base_type = parse_context.derefed_type(n.object_type);
+        // We have just checked for ptr type before, this should work
+        CAPY_ASSERT(ptr_base_type.has_value(), "Fatal compiler error");
+        ;
+        n.object = std::make_unique<node_expr>(node_expr{
+            .value = node_pointer_deref{
+                .pointer_expression = std::move(n.object),
+                .assigned_type = ptr_base_type.value(),
+                .context = current_context
+            },
+            .location = range
+        });
+    }
+}
+
 void normalization::process(source_range, node_global_definition&) {}
 void normalization::process(source_range, node_import_definition&) {}
 

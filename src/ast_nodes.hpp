@@ -30,6 +30,7 @@ DEF_END
 DEF_NODE(node, pointer_deref, node_base)
     DEF_NODE_FIELD(node, node_expr, pointer_expression)
     DEF_SCALAR_WITH_CONTEXT(type_id, assigned_type)
+    // TODO: check if the context is still needed after switching to LIR emitter
     DEF_SCALAR_FIELD(assign_context, context)
 DEF_END
 
