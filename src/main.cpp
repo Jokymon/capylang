@@ -1,6 +1,5 @@
 #include "args_parse.hpp"
 #include "diagnostics.hpp"
-#include "emitter.hpp"
 #include "lir_based_emitter.hpp"
 #include "lir_dump.hpp"
 #include "lir_generator.hpp"

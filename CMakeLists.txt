@@ -17,7 +17,6 @@ add_executable(${PROJECT_NAME}
     src/lir_lowering.cpp
     src/lir_visitor.cpp
     src/lower_cabi.cpp
-    src/emitter.cpp
     src/parser.cpp
     src/semantics.cpp
     src/symbol.cpp
