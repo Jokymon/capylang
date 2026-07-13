@@ -9,7 +9,7 @@ record iovec {
 
 fn print_s(s: string)
 {
-    let mut res: *u32 = cabi_realloc(0, 0, 4, 1) as *u32;
+    let mut res: *u32 = cabi_realloc(0, 0, 4, 4) as *u32;
 
     let v: *iovec = allocate iovec{
         buf = s.ptr as *u32,

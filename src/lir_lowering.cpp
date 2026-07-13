@@ -37,6 +37,11 @@ void lir_lowering::leave(lir::store_record_statement& expr)
         CAPY_ASSERT(init.field_index < record->fields.size(), "LIR record field initialisation index out of bounds");
 
         lir::place field_target = expr.target;
+        if (parse_context.is_pointer_type(expr.stored_type))
+        {
+            field_target.projection.push_back(lir::place_elem{lir::deref{}});
+        }
+
         field_target.projection.push_back(lir::place_elem{lir::field{init.field_index}});
 
         lir::store_statement field_store{

@@ -37,8 +37,6 @@ size_t lir_type_size(const context& ctx, type_id idx)
                             case primitive_type::Char:
                             case primitive_type::Boolean:
                                 return 4;
-                            // case primitive_type::String:
-                            //     return 8; // ptr and size fields
                         }
                     } else if constexpr (std::is_same_v<K, pointer_type>) {
                         return 4;
@@ -387,6 +385,84 @@ void transform_load(const context& parse_context, const storage_loc& storage, wa
     );
 }
 
+void transform_store(const context& parse_context, const storage_loc& storage, wasm_block& code_block)
+{
+    storage.visit(
+        overloaded{
+            [&](const sl_argument& arg)
+            {
+                if (parse_context.is_record_type(arg.type))
+                {
+                    const auto& rec_type_spec = parse_context.types[to_index(arg.type)];
+                    auto* rec_type = get_type_from_node<record_type>(rec_type_spec);
+                    size_t field_index = 0;
+                    for (const auto& field_definition : rec_type->fields)
+                    {
+                        // TODO: do we need to reverse the field order here?
+                        code_block.local_set((arg.name + "_" + std::to_string(field_index)).c_str());
+                        field_index++;
+                    }
+                }
+                else
+                {
+                    code_block.local_set(arg.name.c_str());
+                }
+            },
+            [&](const sl_local_var& local)
+            {
+                if (parse_context.is_record_type(local.type))
+                {
+                    const auto& rec_type_spec = parse_context.types[to_index(local.type)];
+                    auto* rec_type = get_type_from_node<record_type>(rec_type_spec);
+                    size_t field_index = 0;
+                    for (const auto& field_definition : rec_type->fields)
+                    {
+                        // TODO: do we need to reverse the field order here?
+                        code_block.local_set((local.name + "_" + std::to_string(field_index)).c_str());
+                        field_index++;
+                    }
+                }
+                else
+                {
+                    code_block.local_set(local.name.c_str());
+                }
+            },
+            [&](const sl_global_var& global)
+            {
+                if (parse_context.is_record_type(global.type))
+                {
+                    const auto& rec_type_spec = parse_context.types[to_index(global.type)];
+                    auto* rec_type = get_type_from_node<record_type>(rec_type_spec);
+                    size_t field_index = 0;
+                    for (const auto& field_definition : rec_type->fields)
+                    {
+                        // TODO: do we need to reverse the field order here?
+                        code_block.global_set((global.name + "_" + std::to_string(field_index)).c_str());
+                        field_index++;
+                    }
+                }
+                else
+                {
+                    code_block.global_set(global.name.c_str());
+                }
+            },
+            [&](const sl_ptr& ptr)
+            {
+                if (parse_context.is_primitive_type(ptr.type, primitive_type::U8))
+                {
+                    // TODO: we should simplify this by using a mapping from
+                    // primitive types to wasm_types
+                    code_block.store(wasm_type::u8, ptr.offset);
+                }
+                else
+                {
+                    code_block.store(wasm_type::i32, ptr.offset);
+                }
+            }
+        }
+    );
+}
+
 lir_based_emitter::lir_based_emitter(context& ctx)
 : parse_context(ctx)
 , lowering(new lower_cabi(ctx))
@@ -541,52 +617,17 @@ void lir_based_emitter::emit(const lir::while_statement& while_stmt)
 
 void lir_based_emitter::emit(const lir::store_statement& store)
 {
-    const auto& target_sym = parse_context.symbol_at(store.target.base.symbol_ref);
+    const auto& target_var = parse_context.symbol_at(store.target.base.symbol_ref);
 
-    // Turn projections into dereferencing operations and index/offset calculations
-
-    // TODO: generate any accessor elements/operations for this store and create
-    // an object that could be used to determine the type of operation
-    if (!store.target.projection.empty())
+    storage_loc sl = transform_symbol(parse_context, target_var);
+    for (const auto& elem : store.target.projection)
     {
-        // TODO: check that the last projection is actual a pointer deref
-        if (target_sym.kind == symbol_kind::global_var)
-        {
-            cur_block->global_get(target_sym.name.c_str());
-        }
-        else if (target_sym.kind == symbol_kind::local_var)
-        {
-            cur_block->local_get(target_sym.name.c_str());
-        }
+        sl = transform_place(parse_context, sl, elem, *cur_block);
     }
 
     emit(*store.value);
 
-    if (store.target.projection.empty())
-    {
-        if (target_sym.kind == symbol_kind::global_var)
-        {
-            cur_block->global_set(target_sym.name.c_str());
-        }
-        else if (target_sym.kind == symbol_kind::local_var)
-        {
-            cur_block->local_set(target_sym.name.c_str());
-        }
-    }
-    else
-    {
-        // TODO: check that it actually is pointer deref
-        auto base_type = parse_context.find_base_type(target_sym.symbol_type);
-        CAPY_ASSERT(base_type.has_value(), "LIR emitter: Expecting there to be a pointer type");
-        if (parse_context.is_primitive_type(base_type.value(), primitive_type::U8))
-        {
-            cur_block->store(wasm_type::i8);
-        }
-        else
-        {
-            cur_block->store(wasm_type::i32);
-        }
-    }
+    transform_store(parse_context, sl, *cur_block);
 }
 
 void lir_based_emitter::emit(const lir::store_string_statement& store)
@@ -808,7 +849,7 @@ void lir_based_emitter::emit(const lir::allocate_record_expression& expr)
     cur_block->const_val(wasm_type::i32, 0);
     cur_block->const_val(wasm_type::i32, 0);
     cur_block->const_val(wasm_type::i32, 4);
-    cur_block->const_val(wasm_type::i32, 0);
+    cur_block->const_val(wasm_type::i32, lir_type_size(parse_context, r_type));
     cur_block->call("cabi_realloc");
 }
 

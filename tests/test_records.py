@@ -25,6 +25,57 @@ fn _start() {
 
 
 @pytest.mark.good
+def test_multiple_fields_are_correctly_initialised():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+record s {
+    field1: u32,
+    field2: u32,
+};
+
+@export
+fn _start() {
+    let v: *s = allocate s{
+        field1=20u32,
+        field2=15u32,
+    };
+    proc_exit(v.field1 - v.field2)
+}
+"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 5
+
+
+@pytest.mark.good
+def test_allocate_uses_memory_based_storage():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+record s {
+    field1: u32,
+};
+
+@export
+fn _start() {
+    let v: *s = allocate s{
+        field1=18u32,
+    };
+    // This is a hacky approach to overwrite the record field through
+    // memory. If we still get 18 as return value, then the record was
+    // probably lowered to local variables
+    let x: *u32 = v as *u32;
+    *x = 99u32;
+    proc_exit(v.field1)
+}
+"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 99
+
+
+@pytest.mark.good
 def test_nested_record_access():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;

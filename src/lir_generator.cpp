@@ -267,6 +267,9 @@ lir::expr_list lir_generator::generate_exprs(const node_field_deref& node)
         // corresponding lir_field to the projection field
         const auto& type_spec = parse_context.types[to_index(node.object_type)];
         auto* rec_type = get_type_from_node<record_type>(type_spec);
+        // If we still see a pointer here, then something in normalization went wrong
+        CAPY_ASSERT(rec_type != nullptr, "LIR generator expects field access to already be normalized");
+
         size_t field_index = 0;
         type_id field_type = ILLEGAL_TYPE;
         for (const auto& field : rec_type->fields)
