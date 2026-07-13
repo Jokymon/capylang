@@ -98,7 +98,7 @@ Currently recognized builtin attributes:
 
 - `@export` marks a function for export from the generated WASM module.
 
-## Language IR Direction
+## Language IR (LIR)
 
 The language intermediate representation, or LIR, is loosely inspired by Rust
 MIR. Roughly half of the AST node shapes can be represented directly, but some
@@ -106,19 +106,19 @@ areas intentionally change in LIR.
 
 ### Explicit Load and Store Operations
 
-LIR introduces explicit `load` and `store` expressions. These can be understood
-as IR-only operations that work on a `place` abstraction rather than on
-source-level expressions alone.
+LIR introduces explicit `load` expressions and `store` statements. These can be
+understood as IR-only operations that work on a `place` abstraction rather than
+on source-level expressions alone.
 
 A `place` can represent:
 
 - A variable
 - Field access
-- Pointer dereference chains
+- Pointer dereference
 
 This is meant to simplify backend lowering because the emitter can distinguish
 read and write contexts directly instead of reconstructing them from general AST
-expressions.
+expressions and LHS/RHS context in assignments.
 
 ### Record Initialization Lowering
 
@@ -126,6 +126,24 @@ Record initializers are simplified into a structure that contains:
 
 - The record type
 - The initialization expressions in field-definition order
+
+### String Lowering
+
+String lowering is currently still a bit sketchy. When a string literal is used
+in a let-statement, then a special `store_string` LIR node is generated. We
+could have mapped this to a `store_record_statement`, but there is a problem
+with the field `ptr` of the string. This field only gets the correct/actual
+value in the final emitter-phase when we know the addresses of the string
+literals. So we would have had to treat any `store_record_statement` special,
+but only if it's type is a builtin string type.
+Currently this `store_string` node is only generated when we are in a `let`-
+statement, but not in an assignment expression. Fixing the assignment expression
+would be easy, but maybe we should start refactoring this part first into a
+common function block for assignments.
+Additionally, `store_string` is only generated, when we have a
+`node_string_literal` as RHS. Currently this is no problem as we do not provide
+any string-based operators or even string returning functions. But once we get
+to that point, we might have to make this check more intricate.
 
 ### Type Definitions Outside LIR
 
@@ -197,6 +215,23 @@ new precedent for syntax constructs, that we might not want to keep longterm.
    record uses are actually of form 2, the pointer based approach. That is what
    is currently assumed anyways. **DONE**
 2. Add support for value-based record representation. This is not yet supported
-   and would need to be implemented.
+   and would need to be implemented. **to be tested**
 3. Migrate the currently one-of "scalar"-type string to this new value-based
-   record type.
+   record type. **DONE**
+
+## Data type definition
+
+For the definitions of data types, used in tree representations, we want to move
+to project [silwright](https://pypi.org/project/silwright/). Using this project
+we can describe the used node types in a programming language independent form
+and generate all necessary code automatically. The first step is done for the
+introduction of the LIR.
+
+The existing usage of the X-Macro based definition of the AST-nodes is planned
+to be replaced with an ndef definition in the midterm as well to create a
+consistent experience in the project code.
+
+The main motivation of this change was the growing complexity of maintaining and
+extending the X-Macros. The bigger and bigger snippets of code that somehow got
+stitched together with multiple layers of macro code didn't help readability and
+a new approach was in need.

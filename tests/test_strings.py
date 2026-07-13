@@ -209,7 +209,7 @@ fn _start() {
     assert exit_code == 1
     assert (
         tools.normalize_filename_from_output(stderr)
-        == "filename:7:15: Unknown field 'thing' for string type\n"
+        == "filename:7:15: Unknown record field 'thing'\n"
     )
 
 # TODO: assigning from string literal should either create a copy of the string

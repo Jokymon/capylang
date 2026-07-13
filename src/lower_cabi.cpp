@@ -64,10 +64,6 @@ void lower_cabi::lower_function_argument(const type_kind& ty, const std::string&
                     case primitive_type::Boolean:
                         args.push_back({basename, wasm_type::i32});
                         break;
-                    case primitive_type::String:
-                        args.push_back({basename + "_ptr", wasm_type::i32});
-                        args.push_back({basename + "_size", wasm_type::i32});
-                        break;
                     default:
                         CAPY_FAIL("Unknown primitive type in function argument lowering");
                         break;
@@ -77,7 +73,22 @@ void lower_cabi::lower_function_argument(const type_kind& ty, const std::string&
             {
                 args.push_back({basename, wasm_type::i32});
             }
-            // TODO: implement record type passing
+            else if constexpr (std::is_same_v<K, record_type>)
+            {
+                size_t index = 0;
+                for (const auto& field : s.fields)
+                {
+                    type_id resolved_field_typ = parse_context.resolved_type(field.second);
+                    CAPY_ASSERT(parse_context.is_resolved(resolved_field_typ), "In emitter stage, all required types should be resolved");
+                    const auto& type_entry = parse_context.types[to_index(resolved_field_typ)];
+                    CAPY_ASSERT(std::holds_alternative<type_kind>(type_entry), "Unexpected type variable in resolved type");
+                    const auto& type_spec = std::get<type_kind>(type_entry);
+
+                    std::string fieldname = basename + "_" + std::to_string(index);
+                    lower_function_argument(type_spec, fieldname, args);
+                    index++;
+                }
+            }
             // TODO: for much later also consider function passing
             else
             {
@@ -108,25 +119,18 @@ void lower_cabi::lower_local_variables(const node_function_definition& func_def,
 
 void lower_cabi::lower_local_variable(const symbol& sym, wasm_function& func)
 {
-    if (parse_context.is_primitive_type(sym.symbol_type, primitive_type::String))
+    type_id var_type = parse_context.resolved_type(sym.symbol_type);
+    const auto& type_entry = parse_context.types[to_index(var_type)];
+    if (!std::holds_alternative<type_kind>(type_entry))
     {
-        func.allocate_local((sym.name + "_ptr").c_str(), wasm_type::i32);
-        func.allocate_local((sym.name + "_size").c_str(), wasm_type::i32);
+        printf("Checking variable %s\n", sym.name.c_str());
+        CAPY_FAIL("Encountered unresolved type variable in lowering to CABI");
     }
-    else
-    {
-        type_id var_type = parse_context.resolved_type(sym.symbol_type);
-        const auto& type_entry = parse_context.types[to_index(var_type)];
-        if (!std::holds_alternative<type_kind>(type_entry))
-        {
-            printf("Checking variable %s\n", sym.name.c_str());
-            CAPY_FAIL("Encountered unresolved type variable in lowering to CABI");
-        }
 
-        const auto& type_spec = std::get<type_kind>(type_entry);
+    const auto& type_spec = std::get<type_kind>(type_entry);
 
-        std::visit([&](const auto& k) -> void
-                   {
+    std::visit([&](const auto& k) -> void
+               {
                     using K = std::decay_t<decltype(k)>;
 
                     if constexpr (std::is_same_v<K, primitive_type>) {
@@ -156,9 +160,6 @@ void lower_cabi::lower_local_variable(const symbol& sym, wasm_function& func)
                             case primitive_type::Boolean:
                                 func.allocate_local(sym.name.c_str(), wasm_type::i32);
                                 break;
-                            case primitive_type::String:
-                                func.allocate_local(sym.name.c_str(), wasm_type::i32);
-                                break;
                             default:
                                 CAPY_FAIL("Unknown primitive type in lowering local variable");
                                 break;
@@ -181,10 +182,95 @@ void lower_cabi::lower_local_variable(const symbol& sym, wasm_function& func)
                     } else {
                         CAPY_FAIL("Unknown type kind in from_type_kind");
                     } },
-                   type_spec);
+               type_spec);
+}
+
+void lower_cabi::lower_function_arguments(const lir::function_head& func_head, arguments_type& args)
+{
+    auto function_type_entry = parse_context.types[to_index(func_head.signature.function_type)];
+    auto func_type = std::get<function_type>(std::get<type_kind>(function_type_entry));
+
+    const auto& parameter_names = func_head.signature.parameters;
+    for (auto [param, param_typ] : std::views::zip(parameter_names, func_type.parameter_types))
+    {
+        type_id resolved_param_typ = parse_context.resolved_type(param_typ);
+        CAPY_ASSERT(parse_context.is_resolved(resolved_param_typ), "In emitter stage, all required types should be resolved");
+
+        const auto& type_entry = parse_context.types[to_index(resolved_param_typ)];
+        // when the type is resolved, we know that it can't be a type variable,
+        // let's still make sure it really is so
+        CAPY_ASSERT(std::holds_alternative<type_kind>(type_entry), "Unexpected type variable in resolved type");
+        const auto& type_spec = std::get<type_kind>(type_entry);
+
+        lower_function_argument(type_spec, param.name, args);
     }
 }
 
+wasm_type lower_cabi::lower_return_type(type_id return_type)
+{
+    const auto& type_entry = parse_context.types[to_index(return_type)];
+
+    return std::visit(
+        [&](const auto& t) -> auto
+        {
+            using T = std::decay_t<decltype(t)>;
+
+            if constexpr (std::is_same_v<T, type_kind>)
+            {
+                const auto& type_spec = t;
+
+                return std::visit([&](const auto& k) -> wasm_type
+                                  {
+                    using K = std::decay_t<decltype(k)>;
+
+                    if constexpr (std::is_same_v<K, primitive_type>) {
+                        switch (k) {
+                            case primitive_type::Void:
+                                return wasm_type::none;
+                            case primitive_type::Char:
+                            case primitive_type::S8:
+                                return wasm_type::i8;
+                            case primitive_type::S16:
+                                return wasm_type::i16;
+                            case primitive_type::S32:
+                                return wasm_type::i32;
+                            case primitive_type::U8:
+                                return wasm_type::u8;
+                            case primitive_type::U16:
+                                return wasm_type::u16;
+                            case primitive_type::U32:
+                                return wasm_type::u32;
+                            case primitive_type::Boolean:
+                                return wasm_type::i32;
+                            default:
+                                printf("Unknown primitive type in from_type_kind\n");
+                                return wasm_type::none;
+                        }
+                    } else if constexpr (std::is_same_v<K, pointer_type>) {
+                        return wasm_type::i32;
+                    } else if constexpr (std::is_same_v<K, record_type>) {
+                        // records are stored as pointers
+                        return wasm_type::i32;
+                    } else if constexpr (std::is_same_v<K, function_type>) {
+                        printf("Requested function type in conversion\n");
+                        return wasm_type::none;
+                    } else {
+                        printf("Unknown type kind in from_type_kind\n");
+                        return wasm_type::none;
+                    } },
+                                  type_spec);
+            }
+            else if constexpr (std::is_same_v<T, type_var>)
+            {
+                // TODO: LIR passes should take care that we only have fully resolved
+                // types here
+                CAPY_FAIL("Found unresolved type in lowering pass");
+                return wasm_type::none;
+            }
+        },
+        type_entry
+    );
+}
 
 void lower_cabi::lower_variable_ref_read(symbol_id symbol_ref, wasm_block& output_block)
 {
@@ -192,44 +278,21 @@ void lower_cabi::lower_variable_ref_read(symbol_id symbol_ref, wasm_block& outpu
 
     // TODO: In case of record types, here we need to know whether the record is available as function parameter
     // or as locally created record
-    if (parse_context.is_primitive_type(symbol.symbol_type, primitive_type::String))
+    if (symbol.kind == symbol_kind::global_var)
     {
-        if (symbol.kind == symbol_kind::global_var)
-        {
-            output_block.global_get((symbol.name + "_ptr").c_str());
-            output_block.global_get((symbol.name + "_size").c_str());
-        }
-        else
-        {
-            output_block.local_get((symbol.name + "_ptr").c_str());
-            output_block.local_get((symbol.name + "_size").c_str());
-        }
+        output_block.global_get(symbol.name.c_str());
     }
     else
+    // TODO: handle symbol_kind::argument differently in particular for records
     {
-        if (symbol.kind == symbol_kind::global_var)
-        {
-            output_block.global_get(symbol.name.c_str());
-        }
-        else
-        // TODO: handle symbol_kind::argument differently in particular for records
-        {
-            output_block.local_get(symbol.name.c_str());
-        }
+        output_block.local_get(symbol.name.c_str());
     }
+    // }
 }
 
 void lower_cabi::lower_variable_ref_write(symbol_id symbol_ref, wasm_block& output_block)
 {
     const auto& symbol = parse_context.symbol_at(symbol_ref);
 
-    if (parse_context.is_primitive_type(symbol.symbol_type, primitive_type::String))
-    {
-        output_block.local_set((symbol.name + "_size").c_str());
-        output_block.local_set((symbol.name + "_ptr").c_str());
-    }
-    else
-    {
-        output_block.local_set(symbol.name.c_str());
-    }
+    output_block.local_set(symbol.name.c_str());
 }

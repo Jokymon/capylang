@@ -19,6 +19,7 @@ private:
 
     void append_error(const std::string& error_message);
 
+    void create_builtin_types();
     void populate_intrinsics();
 
     node_module parse_module();

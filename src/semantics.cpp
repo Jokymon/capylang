@@ -42,7 +42,7 @@ type_id assigned_node_type(const node_expr& node, context& ctx)
             }
             else if constexpr (std::is_same_v<T, node_string_literal>)
             {
-                return ctx.intern_primitive(primitive_type::String);
+                return ctx.BUILTIN_STRING;
             }
             else if constexpr (std::is_same_v<T, node_var_reference>)
             {
@@ -253,6 +253,7 @@ void semantic_analyser::process(source_range location, node_record_initialisatio
     {
         if (!initialised_fields.contains(field.first))
         {
+            // TODO: Add the name of the type in the error output
             append_error_at(
                 location.start,
                 "Record field '" + field.first + "' not initialised"
@@ -279,38 +280,25 @@ void semantic_analyser::process(source_range location, node_field_deref& n)
     visit(*n.object);
     n.object_type = assigned_node_type(*n.object, parse_context);
 
-    if (parse_context.is_primitive_type(n.object_type, primitive_type::String))
+    auto rec_type = parse_context.record_behind(n.object_type);
+    if (!rec_type.has_value() || !parse_context.is_record_type(rec_type.value()))
     {
-        if ((n.fieldname != "ptr") && (n.fieldname != "size"))
-        {
-            append_error_at(
-                location.start,
-                "Unknown field '" + n.fieldname + "' for string type"
-            );
-        }
+        append_error_at(
+            location.start,
+            "Dereferencing non-record variable or field '" + n.repr_obj() + "'"
+        );
+        return;
     }
-    else
+
+    type_id obj_typ = rec_type.value();
+    auto field_type = parse_context.record_field_type(obj_typ, n.fieldname);
+
+    if (!field_type.has_value())
     {
-        auto rec_type = parse_context.record_behind(n.object_type);
-        if (!rec_type.has_value() || !parse_context.is_record_type(rec_type.value()))
-        {
-            append_error_at(
-                location.start,
-                "Dereferencing non-record variable or field '" + n.repr_obj() + "'"
-            );
-            return;
-        }
-
-        type_id obj_typ = rec_type.value();
-        auto field_type = parse_context.record_field_type(obj_typ, n.fieldname);
-
-        if (!field_type.has_value())
-        {
-            append_error_at(
-                location.start,
-                "Unknown record field '" + n.fieldname + "'"
-            );
-        }
+        append_error_at(
+            location.start,
+            "Unknown record field '" + n.fieldname + "'"
+        );
     }
 }
 

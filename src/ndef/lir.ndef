@@ -59,33 +59,16 @@ node FieldInitialisation
     value: Expr
 end
 
-node StoreRecordExpression
-    target: value Place
-    initialisations: *value FieldInitialisation
-    stored_type: type
-end
-
 node LoadExpression
     source: value Place
     assigned_type: type
 end
 
-node StoreExpression
-    target: value Place
-    value: Expr
-    stored_type: type
-end
-
 node IfExpression
     condition: Expr
-    then_code: *Expr
-    else_code: *Expr
+    then_code: *Statement
+    else_code: *Statement
     assigned_type: type
-end
-
-node WhileExpression
-    condition: Expr
-    while_code: *Expr
 end
 
 node FunctionCall
@@ -97,18 +80,6 @@ end
 node CastExpression
     expression: Expr
     cast_type: type
-end
-
-node DiscardExpression
-    expression: Expr
-end
-
-node ReturnExpression
-    expression: Expr
-    is_explicit: boolean
-end
-
-node BreakStatement
 end
 
 node UnaryExpression
@@ -135,18 +106,59 @@ choice Expr
     | BoolLiteral
     | StringLiteral
     | AllocateRecordExpression
-    | StoreRecordExpression
     | LoadExpression
-    | StoreExpression
     | IfExpression
-    | WhileExpression
     | FunctionCall
     | CastExpression
-    | DiscardExpression
-    | ReturnExpression
-    | BreakStatement
     | UnaryExpression
     | BinaryExpression
+end
+
+// Statements
+node ReturnStatement
+    expression: Expr
+    is_explicit: boolean
+end
+
+node BreakStatement
+end
+
+node ExpressionStatement
+    expression: Expr
+    is_dropped: boolean
+end
+
+node StoreStringStatement
+    target: value Place
+    string_table_index: index
+    string_size: number
+end
+
+node StoreRecordStatement
+    target: value Place
+    initialisations: *value FieldInitialisation
+    stored_type: type
+end
+
+node StoreStatement
+    target: value Place
+    value: Expr
+    stored_type: type
+end
+
+node WhileStatement
+    condition: Expr
+    while_code: *Statement
+end
+
+choice Statement
+    ReturnStatement
+    | BreakStatement
+    | ExpressionStatement
+    | StoreStringStatement
+    | StoreRecordStatement
+    | StoreStatement
+    | WhileStatement
 end
 
 // Elements beyond expressions
@@ -157,7 +169,7 @@ end
 
 node FunctionDefinition with Attributes
     head: value FunctionHead
-    code: *Expr
+    code: *Statement
     function_scope: transient scope
 end
 

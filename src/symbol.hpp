@@ -21,8 +21,7 @@ enum class primitive_type
     U32,
     S8,
     S16,
-    S32,
-    String
+    S32
 };
 
 template <typename Tag>
@@ -331,6 +330,8 @@ struct context
     // indexing through type_id
     std::vector<type_node> types;
     std::unordered_map<type_kind, type_id, type_kind_hash, type_kind_eq> interned;
+
+    type_id BUILTIN_STRING;
 
     std::vector<type_constraint> constraints;
     std::vector<symbol> symbols;

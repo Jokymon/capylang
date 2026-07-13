@@ -11,6 +11,7 @@
  * **07.05.2026** adding of X-Macros
  * **21.05.2026** initial LIR, replacing ANF approach
  * **22.05.2026** Add GitHub CI automation
+ * **13.07.2026** Big move to LIR
 
 ## Handcrafting the lexer and parser
 

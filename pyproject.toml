@@ -8,7 +8,7 @@ dependencies = [
     "pytest>=9.1.1",
     "antlr4-python3-runtime==4.13.2",
     "antlr4-tools==0.2.2",
-    "silwright>=0.2.0",
+    "silwright>=0.3.0",
 ]
 
 [tool.pytest.ini_options]

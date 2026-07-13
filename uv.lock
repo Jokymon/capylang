@@ -44,7 +44,7 @@ requires-dist = [
     { name = "antlr4-python3-runtime", specifier = "==4.13.2" },
     { name = "antlr4-tools", specifier = "==0.2.2" },
     { name = "pytest", specifier = ">=9.1.1" },
-    { name = "silwright", specifier = ">=0.2.0" },
+    { name = "silwright", specifier = ">=0.3.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -321,14 +321,14 @@ wheels = [
 
 [[package]]
 name = "silwright"
-version = "0.2.0"
+version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "lark" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/80/47/46f88d509d7177d8a7ca07f88b96878ddb62a50d440f95f2d7fea2fd0122/silwright-0.2.0.tar.gz", hash = "sha256:956a9cdeb992adae48b46bbcf144e4a6be88fa3b765fa7fd7b053b31aaf16bae", size = 17470, upload-time = "2026-07-06T14:08:25.957Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cc/8a/01ceb4a6f43555a6451eedfede306c23f336fa2893b5abc1df2fa9de9dcc/silwright-0.3.0.tar.gz", hash = "sha256:1ae12f9d7311f9bec6aac448f67861c512d92a2a8435e6c8394be10331cb5842", size = 20699, upload-time = "2026-07-13T08:56:28.319Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2d/64/edd66e4b1952b6389330ece5bb6bc8daf8b7afda56aac487e0ecbd9892e7/silwright-0.2.0-py3-none-any.whl", hash = "sha256:06d3c93c9857303e690c178779dcd51259fe060ff78af3e6dc572b5c52b55a54", size = 22214, upload-time = "2026-07-06T14:08:24.746Z" },
+    { url = "https://files.pythonhosted.org/packages/7c/58/ffe779af46db4ba1551b0562137973729cf6e7d5f14f638e7936158f6c41/silwright-0.3.0-py3-none-any.whl", hash = "sha256:7892b40527bda43a267a4817cea6138c4b2fcd38d0065687c6e6b6bd2db7b2c0", size = 26715, upload-time = "2026-07-13T08:56:27.168Z" },
 ]
 
 [[package]]

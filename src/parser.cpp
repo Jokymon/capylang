@@ -55,10 +55,6 @@ std::optional<type_id> type_from_id(context& ctx, const std::string& id)
     {
         return ctx.intern_primitive(primitive_type::Char);
     }
-    else if (id == "string")
-    {
-        return ctx.intern_primitive(primitive_type::String);
-    }
     else if (id == "bool")
     {
         return ctx.intern_primitive(primitive_type::Boolean);
@@ -99,6 +95,18 @@ void parser::append_error(const std::string& error_message)
 {
     auto current_pos = capy_lexer->current_source_position();
     append_error_at(current_pos, error_message);
+}
+
+void parser::create_builtin_types()
+{
+    std::vector<record_type::field_type> string_fields;
+    string_fields.emplace_back(record_type::field_type{"ptr", parse_context.intern(pointer_type{parse_context.intern_primitive(primitive_type::U8)})});
+    string_fields.emplace_back(record_type::field_type{"size", parse_context.intern_primitive(primitive_type::U32)});
+
+    auto* global_scope = current_scope->get_global_scope();
+    type_id builtin_string = parse_context.intern(record_type{string_fields});
+    parse_context.BUILTIN_STRING = builtin_string;
+    global_scope->type_table["string"] = builtin_string;
 }
 
 void parser::populate_intrinsics()
@@ -165,6 +173,7 @@ node_module parser::parse_module()
 
     capy_module.module_scope = std::make_unique<scope>();
     current_scope = capy_module.module_scope.get();
+    create_builtin_types();
     populate_intrinsics();
 
     std::string library_code = R"(

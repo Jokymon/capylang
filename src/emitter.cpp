@@ -44,8 +44,6 @@ wasm_type from_type_kind(context& ctx, type_id idx)
                                 return wasm_type::u32;
                             case primitive_type::Boolean:
                                 return wasm_type::i32;
-                            case primitive_type::String:
-                                return wasm_type::i32;
                             default:
                                 printf("Unknown primitive type in from_type_kind\n");
                                 return wasm_type::none;
@@ -115,8 +113,6 @@ size_t type_size(context& ctx, type_id idx)
                             case primitive_type::Char:
                             case primitive_type::Boolean:
                                 return 4;
-                            case primitive_type::String:
-                                return 8; // ptr and size fields
                         }
                     } else if constexpr (std::is_same_v<K, pointer_type>) {
                         return 4;
@@ -455,23 +451,13 @@ void emitter::emit(const node_record_initialisation& record_init)
 
 void emitter::emit(const node_field_deref& field_deref)
 {
-    if (parse_context.is_primitive_type(field_deref.object_type, primitive_type::String))
-    {
-        // TODO: for the moment we can only handle variables of types strings
-        // but not strings that are fields of records
-        auto var_name = std::get<node_var_reference>(field_deref.object->value).name;
-        cur_block->local_get((var_name + "_" + field_deref.fieldname).c_str());
-    }
-    else
-    {
-        emit(*field_deref.object);
-        auto maybe_size = record_field_offset(
-            parse_context,
-            field_deref.object_type,
-            field_deref.fieldname
-        );
-        CAPY_ASSERT(maybe_size.has_value(), "A record field should have its offset calculated by this point");
-    }
+    emit(*field_deref.object);
+    auto maybe_size = record_field_offset(
+        parse_context,
+        field_deref.object_type,
+        field_deref.fieldname
+    );
+    CAPY_ASSERT(maybe_size.has_value(), "A record field should have its offset calculated by this point");
 }
 
 void emitter::emit(const node_cast_expression& root)

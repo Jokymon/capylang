@@ -1,8 +1,10 @@
 #include "args_parse.hpp"
 #include "diagnostics.hpp"
 #include "emitter.hpp"
+#include "lir_based_emitter.hpp"
 #include "lir_dump.hpp"
 #include "lir_generator.hpp"
+#include "lir_lowering.hpp"
 #include "normalization.hpp"
 #include "parser.hpp"
 #include "semantics.hpp"
@@ -134,15 +136,19 @@ int main(int argc, char* argv[])
     normalization normalizer{parse_context};
     normalizer.normalize(root_node);
 
+    lir_generator lir_gen{parse_context};
+    auto l_mod = lir_gen.generate(root_node);
+    lir_lowering l_lower{parse_context};
+    l_lower.visit(l_mod);
+
     if (args.dump_lir)
     {
-        lir_generator lir_gen{parse_context};
-        lir::dump(std::cout, parse_context, lir_gen.generate(root_node));
+        lir::dump(std::cout, parse_context, l_mod);
         return 0;
     }
 
-    emitter capyemitter{parse_context};
-    wasm_module mod = capyemitter.generate(root_node);
+    lir_based_emitter l_emitter{parse_context};
+    wasm_module mod = l_emitter.generate(l_mod);
 
     if (args.output_path.ends_with(".wasm"))
     {
