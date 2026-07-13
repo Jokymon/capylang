@@ -33,8 +33,7 @@ void normalization::process(source_range range, node_field_deref& n)
         n.object = std::make_unique<node_expr>(node_expr{
             .value = node_pointer_deref{
                 .pointer_expression = std::move(n.object),
-                .assigned_type = ptr_base_type.value(),
-                .context = current_context
+                .assigned_type = ptr_base_type.value()
             },
             .location = range
         });

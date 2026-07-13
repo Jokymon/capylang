@@ -203,8 +203,6 @@ void semantic_analyser::process(source_range location, node_var_reference& n)
 
 void semantic_analyser::process(source_range location, node_pointer_deref& n)
 {
-    n.context = current_context;
-
     visit_nodes(n);
 
     type_id expression_type = assigned_node_type(*n.pointer_expression, parse_context);

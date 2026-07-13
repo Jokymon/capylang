@@ -1093,9 +1093,7 @@ node_expr parser::parse_primary()
             op_token.location.start,
             pointer_expr.location.end,
             std::make_unique<node_expr>(std::move(pointer_expr)),
-            parse_context.create_type_var(),
-            // parse_context.intern_primitive(primitive_type::Void),
-            assign_context::rhs
+            parse_context.create_type_var()
         );
     }
     else if (capy_lexer->ahead_is_sym(token_symbol::sym_minus))
