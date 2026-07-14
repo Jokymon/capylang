@@ -37,6 +37,19 @@ For explicit code point escapes, the language uses the flexible `\u{...}`
 notation known from languages such as Rust, Swift, and PHP instead of fixed
 width `\u` or `\U` escape formats.
 
+Initially the string type was implemented as a "primitive" type with record-like
+behavior. It was a type implicitly containing the fields `ptr` which points to
+the string in linear memory and the field `size` which gives the size of the
+string in bytes as `u32` value.
+
+Pretending string is a primitive type while actually treating it as a record
+introduced a lot of special case handling in the semantic checks and all the
+lowering and emitter phases. This is why it was ultimately decided to turn
+strings into a "builtin" type that is created by the parser at the very
+beginning. This string type is now represented as a record with the `ptr` and
+`size` fields and can be handled much more uniform with only having few special
+cases.
+
 ### String Literal Storage
 
 String literals are stored in the parse context structure together with symbol
@@ -46,6 +59,24 @@ This keeps literals available to later compiler stages without tying them to the
 AST alone. If later lowering stages operate on an IR instead of the AST, string
 literal access remains straightforward and does not require duplicating that
 data into multiple representations.
+
+### String Lowering
+
+String lowering is currently still a bit sketchy. When a string literal is used
+in a let-statement, then a special `store_string` LIR node is generated. We
+could have mapped this to a `store_record_statement`, but there is a problem
+with the field `ptr` of the string. This field only gets the correct/actual
+value in the final emitter-phase when we know the addresses of the string
+literals. So we would have had to treat any `store_record_statement` special,
+but only if it's type is a builtin string type.
+Currently this `store_string` node is only generated when we are in a `let`-
+statement, but not in an assignment expression. Fixing the assignment expression
+would be easy, but maybe we should start refactoring this part first into a
+common function block for assignments.
+Additionally, `store_string` is only generated, when we have a
+`node_string_literal` as RHS. Currently this is no problem as we do not provide
+any string-based operators or even string returning functions. But once we get
+to that point, we might have to make this check more intricate.
 
 ## Body Structure
 
@@ -126,24 +157,6 @@ Record initializers are simplified into a structure that contains:
 
 - The record type
 - The initialization expressions in field-definition order
-
-### String Lowering
-
-String lowering is currently still a bit sketchy. When a string literal is used
-in a let-statement, then a special `store_string` LIR node is generated. We
-could have mapped this to a `store_record_statement`, but there is a problem
-with the field `ptr` of the string. This field only gets the correct/actual
-value in the final emitter-phase when we know the addresses of the string
-literals. So we would have had to treat any `store_record_statement` special,
-but only if it's type is a builtin string type.
-Currently this `store_string` node is only generated when we are in a `let`-
-statement, but not in an assignment expression. Fixing the assignment expression
-would be easy, but maybe we should start refactoring this part first into a
-common function block for assignments.
-Additionally, `store_string` is only generated, when we have a
-`node_string_literal` as RHS. Currently this is no problem as we do not provide
-any string-based operators or even string returning functions. But once we get
-to that point, we might have to make this check more intricate.
 
 ### Type Definitions Outside LIR
 
