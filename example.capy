@@ -46,7 +46,7 @@ fn print(value: u32)
 
 @export
 fn _start() {
-    let mut res: *u32 = cabi_realloc(0, 0, 4, 1) as *u32;
+    let mut res: *u32 = cabi_realloc(0, 0, 4, 4) as *u32;
 
     let s: string = "Hello \\strings 😀\u{932}\u{4dc} b\n";
     print_s(s);
