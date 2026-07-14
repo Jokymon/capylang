@@ -1,0 +1,26 @@
+// An example source file to check the progress of stack trace support in case of failures. Once enough debugging
+// symbol support is in place, running the WASM file for this source should give a clean and well readable stack
+// trace with function names, file name and line numbers
+
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+fn level3() -> u32
+{
+    unreachable();
+    42u32
+}
+
+fn level2() -> u32
+{
+    level3()
+}
+
+fn level1() -> u32
+{
+    level2()
+}
+
+@export
+fn _start() {
+    proc_exit(level1());
+}

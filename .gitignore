@@ -12,16 +12,12 @@ wheels/
 # Virtual environments
 .venv
 
+# Generated files from examples sources
+examples/*.wat
+examples/*.wasm
+
 # Vim temporaries
 *.swp
-
-# Example generated code
-crash.wat
-crash.wasm
-example.wat
-example.wasm
-drawing.wat
-drawing.wasm
 
 # artefacts generated while producing a VSCode extension
 capylang/*.vsix

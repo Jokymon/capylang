@@ -1,3 +1,6 @@
+// This source file is used a kind of show case for various features of the capylang language. It doesn't have any
+// particular purpose and does not try to solve anything.
+
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
 import wasi_snapshot_preview1::fd_write(fd: u32, io: *u32, count: u32, res: *u32) -> u32 as fd_write;
 // import wasi_snapshot_preview1::args_sizes_get(args_count: *u32, args_size: *u32) -> u32 as args_sizes_get;

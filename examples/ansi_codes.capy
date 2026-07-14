@@ -1,0 +1,100 @@
+// An example source file to play around and demonstrate how capy lang can already create nice shell output
+// using ANSI escape sequences
+
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+import wasi_snapshot_preview1::fd_write(fd: u32, io: *u32, count: u32, res: *u32) -> u32 as fd_write;
+
+record iovec {
+    buf: *u32,
+    len: u32,
+};
+
+fn print_s(s: string)
+{
+    let mut res: *u32 = cabi_realloc(0, 0, 4, 4) as *u32;
+
+    let v: *iovec = allocate iovec{
+        buf = s.ptr as *u32,
+        len = s.size as u32,
+    };
+
+    fd_write(1u32, v as *u32, 1u32, res);   
+}
+
+fn print_num(value: u32)
+{
+    // allocate memory for the number output
+    let s: *u8 = cabi_realloc(0, 0, 4, 12) as *u8;
+
+    let mut remainder: u32 = value;
+
+    let mut i: *u8 = s + (11u32 as *u8);
+    while (remainder!=0)
+    {
+        let ch: char = '0' + (remainder % 10u32) as char;
+        *i = ch;
+        remainder = remainder / 10u32;
+
+        i = i-(1 as *u8);
+    }
+
+    let v: *iovec = allocate iovec{
+        buf = s as *u32,
+        len = 12u32,
+    };
+    let mut res: *u32 = 96 as *u32;
+    fd_write(1u32, v as *u32, 1u32, res);
+}
+
+// --------------------------------------------
+
+fn save_cursor() {
+    print_s("\u{1b}[s")
+}
+
+fn restore_cursor() {
+    print_s("\u{1b}[u")
+}
+
+fn gotoxy(col: u32, row: u32) {
+    print_s("\u{1b}[");
+    print_num(col);
+    print_s(";");
+    print_num(row);
+    print_s("H");
+}
+
+fn box(col: u32, row: u32, width: u32, height: u32) {
+    // top row
+    gotoxy(col, row);
+    print_s("\u{256d}");
+    let mut x: u32 = 1;
+    while (x<width) {
+        print_s("\u{2500}");
+        x = x+1;
+    }
+    print_s("\u{256e}");
+
+    gotoxy(col+height, row);
+    print_s("\u{2570}");
+    x = 1;
+    while (x<width) {
+        print_s("\u{2500}");
+        x = x+1;
+    }
+    print_s("\u{256f}");
+}
+
+@export
+fn _start() {
+    let mut res: *u32 = cabi_realloc(0, 0, 4, 4) as *u32;
+
+    save_cursor();
+    box(5, 30, 40, 7);
+    //gotoxy(10, 10);
+    //let s: string = "\u{256d}\u{2500}\u{2500}\u{2500}\u{256e}\n";
+    //print_s(s);
+    restore_cursor();
+
+    proc_exit(0u32)
+}
