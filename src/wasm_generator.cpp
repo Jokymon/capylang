@@ -115,8 +115,6 @@ char encode_wasm_type(wasm_type type)
             return '\x7C';
         default:
             CAPY_FAIL("Trying to encode an unknown WASM type");
-            // TODO shouldn't happen
-            return '\x42';
     }
 }
 
