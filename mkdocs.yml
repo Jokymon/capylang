@@ -14,7 +14,7 @@ extra_css:
 nav:
   - Overview: index.md
   - Compiler Pipeline: compiler-pipeline.md
-  - Places and storage locations: places-and-storage-locations.md
+  - Places and storage locations: places-and-locations.md
   - Design Decisions: design-decisions.md
   - Roadmap: roadmap.md
 
