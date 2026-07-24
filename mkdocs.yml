@@ -3,7 +3,9 @@ site_description: Internal compiler documentation for the Capylang project
 repo_url: https://github.com/Jokymon/capylang
 docs_dir: doc
 site_dir: site
+site_author: Silvan Wegmann
 strict: true
+copyright: Copyright &copy; 2025 - 2026 Silvan Wegmann
 
 theme:
   name: mkdocs
@@ -13,9 +15,13 @@ extra_css:
 
 nav:
   - Overview: index.md
-  - Compiler Pipeline: compiler-pipeline.md
-  - Places and storage locations: places-and-locations.md
-  - Design Decisions: design-decisions.md
+  - Philosophy:
+    - Charta: charta.md
+    - Journey: journey.md
+  - Details:
+    - Compiler Pipeline: compiler-pipeline.md
+    - Places and storage locations: places-and-locations.md
+    - Design Decisions: design-decisions.md
   - Roadmap: roadmap.md
 
 exclude_docs: |
