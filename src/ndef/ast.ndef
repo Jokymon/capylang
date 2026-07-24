@@ -1,0 +1,162 @@
+module ast
+
+trait Location
+    location: source_range
+end
+
+trait Attributes
+    atributes: *identifier
+end
+
+enum AssignContext
+    Lhs | Rhs
+end
+
+node Number
+    number: number
+    assigned_type: type
+end
+
+node BoolLiteral
+    value: boolean
+end
+
+node CharLiteral
+    ch: character
+end
+
+node StringLiteral
+    table_index: index
+    size: number
+end
+
+node VarReference
+    name: identifier
+    symbol_ref: symbol
+    context: AssignContext
+end
+
+node DiscardExpression
+    expression: Expr
+end
+
+node PointerDeref
+    pointer_expression: Expr
+    assigned_type: type
+end
+
+node FunctionCall
+    function_name: identifier
+    symbol_ref: symbol
+    parameter: *Expr
+end
+
+node CastExpression
+    expression: Expr
+    cast_type: type
+    op_range: source_range
+end
+
+node ReturnExpression
+    expressoin: Expr
+    // used to distinguish return expressions that come from explicit uses of
+    // keyword 'return' or if it was implicitly created from the last expression
+    // in a function
+    is_explicit: boolean
+end
+
+node BreakStatement
+end
+
+node UnaryExpression
+    expr: Expr
+    operation: operator_type
+    assigned_type: type
+end
+
+node BinaryExpression
+    left: Expr
+    right: Expr
+    op_range: source_range
+    operation: operator_type
+    assigned_type: type
+end
+
+node LetExpression
+    name: identifier
+    symbol_ref: symbol
+    init_epxression: Expr
+end
+
+node IfExpression
+    condition: Expr
+    then_code: *Expr
+    else_code: *Expr
+    assigned_type: type
+end
+
+node WhileExpression
+    condition: Expr
+    while_code: *Expr
+end
+
+node RecordDefinition
+    name: identifier
+    // TODO: fields
+end
+
+node FieldInitialisation
+    location: source_range
+    field_name: identifier
+    init_epxression: Expr
+end
+
+node RecordInitialisation
+    type_spec: type
+    initialisations: *value FieldInitialisation
+end
+
+node FieldDeref
+    object: Expr
+    fieldname: identifier
+    object_type: type
+    // TODO: repr_obj()???
+end
+
+node FunctionHead with Location
+    name: identifier
+    signature: function_signature
+end
+
+node ImportDefinition with Location
+    ns_name: identifier
+    function_head: value FunctionHead
+    alias: ?identifier
+end
+
+node GlobalDefinition with Location
+    name: identifier
+    assigned_type: type
+    symbol_ref: symbol
+    init_value: number
+end
+
+node FunctionDefinition with Location, Attributes
+    function_head: value FunctionHead
+    code: *Expr
+    
+    function_scope: transient scope
+end
+
+node Module with Location
+    imports: *ImportDefinition
+    globals: *GlobalDefinition
+    functions: *FunctionDefinition
+    typedefs: *Expr
+
+    module_scope: transient scope
+end
+
+choice Expr
+    Number | CharLiteral
+end
