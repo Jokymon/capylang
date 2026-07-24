@@ -81,6 +81,7 @@ enum class wasm_op
 
     memory_size,
     memory_grow,
+    memory_fill,
 
     typ_const
 };
@@ -250,6 +251,7 @@ public:
     void ret();
     void memory_size();
     void memory_grow();
+    void memory_fill();
     void unreachable();
 
     wasm_block_type block_type;

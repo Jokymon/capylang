@@ -790,6 +790,10 @@ void lir_based_emitter::emit(const lir::function_call& func_call)
         {
             cur_block->memory_grow();
         }
+        else if (func_symbol.name == "memory_fill")
+        {
+            cur_block->memory_fill();
+        }
         else if (func_symbol.name == "unreachable")
         {
             cur_block->unreachable();

@@ -145,6 +145,31 @@ void parser::populate_intrinsics()
             .is_intrinsic = true,
         });
 
+    function_type mem_fill_type;
+    // pointer to the region
+    mem_fill_type.parameter_types.push_back(parse_context.intern_primitive(primitive_type::U32));
+    // value to set (must be < 256)
+    mem_fill_type.parameter_types.push_back(parse_context.intern_primitive(primitive_type::U32));
+    // number of bytes to update
+    mem_fill_type.parameter_types.push_back(parse_context.intern_primitive(primitive_type::U32));
+    mem_fill_type.return_type = parse_context.intern_primitive(primitive_type::Void);
+    function_signature mem_fill_sig;
+    mem_fill_sig.parameters.push_back(function_parameter{source_position{__FILE__, __LINE__, 0}, "region_ptr"});
+    mem_fill_sig.parameters.push_back(function_parameter{source_position{__FILE__, __LINE__, 0}, "value"});
+    mem_fill_sig.parameters.push_back(function_parameter{source_position{__FILE__, __LINE__, 0}, "byte_count"});
+    mem_fill_sig.function_type = parse_context.intern(mem_fill_type);
+    current_scope->symbol_table["memory_fill"] =
+        parse_context.create_symbol(symbol{
+            .name = "memory_fill",
+            .location = source_range{.start = source_position{__FILE__, __LINE__, 0}, .end = source_position{__FILE__, __LINE__, 0}},
+            .symbol_type = mem_fill_sig.function_type,
+            .signature = mem_fill_sig,
+            .kind = symbol_kind::function,
+            .mutab = false,
+            .is_assigned = true,
+            .is_intrinsic = true,
+        });
+
     function_type unreachable_type;
     unreachable_type.return_type = parse_context.intern_primitive(primitive_type::Void);
     function_signature unreachable_sig;

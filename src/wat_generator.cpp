@@ -314,6 +314,9 @@ void wat_generator::generate(const wasm_instruction& inst, std::ostream& output,
         case wasm_op::memory_grow:
             output << "memory.grow\n";
             break;
+        case wasm_op::memory_fill:
+            output << "memory.fill\n";
+            break;
         default:
             break;
     }

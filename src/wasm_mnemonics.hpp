@@ -63,3 +63,8 @@ const char INST_I32_XOR = '\x73';
 const char INST_I32_SHL = '\x74';
 const char INST_I32_SHR_S = '\x75';
 const char INST_I32_SHR_U = '\x76';
+
+// Multibyte instructions starting with FC
+const char INST_FC = '\xfc';
+
+const char INST_FC_MEMORY_FILL = '\x0b';
