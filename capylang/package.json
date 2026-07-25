@@ -2,6 +2,7 @@
   "name": "capylang",
   "displayName": "Capylang",
   "description": "Syntax highlighting for the Capybara language",
+  "icon": "images/icon.png",
   "version": "0.0.2",
   "main": "./client/out/extensions.js",
   "engines": {
