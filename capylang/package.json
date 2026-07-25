@@ -4,6 +4,9 @@
   "description": "Syntax highlighting for the Capybara language",
   "icon": "images/icon.png",
   "version": "0.0.2",
+  "publisher": "silvan-wegmann",
+  "author": "Silvan Wegmann",
+  "license": "MIT",
   "main": "./client/out/extensions.js",
   "engines": {
     "vscode": "^1.104.0"
