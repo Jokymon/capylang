@@ -2,84 +2,42 @@
 # The script expects one mandatory argument which must be the capylang source
 # file to compile.
 # Additionally the following arguments are available:
-#
-# -Direct       Normally the script will compile the source file to a WAT file
-#               and then run wasm-tools to turn this into a WASM file. Using
-#               this option, the compiler will use its own WASM generator
-# -DumpLir      When this option is present, the compiler will only print the
-#               LIR on stdout without generating any output files.
-# -DumpAst      When this option is present, the compiler will only print the
-#               AST on stdout without generating any output files.
-# -DumpTokens   When this option is present, the compiler will only print the
-#               tokens on stdout without generating any output files.
 
-param (
-    [string]$InputFile = $(throw "Input file path is required"),
-    [switch]$Direct,
-    [switch]$DumpAst,
-    [switch]$DumpLir,
-    [switch]$DumpTokens
-)
+$inputFile = $null
+$outputFile = $null
+$forwardArgs = @()
 
 # --- Compute relative paths manually (without requiring existence) ---
-function Get-RelativePath($TargetPath, $BasePath) {
-    $uriTarget = New-Object System.Uri($TargetPath)
-    $uriBase   = New-Object System.Uri($BasePath + [System.IO.Path]::DirectorySeparatorChar)
+function Get-RelativePath($TargetPath) {
+    $ResolvedInput = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($TargetPath)
+    $CurrentDir = (Resolve-Path ".").Path
+    
+    $uriTarget = New-Object System.Uri($ResolvedInput)
+    $uriBase   = New-Object System.Uri($CurrentDir + [System.IO.Path]::DirectorySeparatorChar)
     return $uriBase.MakeRelativeUri($uriTarget).ToString() -replace '/', [System.IO.Path]::DirectorySeparatorChar
 }
 
-# ------------------------------------------------------------------------------
-$ResolvedInput = (Resolve-Path $InputFile).Path
-$BaseName  = [System.IO.Path]::GetFileNameWithoutExtension($ResolvedInput)
-$DirName   = [System.IO.Path]::GetDirectoryName($ResolvedInput)
+# --- process input and output paths for running them in WASM runtime ---
+for ($i = 0; $i -lt $args.Count; $i++) {
+    switch ($args[$i]) {
+        '-i' {
+            $inputFile = Get-RelativePath $args[++$i]
 
-$WatFile = Join-Path $DirName ($BaseName + ".wat")
-$WasmFile = Join-Path $DirName ($BaseName + ".wasm")
+            $forwardArgs += '-i'
+            $forwardArgs += $inputFile
+        }
 
-# --- Build relative paths ---
-$CurrentDir = (Resolve-Path ".").Path
-$InputRel   = Get-RelativePath $ResolvedInput $CurrentDir
-$WatFileRel = Get-RelativePath $WatFile $CurrentDir
-$WasmFileRel = Get-RelativePath $WasmFile $CurrentDir
+        '-o' {
+            $outputFile = Get-RelativePath $args[++$i]
+            $forwardArgs += '-o'
+            $forwardArgs += $outputFile
+        }
 
-$InputRel  = $InputRel -replace '\\', '/'
-$WatFileRel = $WatFileRel -replace '\\', '/'
-$WasmFileRel = $WasmFileRel -replace '\\', '/'
-
-# Cleanup first
-if (Test-Path $WatFile) {
-    Remove-Item $WatFile
-}
-if (Test-Path $WasmFile) {
-    Remove-Item $WasmFile
-}
-
-$AdditionalArgs = ""
-if ($DumpLir) {
-    $AdditionalArgs = "--dump-lir"
-}
-if ($DumpAst) {
-    $AdditionalArgs = "--dump-ast"
-}
-if ($DumpTokens) {
-    $AdditionalArgs = "--dump-tokens"
-}
-
-# Run the capylang compiler
-$CompilerOutput = if ($Direct) { $WasmFileRel } else { $WatFileRel }
-wasmtime.exe run --dir . .\build\capylang.wasm $AdditionalArgs -i $InputRel -o $CompilerOutput
-if ($LASTEXITCODE -ne 0) {
-    Write-Output "Compilation failed, terminating script"
-    exit $LASTEXITCODE
-}
-
-if (-not $Direct -and -not $DumpLir -and -not $DumpAst -and -not $DumpTokens) {
-    # convert the WAT file to WASM
-    wasm-tools.exe parse $WatFile -o $WasmFile
-    if ($LASTEXITCODE -ne 0) {
-        Write-Output "WAT to WASM conversion failed, terminating script"
-        exit $LASTEXITCODE
+        default {
+            $forwardArgs += $args[$i]
+        }
     }
 }
 
+wasmtime.exe run --dir . .\build\capylang.wasm @forwardArgs
 exit $LASTEXITCODE
