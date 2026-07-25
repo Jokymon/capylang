@@ -25,8 +25,11 @@ const char INST_GLOBAL_SET = '\x24';
 const char INST_I32_LOAD = '\x28';
 const char INST_I32_LOAD8_S = '\x2c';
 const char INST_I32_LOAD8_U = '\x2d';
+const char INST_I32_LOAD16_S = '\x2e';
+const char INST_I32_LOAD16_U = '\x2f';
 const char INST_I32_STORE = '\x36';
 const char INST_I32_STORE8 = '\x3a';
+const char INST_I32_STORE16 = '\x3b';
 
 const char INST_MEMORY_SIZE = '\x3f';
 const char INST_MEMORY_GROW = '\x40';

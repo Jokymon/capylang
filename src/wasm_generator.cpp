@@ -700,6 +700,16 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
                                                output.put(INST_I32_LOAD8_U);
                                            }
                                            break;
+                                       case wasm_size_e::Size16:
+                                           if (is_wasm_type_signed(t.value_type))
+                                           {
+                                               output.put(INST_I32_LOAD16_S);
+                                           }
+                                           else
+                                           {
+                                               output.put(INST_I32_LOAD16_U);
+                                           }
+                                           break;
                                        default:
                                            output.put(INST_I32_LOAD);
                                            break;
@@ -712,6 +722,9 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
                                    {
                                        case wasm_size_e::Size8:
                                            output.put(INST_I32_STORE8);
+                                           break;
+                                       case wasm_size_e::Size16:
+                                           output.put(INST_I32_STORE16);
                                            break;
                                        default:
                                            output.put(INST_I32_STORE);

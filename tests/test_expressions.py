@@ -325,6 +325,60 @@ proc_exit(*addr2 as u32)"""
 
 
 @pytest.mark.good
+def test_u16_deref_on_rhs():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    // set some test data
+    let data: *u32 = 1000u32 as *u32;
+    *data = 0x12345678u32;
+
+    let addr: *u16 = 1000u32 as *u16;
+
+    if (*addr == 0x5678u16) {
+        proc_exit(0x56u32)
+    } else {
+        proc_exit(0x22u32)
+    }
+    proc_exit(5u32 as u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 0x56
+
+
+@pytest.mark.good
+def test_u16_deref_on_lhs():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    // set some test data
+    let data_l: *u16 = 1000u32 as *u16;
+    let data_h: *u16 = 1002u32 as *u16;
+
+    *data_h = 0x8f33u16;
+    // Writing the lower 16 bits after the higher bits
+    *data_l = 0x11c8u16;
+
+    let data: *u32 = 1000u32 as *u32;
+
+    if (*data == 0x8f3311c8u32) {
+        proc_exit(0x56u32)
+    } else {
+        proc_exit(0x22u32)
+    }
+    proc_exit(5u32 as u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 0x56
+
+
+@pytest.mark.good
 def test_variables_can_be_modified():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;

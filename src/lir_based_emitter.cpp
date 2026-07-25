@@ -376,6 +376,10 @@ void transform_load(const context& parse_context, const storage_loc& storage, wa
                     // primitive types to wasm_types
                     code_block.load(wasm_type::u8, ptr.offset);
                 }
+                else if (parse_context.is_primitive_type(ptr.type, primitive_type::U16))
+                {
+                    code_block.load(wasm_type::u16, ptr.offset);
+                }
                 else
                 {
                     code_block.load(wasm_type::i32, ptr.offset);
@@ -453,6 +457,10 @@ void transform_store(const context& parse_context, const storage_loc& storage, w
                     // TODO: we should simplify this by using a mapping from
                     // primitive types to wasm_types
                     code_block.store(wasm_type::u8, ptr.offset);
+                }
+                else if (parse_context.is_primitive_type(ptr.type, primitive_type::U16))
+                {
+                    code_block.store(wasm_type::u16, ptr.offset);
                 }
                 else
                 {
