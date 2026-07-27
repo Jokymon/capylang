@@ -182,7 +182,7 @@ std::string generate_help_text(Args const& args)
     std::string help_text = "Overview: Capylang compiler\n\n";
 
     std::string options_line = "Usage: " + args.programm_name + " ";
-    std::string indentation = std::string(" ", options_line.size());
+    std::string indentation = std::string(options_line.size(), ' ');
     for (auto const& descriptor : descriptors)
     {
         std::string options_text = "";
@@ -212,7 +212,7 @@ std::string generate_help_text(Args const& args)
             // This option no longer fits on the current line, so break the line and put the
             // option on the next line
             help_text += options_line;
-            options_line = indentation + options_text;
+            options_line = "\n" + indentation + options_text;
         }
     }
 
