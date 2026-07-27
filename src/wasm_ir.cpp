@@ -302,6 +302,17 @@ exportable::exportable(index_type index, wasm_extern_index export_type)
 {
 }
 
+void importable::import_from(const char* ns, const char* import_name)
+{
+    this->ns = ns;
+    this->import_name = import_name;
+}
+
+bool importable::is_imported() const
+{
+    return !ns.empty();
+}
+
 wasm_function::wasm_function(index_type index, const std::string& name, wasm_type return_type, arguments_type arguments)
 : exportable(index, wasm_extern_index::funcidx)
 , return_type(return_type)
@@ -331,17 +342,6 @@ wasm_block& wasm_function::body()
 const wasm_block& wasm_function::body_const() const
 {
     return function_body;
-}
-
-bool wasm_function::is_imported() const
-{
-    return !ns.empty();
-}
-
-void wasm_function::import_from(const char* ns, const char* import_name)
-{
-    this->ns = ns;
-    this->import_name = import_name;
 }
 
 wasm_memory::wasm_memory(index_type index, size_t initial_block_count)

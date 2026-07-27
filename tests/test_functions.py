@@ -127,6 +127,7 @@ fn _start() {
 """
     wat = tools.compile_to_wat(tools.get_doc_str())
 
+    assert '(import "wasi_snapshot_preview1" "proc_exit" (func $proc_exit' in wat
     assert '(export "create_frame" (func $create_frame))' in wat
     assert '(export "_start" (func $_start))' in wat
     assert '(export ""' not in wat

@@ -273,6 +273,16 @@ public:
     wasm_extern_index export_type;
 };
 
+struct importable
+{
+public:
+    void import_from(const char* ns, const char* import_name);
+    bool is_imported() const;
+
+    std::string import_name;
+    std::string ns;
+};
+
 struct wasm_export
 {
     std::string export_name;
@@ -281,15 +291,12 @@ struct wasm_export
     wasm_extern_index export_type;
 };
 
-struct wasm_function : public exportable
+struct wasm_function : public exportable, public importable
 {
 public:
-    bool is_imported() const;
-
     void allocate_local(const char* name, wasm_type var_type);
     wasm_block& body();
     const wasm_block& body_const() const;
-    void import_from(const char* ns, const char* import_name);
 
     // prefer to use the create..() function of the module
     explicit wasm_function(index_type index, const std::string& name, wasm_type return_type, arguments_type arguments);
@@ -302,9 +309,7 @@ public:
     // the locals_map maps both, argument names and local variable names to indices
     std::map<std::string, size_t> locals_map;
     wasm_block function_body;
-    std::string ns;
-    std::string import_name;
-};
+    };
 
 struct wasm_data_section
 {
