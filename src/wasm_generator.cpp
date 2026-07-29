@@ -331,8 +331,17 @@ void wasm_generator::generate_memories(const wasm_module& module, std::ostream& 
     encode_leb128(content, module.memories.size());
     for (const auto& mem : module.memories)
     {
-        content.put(LIMITS_I32_N);
-        encode_leb128(content, mem.initial_block_count);
+        if (mem.max_block_count > 0)
+        {
+            content.put(LIMITS_I32_NM);
+            encode_leb128(content, mem.initial_block_count);
+            encode_leb128(content, mem.max_block_count);
+        }
+        else
+        {
+            content.put(LIMITS_I32_N);
+            encode_leb128(content, mem.initial_block_count);
+        }
     }
 
     encode_leb128(output, content.str().size());

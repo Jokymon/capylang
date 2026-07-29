@@ -309,7 +309,7 @@ public:
     // the locals_map maps both, argument names and local variable names to indices
     std::map<std::string, size_t> locals_map;
     wasm_block function_body;
-    };
+};
 
 struct wasm_data_section
 {
@@ -327,6 +327,7 @@ struct wasm_memory : public exportable
     explicit wasm_memory(index_type index, size_t initial_block_count);
 
     size_t initial_block_count;
+    size_t max_block_count = 0;
 };
 
 struct wasm_module

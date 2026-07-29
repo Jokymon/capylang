@@ -13,7 +13,7 @@ fn _start() {
 }"""
     exit_code, _ = tools.run_test_code(tools.get_doc_str())
 
-    assert exit_code == 2
+    assert exit_code == 1
 
 
 @pytest.mark.good

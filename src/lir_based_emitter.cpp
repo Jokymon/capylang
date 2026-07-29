@@ -491,7 +491,7 @@ wasm_module lir_based_emitter::generate(lir::module& module_def)
 
     current_module = &module_def;
 
-    auto& memory = ir_module.create_memory(2);
+    auto& memory = ir_module.create_memory(1);
     ir_module.export_as("memory", memory);
 
     for (auto& literal : parse_context.string_literals)

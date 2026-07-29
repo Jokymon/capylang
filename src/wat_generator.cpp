@@ -229,7 +229,12 @@ void wat_generator::generate(const wasm_data_section& section, std::ostream& out
 void wat_generator::generate(const wasm_memory& memory, std::ostream& output, size_t indent)
 {
     std::string ind(2, ' ');
-    output << ind << "(memory " << memory.initial_block_count << ")\n";
+    output << ind << "(memory " << memory.initial_block_count;
+    if (memory.max_block_count > 0)
+    {
+        output << " " << memory.max_block_count;
+    }
+    output << ")\n";
 }
 
 void wat_generator::generate(const wasm_block& block, std::ostream& output, size_t indent)
