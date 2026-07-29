@@ -1,4 +1,5 @@
 #include "lir.hpp"
+#include "compile_options.hpp"
 #include "lowering_strategy.hpp"
 #include <ostream>
 
@@ -9,7 +10,7 @@ class wasm_module;
 class lir_based_emitter
 {
 public:
-    explicit lir_based_emitter(context& ctx);
+    explicit lir_based_emitter(compile_options options, context& ctx);
     ~lir_based_emitter();
 
     wasm_module generate(lir::module& module_def);
@@ -44,6 +45,7 @@ public:
 private:
     uint32_t allocate_data(const std::string& data);
 
+    compile_options options;
     context& parse_context;
     std::unique_ptr<lowering_strategy> lowering;
 

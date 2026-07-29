@@ -322,7 +322,7 @@ struct wasm_data_section
     std::string data_buffer;
 };
 
-struct wasm_memory : public exportable
+struct wasm_memory : public exportable, public importable
 {
     explicit wasm_memory(index_type index, size_t initial_block_count);
 

@@ -35,7 +35,11 @@ void dump_value(std::ostream& out, context& context, const symbol_id& value)
 
 int main(int argc, char* argv[])
 {
+    compile_options options;
     auto args = parse_args(argc, argv);
+    options.mem_type = args.mem_type;
+    options.mem_min_blocks = args.mem_min_blocks;
+    options.mem_max_blocks = args.mem_max_blocks;
 
     if (args.help)
     {
@@ -146,7 +150,7 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    lir_based_emitter l_emitter{parse_context};
+    lir_based_emitter l_emitter{options, parse_context};
     wasm_module mod = l_emitter.generate(l_mod);
 
     if (args.output_path.ends_with(".wasm"))

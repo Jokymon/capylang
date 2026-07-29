@@ -471,8 +471,9 @@ void transform_store(const context& parse_context, const storage_loc& storage, w
     );
 }
 
-lir_based_emitter::lir_based_emitter(context& ctx)
-: parse_context(ctx)
+lir_based_emitter::lir_based_emitter(compile_options options, context& ctx)
+: options(options)
+, parse_context(ctx)
 , lowering(new lower_cabi(ctx))
 {
     cur_data = new wasm_data_section(100);
@@ -491,8 +492,20 @@ wasm_module lir_based_emitter::generate(lir::module& module_def)
 
     current_module = &module_def;
 
-    auto& memory = ir_module.create_memory(1);
-    ir_module.export_as("memory", memory);
+    auto& memory = ir_module.create_memory(options.mem_min_blocks);
+    if (options.mem_max_blocks.has_value())
+    {
+        memory.max_block_count = options.mem_max_blocks.value();
+    }
+
+    if ((memory_type::exported == options.mem_type) || (memory_type::impex == options.mem_type))
+    {
+        ir_module.export_as("memory", memory);
+    }
+    if ((memory_type::imported == options.mem_type) || (memory_type::impex == options.mem_type))
+    {
+        memory.import_from("env", "memory");
+    }
 
     for (auto& literal : parse_context.string_literals)
     {

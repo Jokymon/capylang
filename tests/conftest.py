@@ -3,7 +3,7 @@ import subprocess
 import tools
 
 
-def run_compile_wat(source_path, wat_path, wasm_path) -> tuple[int, str]:
+def run_compile_wat(source_path, wat_path, wasm_path, cli_options=[]) -> tuple[int, str]:
     res = subprocess.run(
         [
             "wasmtime",
@@ -15,7 +15,7 @@ def run_compile_wat(source_path, wat_path, wasm_path) -> tuple[int, str]:
             source_path.as_posix(),
             "-o",
             wat_path.as_posix(),
-        ],
+        ] + cli_options,
         capture_output=True,
     )
     if res.returncode != 0:
@@ -27,7 +27,7 @@ def run_compile_wat(source_path, wat_path, wasm_path) -> tuple[int, str]:
     return res.returncode, res.stderr.decode()
 
 
-def run_compile_wasm(source_path, _wat_path, wasm_path) -> tuple[int, str]:
+def run_compile_wasm(source_path, _wat_path, wasm_path, cli_options=[]) -> tuple[int, str]:
     res = subprocess.run(
         [
             "wasmtime",
@@ -39,7 +39,7 @@ def run_compile_wasm(source_path, _wat_path, wasm_path) -> tuple[int, str]:
             source_path.as_posix(),
             "-o",
             wasm_path.as_posix(),
-        ],
+        ] + cli_options,
         capture_output=True,
     )
     if res.returncode != 0:

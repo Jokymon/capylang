@@ -42,7 +42,7 @@ def run_wasmfile(wasm_path) -> tuple[int, str]:
     return res.returncode, res.stdout.decode()
 
 
-def run_test_code(source_code) -> tuple[int, str]:
+def run_test_code(source_code, options={}) -> tuple[int, str]:
     """Compiles the given source_code into a WASM module
     and run it in a WASM runtime. The returned values
     represent the exit code of the run code and the
@@ -57,8 +57,15 @@ def run_test_code(source_code) -> tuple[int, str]:
     wasm_file_path = source_file_path.with_suffix(".wasm")
 
     assert _compile_func is not None
+    cli_args = []
+    if "memory" in options:
+        cli_args += ["--memory", options["memory"]]
+    if "mem-min-blocks" in options:
+        cli_args += ["--mem-min-blocks", str(options["mem-min-blocks"])]
+    if "mem-max-blocks" in options:
+        cli_args += ["--mem-max-blocks", str(options["mem-max-blocks"])]
     exit_code, stderr = _compile_func(source_file_path, wat_file_path,
-                                      wasm_file_path)
+                                      wasm_file_path, cli_args)
     if exit_code != 0:
         raise ValueError("Compilation unexpectedly failed:\n" + stderr)
     exit_code, stdout = run_wasmfile(wasm_file_path)

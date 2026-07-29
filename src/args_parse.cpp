@@ -2,6 +2,7 @@
 #include "tools.hpp"
 #include <functional>
 #include <iterator>
+#include <ranges>
 #include <vector>
 
 // maximum length to use when listing the arguments in the help text
@@ -143,11 +144,147 @@ static ArgumentDescriptor make_value_descriptor(
     };
 }
 
+template <typename T>
+static ArgumentDescriptor make_numeric_descriptor(
+    std::vector<std::string> options,
+    bool required,
+    std::string value_name,
+    std::string description,
+    T& target
+)
+{
+    constexpr bool is_optional = (requires { target.has_value(); });
+
+    return ArgumentDescriptor{
+        ArgumentDescriptor::option,
+        options,
+        value_name,
+        description,
+        required,
+        [&target, options = options](ArgvIterator& current, ArgvIterator const& end)
+        {
+            std::string arg = *current;
+            for (auto const& option : options)
+            {
+                if (arg == option)
+                {
+                    if (++current == end)
+                    {
+                        return false;
+                    }
+
+                    if constexpr (is_optional)
+                    {
+                        if (*current == "none")
+                        {
+                            target = std::nullopt;
+                            return true;
+                        }
+                    }
+                    // TODO: check parsing
+                    target = std::atoi((*current).c_str());
+                    return true;
+                }
+                const std::string prefix = option + "=";
+                if (arg.rfind(prefix, 0) == 0)
+                {
+                    if constexpr (is_optional)
+                    {
+                        if (arg.substr(prefix.size()) == "none")
+                        {
+                            target = std::nullopt;
+                            return true;
+                        }
+                    }
+                    // TODO: number parsing check
+                    target = std::atoi(arg.substr(prefix.size()).c_str());
+                    return true;
+                }
+            }
+            return false;
+        }
+    };
+}
+
+template <typename E>
+static ArgumentDescriptor make_choice_descriptor(
+    std::vector<std::string> options,
+    bool required,
+    std::string value_name,
+    std::vector<std::string> choices_as_string,
+    std::vector<E> choices_as_enum,
+    std::string description,
+    E& target
+)
+{
+    CAPY_ASSERT(choices_as_string.size() == choices_as_enum.size(), "Invalid choice description; enum and string representation lists should be equal size");
+
+    return ArgumentDescriptor{
+        ArgumentDescriptor::option,
+        options,
+        value_name,
+        description,
+        required,
+        [&target, options = options, choices_str = choices_as_string, choices_enum = choices_as_enum](ArgvIterator& current, ArgvIterator const& end)
+        {
+            std::string arg = *current;
+            for (auto const& option : options)
+            {
+                if (arg == option)
+                {
+                    if (++current == end)
+                    {
+                        return false;
+                    }
+
+                    for (auto [choice, choice_enum] : std::views::zip(choices_str, choices_enum))
+                    {
+                        if (choice == *current)
+                        {
+                            target = choice_enum;
+                            return true;
+                        }
+                    }
+                    // choice is not a valid option
+                    return false;
+                }
+                const std::string prefix = option + "=";
+                if (arg.rfind(prefix, 0) == 0)
+                {
+                    for (auto [choice, choice_enum] : std::views::zip(choices_str, choices_enum))
+                    {
+                        if (choice == arg.substr(prefix.size()))
+                        {
+                            target = choice_enum;
+                            return true;
+                        }
+                    }
+                    // TODO: this is an actual error and should be explicitly reported
+                    // choice is not a valid option
+                    return false;
+                }
+            }
+            return false;
+        }
+    };
+}
+
 static std::vector<ArgumentDescriptor> make_argument_descriptors(Args& args)
 {
     return {
         make_value_descriptor({"-o", "--output"}, true, "PATH", "Path to the output file. Depending on the suffix, a WAT or WASM file is generated", args.output_path),
         make_value_descriptor({"-i", "--input"}, true, "PATH", "Path to the capylang source input file", args.input_path),
+        make_choice_descriptor<memory_type>(
+            {"--memory"},
+            false,
+            "MEMORY_TYPE",
+            {"internal", "imported", "exported", "impex"},
+            {memory_type::internal, memory_type::imported, memory_type::exported, memory_type::impex},
+            "Type of linear memory to use in the generated module; possible options are 'internal', 'imported' and 'exported'",
+            args.mem_type
+        ),
+        make_numeric_descriptor({"--mem-min-blocks"}, false, "INT", "Minimal number of blocks for the linear memory. Default is 1", args.mem_min_blocks),
+        make_numeric_descriptor({"--mem-max-blocks"}, false, "OPT<INT>", "Maximum number of blocks for the linear memory. Default is 'none'", args.mem_max_blocks),
         make_flag_descriptor({"--dump-tokens"}, "Only dump the tokens and exit", args.dump_tokens),
         make_flag_descriptor({"--dump-ast"}, "Only dump the AST and exit", args.dump_ast),
         make_flag_descriptor({"--dump-lir"}, "Only dump the LIR and exit", args.dump_lir),
