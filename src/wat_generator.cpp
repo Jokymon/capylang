@@ -232,16 +232,18 @@ void wat_generator::generate(const wasm_memory& memory, std::ostream& output, si
 
     if (memory.is_imported())
     {
-        output << ind << "(import \"" << memory.ns << "\" \"memory\" (memory " << memory.initial_block_count;
-    }
-    else
-    {
-        output << ind << "(memory " << memory.initial_block_count;
+        output << ind << "(import \"" << memory.ns << "\" \"memory\" ";
     }
 
+    output << ind << "(memory " << memory.initial_block_count;
     if (memory.max_block_count > 0)
     {
         output << " " << memory.max_block_count;
+    }
+
+    if (memory.is_imported())
+    {
+        output << ")";
     }
 
     output << ")\n";

@@ -274,6 +274,12 @@ void wasm_generator::generate_imports(const wasm_module& module, std::ostream& o
     output.put(SECTION_IMPORT);
 
     size_t import_count = std::count_if(
+        module.memories.begin(),
+        module.memories.end(),
+        [](const auto& mem)
+        { return mem.is_imported(); }
+    );
+    import_count += std::count_if(
         module.functions.begin(),
         module.functions.end(),
         [](const auto& func)
@@ -282,6 +288,28 @@ void wasm_generator::generate_imports(const wasm_module& module, std::ostream& o
 
     std::ostringstream content(std::ios::binary);
     encode_leb128(content, import_count);
+
+    for (const auto& mem : module.memories)
+    {
+        if (!mem.is_imported())
+            continue;
+
+        encode_string(content, mem.ns);
+        encode_string(content, mem.import_name);
+
+        content.put(EXTERNAL_TYPE_MEM);
+        if (mem.max_block_count > 0)
+        {
+            content.put(LIMITS_I32_NM);
+            encode_leb128(content, mem.initial_block_count);
+            encode_leb128(content, mem.max_block_count);
+        }
+        else
+        {
+            content.put(LIMITS_I32_N);
+            encode_leb128(content, mem.initial_block_count);
+        }
+    }
 
     for (const auto& func : module.functions)
     {
