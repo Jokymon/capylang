@@ -385,7 +385,7 @@ void wasm_generator::generate_globals(const wasm_module& module, std::ostream& o
     for (const auto& g : module.globals)
     {
         content.put(encode_wasm_type(g.typ));
-        if (g.access == wasm_module::access_type::mut)
+        if (g.access == access_type::mut)
             content.put(MUTABILITY_MUT);
         else
             content.put(MUTABILITY_IMMUT);

@@ -117,7 +117,7 @@ void wat_generator::generate(const wasm_module& module, std::ostream& output)
     for (const auto& global : module.globals)
     {
         output << ind << "(global $" << global.name;
-        if (global.access == wasm_module::access_type::mut)
+        if (global.access == access_type::mut)
         {
             output << " (mut ";
             output << repr_wasm_type(global.typ);

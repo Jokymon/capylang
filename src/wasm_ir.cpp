@@ -381,7 +381,7 @@ wasm_data_section& wasm_module::create_data_section(size_t init_offset)
     return data_sections.back();
 }
 
-void wasm_module::create_global(const char* name, wasm_type g_type, wasm_module::access_type access, uint64_t initvalue)
+void wasm_module::create_global(const char* name, wasm_type g_type, access_type access, uint64_t initvalue)
 {
     size_t index = globals.size();
     globals.push_back({name, access, g_type, initvalue});

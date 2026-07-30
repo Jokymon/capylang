@@ -86,6 +86,12 @@ enum class wasm_op
     typ_const
 };
 
+enum class access_type
+{
+    mut,
+    immut
+};
+
 class wasm_branch_label
 {
 public:
@@ -330,14 +336,16 @@ struct wasm_memory : public exportable, public importable
     size_t max_block_count = 0;
 };
 
+struct wasm_global
+{
+    std::string name;
+    access_type access;
+    wasm_type typ;
+    uint64_t initvalue;
+};
+
 struct wasm_module
 {
-    enum access_type
-    {
-        mut,
-        immut
-    };
-
     explicit wasm_module();
 
     wasm_memory& create_memory(size_t initial_block_count);
@@ -349,19 +357,11 @@ struct wasm_module
 
     void export_as(const char* export_name, exportable& object);
 
-    struct global_sym
-    {
-        std::string name;
-        access_type access;
-        wasm_type typ;
-        uint64_t initvalue;
-    };
-
     // vectors with WASM items where the index in the vector represents the
     // index in corresponding WASM section
     std::vector<wasm_memory> memories;
     std::vector<wasm_data_section> data_sections;
-    std::vector<global_sym> globals;
+    std::vector<wasm_global> globals;
     std::map<std::string, size_t> globals_map;
     std::vector<wasm_export> exports;
     std::vector<wasm_function> functions;

@@ -580,7 +580,7 @@ void lir_based_emitter::emit(const lir::import_definition& import_def)
 void lir_based_emitter::emit(const lir::global_definition& global_def)
 {
     const auto& global_symbol = parse_context.symbol_at(global_def.symbol_ref);
-    auto mutability = global_symbol.mutab ? wasm_module::access_type::mut : wasm_module::access_type::immut;
+    auto mutability = global_symbol.mutab ? access_type::mut : access_type::immut;
     cur_mod->create_global(global_symbol.name.c_str(), wasm_type::i32, mutability, global_def.init_value);
 }
 
