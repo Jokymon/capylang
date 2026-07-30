@@ -1,0 +1,87 @@
+// Must be compiled with --memory imported and potentially --mem-min-size=1 to work with
+// WASM4 game engine
+
+import env::blit(data: *u8, x: s32, y: s32, width: u32, height: u32, flags: u32) as blit;
+import env::line(x1: s32, y1: s32, x2: s32, y2: s32) as line;
+import env::hline(x: s32, y: s32, len: u32) as hline;
+import env::vline(x: s32, y: s32, len: u32) as vline;
+import env::oval(x: s32, y: s32, width: u32, height: u32) as oval;
+import env::rect(x: s32, y: s32, width: u32, height: u32) as oval;
+import env::text(text: *u32, x: s32, y: s32) as text;
+
+// TONE_PULSE1 0
+// TONE_PULSE2 1
+// TONE_TRIANGLE 2
+// TONE_NOISE 3
+// TONE_MODE1 0
+// TONE_MODE2 4
+// TONE_MODE3 8
+// TONE_MODE4 12
+// TONE_PAN_LEFT 16
+// TONE_PAN_RIGHT 32
+// TONE_NOTE_MODE 64
+import env::tone(frequency: u32, duration: u32, volume: u32, flags: u32) as tone;
+
+import env::diskr(dest: *u8, size: u32) as diskr;
+import env::diskw(src: *u8, size: u32) as diskw;
+
+import env::trace(msg: *u8) as trace;
+
+// SCREEN_SIZE = 160x160
+// FONT_SIZE = 8
+
+// BUTTON_1 1
+// BUTTON_2 2
+// BUTTON_LEFT 16
+// BUTTON_RIGHT 32
+// BUTTON_UP 64
+// BUTTON_DOWN 128
+// MOUSE_LEFT 1
+// MOUSE_RIGHT 2
+// MOUSE_MIDDLE 4
+
+// BLIT_2BPP 1
+// BLIT_1BPP 0
+// BLIT_FLIP_X 2
+// BLIT_FLIP_Y 4
+// BLIT_ROTATE 8
+
+global PALETTE: *u32 = 0x04;
+global DRAW_COLORS: *u16 = 0x14;
+global GAMEPAD1: *u8 = 0x16;
+
+global mut button_pressed: bool = false;
+
+@export
+fn start() {
+}
+
+@export
+fn update() {
+    // TODO: doesn't produce a nice enough smiley face because binary values starting with 0x80 are
+    // turned into multi byte values in strings. We would need something like plain byte arrays.
+    let smiley: string = "\u{c3}\u{81}\u{24}\u{24}\u{0}\u{24}\u{99}\u{c3}";
+    let hello: string = "Hello\u{0}";
+    let press: string = "Press X to blink\u{0}";
+
+    *DRAW_COLORS = 2;
+    text(hello.ptr as *u32, 10, 10);
+
+    let gamepad: u8 = *GAMEPAD1;
+    if gamepad != 0 {
+        *DRAW_COLORS = 4;
+    }
+    if gamepad == 2 {
+        if (button_pressed==false) {
+            button_pressed = true;
+            tone(440, 30, 30, 0);
+        }
+    }
+    else
+    {
+        button_pressed = false;
+    }
+
+    blit(smiley.ptr as *u8, 76, 76, 8, 8, 0);
+    text(press.ptr as *u32, 16, 90);
+}
