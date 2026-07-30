@@ -647,11 +647,13 @@ std::unique_ptr<lir::import_definition> lir_generator::generate(const node_impor
 
 std::unique_ptr<lir::global_definition> lir_generator::generate(const node_global_definition& global_def)
 {
+    auto init_expressions = generate_to_exprs(*global_def.init_expression);
+
     auto glob = std::make_unique<lir::global_definition>();
     glob->name = global_def.name;
     glob->assigned_type = global_def.assigned_type;
     glob->symbol_ref = global_def.symbol_ref;
-    glob->init_value = global_def.init_value;
+    glob->init_expression = std::move(init_expressions[0]);
 
     return glob;
 }

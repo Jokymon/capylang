@@ -131,8 +131,7 @@ DEF_NODE(node, global_definition, located_node)
     DEF_SCALAR_FIELD(std::string, name)
     DEF_SCALAR_WITH_CONTEXT(type_id, assigned_type)
     DEF_SCALAR_WITH_CONTEXT(symbol_id, symbol_ref)
-    DEF_SCALAR_FIELD(int32_t, init_value)
-    // std::unique_ptr<node_expr> init_expression;
+    DEF_NODE_FIELD(node, node_expr, init_expression)
 DEF_END
 
 DEF_NODE(node, function_definition, located_node_with_attributes)

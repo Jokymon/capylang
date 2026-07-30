@@ -127,10 +127,9 @@ void wat_generator::generate(const wasm_module& module, std::ostream& output)
         {
             output << " " << repr_wasm_type(global.typ);
         }
-        output << " (";
-        output << repr_wasm_type(global.typ) << ".const ";
-        output << global.initvalue;
-        output << "))\n";
+        output << " (\n";
+        generate(global.init_expression, output, 4);
+        output << ind << "))\n";
     }
     for (const auto& exp : module.exports)
     {

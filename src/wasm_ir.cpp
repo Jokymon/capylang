@@ -295,6 +295,16 @@ void wasm_block::unreachable()
     instructions.push_back(std::make_unique<wasm_statement>(wasm_instruction(wasm_op::unreachable)));
 }
 
+wasm_block wasm_block::create_init_block()
+{
+    return wasm_block{
+        wasm_block_type::t_plain,
+        wasm_type::none,
+        wasm_branch_label(),
+        nullptr
+    };
+}
+
 exportable::exportable(index_type index, wasm_extern_index export_type)
 : name()
 , index(index)
@@ -381,11 +391,13 @@ wasm_data_section& wasm_module::create_data_section(size_t init_offset)
     return data_sections.back();
 }
 
-void wasm_module::create_global(const char* name, wasm_type g_type, access_type access, uint64_t initvalue)
+wasm_global& wasm_module::create_global(const char* name, wasm_type g_type, access_type access)
 {
     size_t index = globals.size();
-    globals.push_back({name, access, g_type, initvalue});
+    globals.push_back(wasm_global{name, access, g_type, wasm_block::create_init_block()});
     globals_map[name] = index;
+
+    return globals.back();
 }
 
 wasm_function& wasm_module::create_function(const char* name, wasm_type return_type, arguments_type arguments)

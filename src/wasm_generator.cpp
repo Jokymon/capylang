@@ -390,8 +390,10 @@ void wasm_generator::generate_globals(const wasm_module& module, std::ostream& o
         else
             content.put(MUTABILITY_IMMUT);
 
-        content.put(INST_I32_CONST);
-        encode_i32_const_immediate(content, static_cast<int64_t>(g.initvalue));
+        // We need a dummy function for generate_block(), because generate_block wants to look up locals; in globals we can't
+        // use any locals, so an empty function should be ok
+        wasm_function dummy_function{0, "", wasm_type::none, {}};
+        generate_block(module, dummy_function, g.init_expression, content);
         content.put(INST_TERMINATOR);
     }
 

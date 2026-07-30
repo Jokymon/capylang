@@ -445,7 +445,7 @@ node_global_definition parser::parse_global()
     auto global_symbol_id = parse_context.create_symbol(std::move(global_symbol));
     current_scope->symbol_table[variable_name.name] = global_symbol_id;
 
-    int32_t init_value = 0;
+    std::unique_ptr<node_expr> init_expr = nullptr;
     if (!capy_lexer->ahead_is_sym(token_symbol::sym_equal))
     {
         append_error("Globals need an initialisation value");
@@ -454,8 +454,7 @@ node_global_definition parser::parse_global()
     {
         capy_lexer->expect_symbol(token_symbol::sym_equal);
 
-        auto initializer = parse_number();
-        init_value = std::get<node_number>(initializer.value).number;
+        init_expr = std::make_unique<node_expr>(parse_expression());
         parse_context.symbol_at(global_symbol_id).is_assigned = true;
     }
 
@@ -468,7 +467,7 @@ node_global_definition parser::parse_global()
         variable_name.name,
         type_spec,
         global_symbol_id,
-        init_value
+        std::move(init_expr)
     };
 }
 

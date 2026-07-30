@@ -267,6 +267,10 @@ public:
     wasm_block* enclosing_block = nullptr;
 
     std::vector<std::unique_ptr<wasm_statement>> instructions;
+
+public:
+    // Create a very simple block usable for the initialiser expression of globals
+    static wasm_block create_init_block();
 };
 
 struct exportable
@@ -341,7 +345,7 @@ struct wasm_global
     std::string name;
     access_type access;
     wasm_type typ;
-    uint64_t initvalue;
+    wasm_block init_expression;
 };
 
 struct wasm_module
@@ -350,7 +354,7 @@ struct wasm_module
 
     wasm_memory& create_memory(size_t initial_block_count);
     wasm_data_section& create_data_section(size_t init_offset);
-    void create_global(const char* name, wasm_type g_type, access_type access, uint64_t initvalue);
+    wasm_global& create_global(const char* name, wasm_type g_type, access_type access);
     wasm_function& create_function(const char* name, wasm_type return_type, arguments_type arguments);
 
     void append_data_section(wasm_data_section& data);

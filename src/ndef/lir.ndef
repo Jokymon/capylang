@@ -183,7 +183,7 @@ node GlobalDefinition with Location
     name: identifier
     assigned_type: type
     symbol_ref: symbol
-    init_value: number
+    init_expression: Expr
 end
 
 node Module with Location

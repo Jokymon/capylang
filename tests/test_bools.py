@@ -18,6 +18,25 @@ fn _start() {
 
 
 @pytest.mark.good
+def test_global_can_be_a_bool():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+global b: bool = true;
+
+@export
+fn _start() {
+    if (b) {
+        proc_exit(28u32);
+    }
+    proc_exit(10u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 28
+
+
+@pytest.mark.good
 def test_a_boolean_true_is_a_1():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;

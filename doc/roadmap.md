@@ -25,10 +25,9 @@ it can serve as published project documentation.
 - Tighten pointer dereference handling, especially for `u8` and `u16` where the
   current defaults differ from normal `u32` dereferencing.
 - Design the `address of` operator and define where it should be legal.
-- Decide whether global initialization should allow the `const` subset of
-  instructions.
 - Explore a feature for embedding binary assets directly from files.
 - Clarify the in-memory lowering strategy for strings and WASI interop.
+- Add better checks for the supported range of types and functions in global initialisations
 
 ## Frontend and Diagnostics
 
