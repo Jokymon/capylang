@@ -1,27 +1,31 @@
 # Compiler Roadmap
 
 This page tracks implementation work that is still open and relevant to the
-compiler internals. It is intentionally more structured than a raw TODO list so
-it can serve as published project documentation.
+compiler internals.
 
 ## Language and Type System
 
-- Formalize the grammar so it can drive tooling such as syntax highlighters and
-  a future language server.
 - Add 64-bit integer types.
 - Add floating-point types.
+- Add `\0` shorthand for inserting a zero-byte into a string
+- Check type inference when accessing ptr/size of a string whose type was only inferred
 - Design and add vector numeric types.
 - Add structured component model types such as variants, enums, lists, and
   results.
 - Improve type inference for `if` and `else` branches when surrounding type
   information is available.
+- Add logical `&`, `|` operators
 - Add the unary logical `!` operator.
 - The type inference doesn't properly pick up on the return type when only
   `return` statements are used.
+- Add compile time constants, for starters, at least the numeric ones.
 
 ## Memory and Data Model
 
 - Extend the basic memory management model.
+- Consider some form of memory configuration such that we can later define the area for heap allocations
+  and for placing data sections. This might either be in the form of more command line arguments or
+  something like linker scripts or just configurations.
 - Tighten pointer dereference handling, especially for `u8` and `u16` where the
   current defaults differ from normal `u32` dereferencing.
 - Design the `address of` operator and define where it should be legal.
@@ -31,8 +35,8 @@ it can serve as published project documentation.
 
 ## Frontend and Diagnostics
 
-- Fix parser cases that currently allow endless loops on unknown or unexpected
-  tokens.
+- Investigate the current weaknesses of the hand-written parser. In some cases, it just ends up in an endless loop,
+  sometimes it skips over the rest of the file complaining that there was some unexpected trailer.
 - Improve lexer-side error handling and diagnostics.
 - Decide whether `let` expressions without a trailing semicolon should stay
   valid.
