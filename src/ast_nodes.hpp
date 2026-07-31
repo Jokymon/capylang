@@ -122,7 +122,7 @@ DEF_END
 
 DEF_NODE(node, import_definition, located_node)
     DEF_SCALAR_FIELD(std::string, ns_name)
-    DEF_NODE_FIELD(node, node_function_head, function_head)
+    DEF_SCALAR_WITH_CONTEXT(node_function_head, function_head)
 
     DEF_NO_DUMP(std::optional<std::string>, alias)
 DEF_END
@@ -135,7 +135,7 @@ DEF_NODE(node, global_definition, located_node)
 DEF_END
 
 DEF_NODE(node, function_definition, located_node_with_attributes)
-    DEF_NODE_FIELD(node, node_function_head, function_head)
+    DEF_SCALAR_WITH_CONTEXT(node_function_head, function_head)
     DEF_NODE_LIST_FIELD(node, node_expr, code)
 
     DEF_NO_DUMP(std::unique_ptr<scope>, function_scope)

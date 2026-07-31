@@ -636,8 +636,8 @@ lir::expr_list lir_generator::generate_exprs(const node_binary_expression& node)
 std::unique_ptr<lir::import_definition> lir_generator::generate(const node_import_definition& imp_def)
 {
     auto imp = std::make_unique<lir::import_definition>();
-    imp->function_head.name = imp_def.function_head->name;
-    imp->function_head.signature = imp_def.function_head->signature;
+    imp->function_head.name = imp_def.function_head.name;
+    imp->function_head.signature = imp_def.function_head.signature;
 
     imp->ns_name = imp_def.ns_name;
     imp->alias = imp_def.alias;
@@ -665,8 +665,8 @@ std::unique_ptr<lir::function_definition> lir_generator::generate(const node_fun
     {
         func->attributes.push_back(attr.name);
     }
-    func->head.name = func_def.function_head->name;
-    func->head.signature = func_def.function_head->signature;
+    func->head.name = func_def.function_head.name;
+    func->head.signature = func_def.function_head.signature;
 
     for (const auto& statement : func_def.code)
     {

@@ -381,7 +381,7 @@ void semantic_analyser::process(source_range location, node_let_expression& n)
 
 void semantic_analyser::process(source_range location, node_function_definition& n)
 {
-    auto declared_return_type = parse_context.function_return_type(n.function_head->signature.function_type);
+    auto declared_return_type = parse_context.function_return_type(n.function_head.signature.function_type);
     if (!declared_return_type.has_value())
     {
         CAPY_FAIL("In a node_function_definition, the function_type should be a function and have a return type");
@@ -392,7 +392,7 @@ void semantic_analyser::process(source_range location, node_function_definition&
         return;
     }
 
-    current_func_head = n.function_head.get();
+    current_func_head = &n.function_head;
     visit_nodes(n);
     current_func_head = nullptr;
 

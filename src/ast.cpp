@@ -32,6 +32,16 @@ std::string val_repr(const context& ctx, symbol_id sid)
     return sym.name + " (" + sym_kind + "): " + ctx.repr(sym.symbol_type);
 }
 
+// TODO: This is a hacky replacement to get function_head as a value into
+// the AST until we can switch to Ndef
+std::string val_repr(const context& ctx, node_function_head fhead)
+{
+    std::string out = "name: " + fhead.name;
+    out += ", signature: ";
+    out += ctx.repr(fhead.signature.function_type);
+    return out;
+}
+
 // plain streaming functions for dumping some special scalar types
 inline std::ostream& operator<<(std::ostream& o, assign_context a_ctx)
 {

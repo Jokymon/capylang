@@ -93,7 +93,7 @@ void normalization::process(source_range, node_function_definition& n)
 {
     visit_nodes(n);
 
-    auto maybe_return_type = parse_context.function_return_type(n.function_head->signature.function_type);
+    auto maybe_return_type = parse_context.function_return_type(n.function_head.signature.function_type);
     if (!maybe_return_type.has_value())
     {
         return;

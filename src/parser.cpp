@@ -402,7 +402,7 @@ node_import_definition parser::parse_import_definition()
         {{},
          {start_range.start, end_range.end}},
         namespace_name.name,
-        std::make_unique<node_function_head>(std::move(function_head)),
+        function_head,
         alias_name
     };
 }
@@ -517,7 +517,7 @@ node_function_definition parser::parse_function_definition()
 
     return node_function_definition{
         {{{}, {start_range.start, end_range.end}}, std::move(attributes)},
-        std::make_unique<node_function_head>(std::move(function_head)),
+        function_head,
         std::move(function_body),
         std::move(func_scope)
     };
