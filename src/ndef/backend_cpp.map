@@ -1,11 +1,15 @@
 @include <cstddef>
 @include <cstdint>
+@include "lexer.hpp"
 @include "symbol.hpp"
 
+attribute: capy_attribute
+field_type: record_type::field_type
 identifier: std::string
 number: long long
 boolean: bool
 type: type_id
+operator_type: operator_type
 symbol: symbol_id
 function_signature: function_signature
 character: std::uint32_t

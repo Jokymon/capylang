@@ -5,7 +5,7 @@ trait Location
 end
 
 trait Attributes
-    atributes: *identifier
+    attributes: *attribute
 end
 
 enum AssignContext
@@ -58,7 +58,7 @@ node CastExpression
 end
 
 node ReturnExpression
-    expressoin: Expr
+    expression: Expr
     // used to distinguish return expressions that come from explicit uses of
     // keyword 'return' or if it was implicitly created from the last expression
     // in a function
@@ -85,7 +85,7 @@ end
 node LetExpression
     name: identifier
     symbol_ref: symbol
-    init_epxression: Expr
+    init_expression: Expr
 end
 
 node IfExpression
@@ -102,13 +102,13 @@ end
 
 node RecordDefinition
     name: identifier
-    // TODO: fields
+    fields: *field_type
 end
 
 node FieldInitialisation
     location: source_range
     field_name: identifier
-    init_epxression: Expr
+    init_expression: Expr
 end
 
 node RecordInitialisation
@@ -138,7 +138,7 @@ node GlobalDefinition with Location
     name: identifier
     assigned_type: type
     symbol_ref: symbol
-    init_value: number
+    init_expression: Expr
 end
 
 node FunctionDefinition with Location, Attributes
@@ -157,6 +157,13 @@ node Module with Location
     module_scope: transient scope
 end
 
-choice Expr
-    Number | CharLiteral
+choice Expr allwith Location
+    Number | CharLiteral | BoolLiteral | StringLiteral |
+    VarReference | PointerDeref | LetExpression |
+    IfExpression | WhileExpression |
+    RecordDefinition | RecordInitialisation | FieldDeref |
+    FunctionCall |
+    CastExpression | DiscardExpression | ReturnExpression |
+    BreakStatement |
+    UnaryExpression | BinaryExpression
 end

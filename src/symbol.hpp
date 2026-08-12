@@ -11,6 +11,11 @@
 #include <variant>
 #include <vector>
 
+struct capy_attribute
+{
+    std::string name;
+};
+
 enum class primitive_type
 {
     Void,

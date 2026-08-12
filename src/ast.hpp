@@ -16,11 +16,6 @@ struct located_node : public node_base
     source_range location;
 };
 
-struct capy_attribute
-{
-    std::string name;
-};
-
 using attribute_bag = std::vector<capy_attribute>;
 
 struct located_node_with_attributes : public located_node
