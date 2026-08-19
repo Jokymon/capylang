@@ -143,6 +143,25 @@ fn _start() {
 
 
 @pytest.mark.good
+def test_blob_literals_allow_plain_binary_data():
+    # Use a value in the blob with the 8th bit set to make sure that no UTF-8
+    # encoding happens but subtract 10 to keep the exit code in the range 0-127
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let s: string = b"\\x80blob_data";
+    let p: *u8 = s.ptr;
+
+    proc_exit(*p as u32 - 10)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == (0x80 - 10)
+
+
+@pytest.mark.good
 def test_creating_character_literals():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;

@@ -1,4 +1,4 @@
-// Must be compiled with --memory imported and potentially --mem-min-size=1 to work with
+// Must be compiled with --memory=imported and potentially --mem-min-size=1 to work with
 // WASM4 game engine
 
 import env::blit(data: *u8, x: s32, y: s32, width: u32, height: u32, flags: u32) as blit;
@@ -58,9 +58,7 @@ fn start() {
 
 @export
 fn update() {
-    // TODO: doesn't produce a nice enough smiley face because binary values starting with 0x80 are
-    // turned into multi byte values in strings. We would need something like plain byte arrays.
-    let smiley: string = "\u{c3}\u{81}\u{24}\u{24}\u{0}\u{24}\u{99}\u{c3}";
+    let smiley: string = b"\xc3\x81\x24\x24\x00\x24\x99\xc3";
     let hello: string = "Hello\u{0}";
     let press: string = "Press X to blink\u{0}";
 

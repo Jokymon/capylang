@@ -96,6 +96,7 @@ atom
     | block_expression
     | record_initialisation
     | IDENTIFIER ( DOT IDENTIFIER )*
+    | BLOB_LITERAL
     | STRING_LITERAL
     | CHAR_LITERAL
     | number

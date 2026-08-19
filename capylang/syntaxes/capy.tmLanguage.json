@@ -122,13 +122,45 @@
 			]
 		},
 		"strings": {
-			"name": "string.quoted.double.capy",
-			"begin": "\"",
-			"end": "\"",
 			"patterns": [
 				{
-					"name": "constant.character.escape.capy",
-					"match": "\\\\."
+					"name": "string.quoted.double.blob.capy",
+					"begin": "(b)\"",
+					"beginCaptures": {
+						"1": {
+							"name": "storage.type.blob.capy"
+						}
+					},
+					"end": "\"",
+					"patterns": [
+						{
+							"name": "constant.character.escape.capy",
+							"match": "\\\\(?:[nt\\\\\"]|x[0-9a-f]{2})"
+						},
+						{
+							"name": "invalid.illegal.non-ascii.blob.capy",
+							"match": "[^\\x00-\\x7F]+"
+						},
+						{
+							"name": "invalid.illegal.escape.capy",
+							"match": "\\\\."
+						}
+					]
+				},
+				{
+					"name": "string.quoted.double.utf8.capy",
+					"begin": "\"",
+					"end": "\"",
+					"patterns": [
+						{
+							"name": "constant.character.escape.capy",
+							"match": "\\\\(?:[nt\\\\\"]|u\\{[0-9A-Fa-f]+\\})"
+						},
+						{
+							"name": "invalid.illegal.escape.capy",
+							"match": "\\\\."
+						}
+					]
 				}
 			]
 		}

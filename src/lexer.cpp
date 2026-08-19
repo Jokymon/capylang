@@ -647,6 +647,10 @@ token lexer::parse_token()
     {
         return parse_char_literal();
     }
+    else if ((ch == 'b') && (peek_ahead() == '\"'))
+    {
+        return parse_blob_literal();
+    }
     else if (ch == '\"')
     {
         return parse_string_literal();
@@ -808,7 +812,6 @@ token lexer::parse_string_literal()
         auto current_char_pos = look_ahead_position;
 
         auto ch = get_char();
-        int digit;
 
         if (ch == '\\')
         {
@@ -832,6 +835,60 @@ token lexer::parse_string_literal()
                 {
                     uint32_t char_code = parse_unicode_escape();
                     encode_utf8_raw_unchecked(char_code, string_literal);
+                    break;
+                }
+                default:
+                    // TODO: add a warning text for unknown escape sequence
+                    // unknown escape sequence, just add both characters as-is
+                    string_literal += ch;
+                    string_literal += next_ch;
+                    break;
+            }
+        }
+        else
+        {
+            string_literal += ch;
+        }
+    }
+    get_char(); // parse over the closing "
+
+    return token_string_literal{start_position, look_ahead_position, string_literal};
+}
+
+token lexer::parse_blob_literal()
+{
+    auto start_position = look_ahead_position;
+    get_char(); // parse over the opening b
+    get_char(); // parse over the opening "
+    std::string string_literal;
+
+    while (input_.peek() != '\"')
+    {
+        auto current_char_pos = look_ahead_position;
+
+        auto ch = get_char();
+
+        if (ch == '\\')
+        {
+            // handle escape sequences
+            char next_ch = get_char();
+            switch (next_ch)
+            {
+                case 'n':
+                    string_literal += '\n';
+                    break;
+                case 't':
+                    string_literal += '\t';
+                    break;
+                case '\\':
+                    string_literal += '\\';
+                    break;
+                case '\"':
+                    string_literal += '\"';
+                    break;
+                case 'x':
+                {
+                    string_literal += parse_hex_escape();
                     break;
                 }
                 default:
@@ -879,6 +936,33 @@ uint32_t lexer::parse_unicode_escape()
         }
         // TODO: handle invalid digit
         digit = get_char();
+    }
+
+    return char_code;
+}
+
+uint32_t lexer::parse_hex_escape()
+{
+    auto current_char_pos = look_ahead_position;
+    uint32_t char_code = 0;
+
+    // always expecting exactly two hexadecimal digits for \x sequences
+    for (size_t i = 0; i < 2; i++)
+    {
+        int digit = get_char();
+
+        if ((digit >= '0') && (digit <= '9'))
+        {
+            char_code = (char_code * 0x10) + (digit - '0');
+        }
+        else if ((digit >= 'a') && (digit <= 'f'))
+        {
+            char_code = (char_code * 0x10) + (digit - 'a' + 10);
+        }
+        else
+        {
+            append_error_at(current_char_pos, "Invalid hexadecimal digit ; must be 0-9 or a-f");
+        }
     }
 
     return char_code;
