@@ -249,3 +249,95 @@ void ast_visitor::visit_nodes(node_pointer_deref& ptr_deref)
 {
     visit(*ptr_deref.pointer_expression);
 }
+
+void ast_visitor::process(source_range location, node_number& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_char_literal& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_bool_literal& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_string_literal& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_var_reference& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_pointer_deref& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_record_definition& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_record_initialisation& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_field_deref& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_function_call& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_cast_expression& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_discard_expression& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_return_expression& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_break_statement& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_unary_expression& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_binary_expression& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_if_expression& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_while_expression& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_let_expression& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_global_definition& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_function_definition& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_import_definition& n)
+{
+}
+
+void ast_visitor::process(source_range location, node_module& n)
+{
+}

@@ -44,63 +44,23 @@ void type_inference::unify()
     } while (new_unresolved != previous_unresolved);
 }
 
-void type_inference::process(source_range location, node_number& n)
-{
-    (void)location;
-    (void)n;
-}
-
-void type_inference::process(source_range location, node_char_literal& n)
-{
-    (void)location;
-    (void)n;
-}
-
-void type_inference::process(source_range location, node_bool_literal& n)
-{
-    (void)location;
-    (void)n;
-}
-
-void type_inference::process(source_range location, node_string_literal& n)
-{
-    (void)location;
-    (void)n;
-}
-
-void type_inference::process(source_range location, node_var_reference& n)
-{
-    (void)location;
-    (void)n;
-}
-
 void type_inference::process(source_range location, node_pointer_deref& n)
 {
-    (void)location;
     visit_nodes(n);
-}
-
-void type_inference::process(source_range location, node_record_definition& n)
-{
-    (void)location;
-    (void)n;
 }
 
 void type_inference::process(source_range location, node_record_initialisation& n)
 {
-    (void)location;
     visit_nodes(n);
 }
 
 void type_inference::process(source_range location, node_field_deref& n)
 {
-    (void)location;
     visit(*n.object);
 }
 
 void type_inference::process(source_range location, node_function_call& n)
 {
-    (void)location;
     const auto& called_symbol = parse_context.symbol_at(n.symbol_ref);
     if (called_symbol.kind != symbol_kind::function)
     {
@@ -120,24 +80,17 @@ void type_inference::process(source_range location, node_function_call& n)
 
 void type_inference::process(source_range location, node_cast_expression& n)
 {
-    (void)location;
     visit_nodes(n);
 }
 
 void type_inference::process(source_range location, node_discard_expression& n)
 {
-    (void)location;
     visit_nodes(n);
 }
 
 void type_inference::process(source_range location, node_return_expression& n)
 {
-    (void)location;
     visit_nodes(n);
-}
-
-void type_inference::process(source_range location, node_break_statement&)
-{
 }
 
 void type_inference::process(source_range location, node_unary_expression& n)
@@ -147,7 +100,6 @@ void type_inference::process(source_range location, node_unary_expression& n)
 
 void type_inference::process(source_range location, node_binary_expression& n)
 {
-    (void)location;
     visit_nodes(n);
 
     switch (n.operation)
@@ -171,19 +123,16 @@ void type_inference::process(source_range location, node_binary_expression& n)
 
 void type_inference::process(source_range location, node_if_expression& n)
 {
-    (void)location;
     visit_nodes(n);
 }
 
 void type_inference::process(source_range location, node_while_expression& n)
 {
-    (void)location;
     visit_nodes(n);
 }
 
 void type_inference::process(source_range location, node_let_expression& n)
 {
-    (void)location;
     visit_nodes(n);
 
     if (!n.init_expression)
@@ -194,21 +143,9 @@ void type_inference::process(source_range location, node_let_expression& n)
     parse_context.constraints.emplace_back(equal_constraint{parse_context.symbol_at(n.symbol_ref).symbol_type, assigned_node_type(*n.init_expression, parse_context)});
 }
 
-void type_inference::process(source_range location, node_global_definition& n)
-{
-    (void)location;
-    (void)n;
-}
-
 void type_inference::process(source_range location, node_function_definition& n)
 {
-    (void)location;
     visit_nodes(n);
-}
-
-void type_inference::process(source_range location, node_import_definition& n)
-{
-    (void)location;
 }
 
 void type_inference::process(source_range location, node_module& n)

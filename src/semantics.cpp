@@ -163,18 +163,6 @@ void semantic_analyser::process(source_range location, node_number& n)
     }
 }
 
-void semantic_analyser::process(source_range location, node_char_literal& n)
-{
-}
-
-void semantic_analyser::process(source_range location, node_bool_literal& n)
-{
-}
-
-void semantic_analyser::process(source_range location, node_string_literal& n)
-{
-}
-
 void semantic_analyser::process(source_range location, node_var_reference& n)
 {
     n.context = current_context;
@@ -219,10 +207,6 @@ void semantic_analyser::process(source_range location, node_pointer_deref& n)
         CAPY_ASSERT(ptr_type != nullptr, "Compiler error, in semantics check, the type of a pointer ref should be a pointer");
         n.assigned_type = ptr_type->to;
     }
-}
-
-void semantic_analyser::process(source_range location, node_record_definition& n)
-{
 }
 
 void semantic_analyser::process(source_range location, node_record_initialisation& n)
@@ -393,14 +377,6 @@ void semantic_analyser::process(source_range location, node_let_expression& n)
             "Type mismatch in let statement. Variable is of type '" + parse_context.repr(symbol.symbol_type) + "' but expression has type '" + parse_context.repr(assigned_node_type(*n.init_expression, parse_context)) + "'"
         );
     }
-}
-
-void semantic_analyser::process(source_range location, node_import_definition& n)
-{
-}
-
-void semantic_analyser::process(source_range location, node_global_definition& n)
-{
 }
 
 void semantic_analyser::process(source_range location, node_function_definition& n)

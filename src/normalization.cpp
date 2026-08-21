@@ -12,13 +12,6 @@ void normalization::normalize(node_module& module)
     visit_nodes(module);
 }
 
-void normalization::process(source_range, node_number&) {}
-void normalization::process(source_range, node_char_literal&) {}
-void normalization::process(source_range, node_bool_literal&) {}
-void normalization::process(source_range, node_string_literal&) {}
-void normalization::process(source_range, node_var_reference&) {}
-void normalization::process(source_range, node_record_definition&) {}
-
 void normalization::process(source_range range, node_field_deref& n)
 {
     visit(*n.object);
@@ -40,9 +33,6 @@ void normalization::process(source_range range, node_field_deref& n)
         n.object_type = ptr_base_type.value();
     }
 }
-
-void normalization::process(source_range, node_global_definition&) {}
-void normalization::process(source_range, node_import_definition&) {}
 
 void normalization::process(source_range, node_pointer_deref& n)
 {
@@ -77,10 +67,6 @@ void normalization::process(source_range location, node_unary_expression& n)
 void normalization::process(source_range, node_return_expression& n)
 {
     visit_nodes(n);
-}
-
-void normalization::process(source_range location, node_break_statement&)
-{
 }
 
 void normalization::process(source_range, node_binary_expression& n)
