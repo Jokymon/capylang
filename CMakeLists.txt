@@ -7,6 +7,8 @@ add_executable(${PROJECT_NAME}
     src/main.cpp
     src/args_parse.cpp
     src/ast.cpp
+    src/ast_dump.cpp
+    src/ast_visitor.cpp
     src/diagnostics.cpp
     src/normalization.cpp
     src/lexer.cpp

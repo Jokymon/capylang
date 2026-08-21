@@ -8,9 +8,9 @@ type_inference::type_inference(diagnostic_bag& diagnostics, context& ctx)
 {
 }
 
-void type_inference::infer_types(node_module& module)
+void type_inference::infer_types(ast::module& module)
 {
-    visit_nodes(module);
+    visit(module);
 
     unify();
 }
@@ -44,22 +44,7 @@ void type_inference::unify()
     } while (new_unresolved != previous_unresolved);
 }
 
-void type_inference::process(source_range location, node_pointer_deref& n)
-{
-    visit_nodes(n);
-}
-
-void type_inference::process(source_range location, node_record_initialisation& n)
-{
-    visit_nodes(n);
-}
-
-void type_inference::process(source_range location, node_field_deref& n)
-{
-    visit(*n.object);
-}
-
-void type_inference::process(source_range location, node_function_call& n)
+void type_inference::leave(ast::function_call& n)
 {
     const auto& called_symbol = parse_context.symbol_at(n.symbol_ref);
     if (called_symbol.kind != symbol_kind::function)
@@ -70,38 +55,14 @@ void type_inference::process(source_range location, node_function_call& n)
     auto declared_type = parse_context.types[to_index(called_symbol.signature.function_type)];
     auto* declared_function_type = get_type_from_node<function_type>(declared_type);
 
-    visit_nodes(n);
-
     for (auto [actual_value, declared_param] : std::views::zip(n.parameter, declared_function_type->parameter_types))
     {
         parse_context.constraints.emplace_back(equal_constraint{assigned_node_type(*actual_value, parse_context), declared_param});
     }
 }
 
-void type_inference::process(source_range location, node_cast_expression& n)
+void type_inference::leave(ast::binary_expression& n)
 {
-    visit_nodes(n);
-}
-
-void type_inference::process(source_range location, node_discard_expression& n)
-{
-    visit_nodes(n);
-}
-
-void type_inference::process(source_range location, node_return_expression& n)
-{
-    visit_nodes(n);
-}
-
-void type_inference::process(source_range location, node_unary_expression& n)
-{
-    visit_nodes(n);
-}
-
-void type_inference::process(source_range location, node_binary_expression& n)
-{
-    visit_nodes(n);
-
     switch (n.operation)
     {
         case operator_type::op_plus:
@@ -121,34 +82,12 @@ void type_inference::process(source_range location, node_binary_expression& n)
     }
 }
 
-void type_inference::process(source_range location, node_if_expression& n)
+void type_inference::leave(ast::let_expression& n)
 {
-    visit_nodes(n);
-}
-
-void type_inference::process(source_range location, node_while_expression& n)
-{
-    visit_nodes(n);
-}
-
-void type_inference::process(source_range location, node_let_expression& n)
-{
-    visit_nodes(n);
-
     if (!n.init_expression)
     {
         return;
     }
 
     parse_context.constraints.emplace_back(equal_constraint{parse_context.symbol_at(n.symbol_ref).symbol_type, assigned_node_type(*n.init_expression, parse_context)});
-}
-
-void type_inference::process(source_range location, node_function_definition& n)
-{
-    visit_nodes(n);
-}
-
-void type_inference::process(source_range location, node_module& n)
-{
-    visit_nodes(n);
 }

@@ -1,31 +1,21 @@
 #pragma once
 #include "ast.hpp"
+#include "ast_visitor.hpp"
 #include "diagnostics.hpp"
 #include "parser.hpp"
 
-class type_inference : public ast_visitor, private diagnostic_emitter
+class type_inference : public ast::visitor, private diagnostic_emitter
 {
 public:
     explicit type_inference(diagnostic_bag& diagnostics, context& ctx);
-    void infer_types(node_module& module);
+    void infer_types(ast::module& module);
 
 private:
     void unify();
 
-    void process(source_range location, node_pointer_deref& n) override;
-    void process(source_range location, node_record_initialisation& n) override;
-    void process(source_range location, node_field_deref& n) override;
-    void process(source_range location, node_function_call& n) override;
-    void process(source_range location, node_cast_expression& n) override;
-    void process(source_range location, node_discard_expression& n) override;
-    void process(source_range location, node_return_expression& n) override;
-    void process(source_range location, node_if_expression& n) override;
-    void process(source_range location, node_unary_expression& n) override;
-    void process(source_range location, node_binary_expression& n) override;
-    void process(source_range location, node_while_expression& n) override;
-    void process(source_range location, node_let_expression& n) override;
-    void process(source_range location, node_function_definition& n) override;
-    void process(source_range location, node_module& n) override;
+    void leave(ast::function_call& n) override;
+    void leave(ast::binary_expression& n) override;
+    void leave(ast::let_expression& n) override;
 
     context& parse_context;
 };

@@ -43,9 +43,9 @@ lir::binary_op_t from_op_type(operator_type op)
     }
 }
 
-lir::place get_place(const node_expr& expr);
+lir::place get_place(const ast::expr& expr);
 
-lir::place get_place(const node_var_reference& node)
+lir::place get_place(const ast::var_reference& node)
 {
     return lir::place{
         .base = {
@@ -56,7 +56,7 @@ lir::place get_place(const node_var_reference& node)
     };
 }
 
-lir::place get_place(const node_let_expression& node)
+lir::place get_place(const ast::let_expression& node)
 {
     return lir::place{
         .base = {
@@ -67,7 +67,7 @@ lir::place get_place(const node_let_expression& node)
     };
 }
 
-lir::place get_place(const node_pointer_deref& node)
+lir::place get_place(const ast::pointer_deref& node)
 {
     auto place = get_place(*node.pointer_expression);
     place.projection.push_back(lir::place_elem{lir::deref{}});
@@ -75,28 +75,28 @@ lir::place get_place(const node_pointer_deref& node)
     return place;
 }
 
-lir::place get_place(const node_expr& expr)
+lir::place get_place(const ast::expr& expr)
 {
     return std::visit(
         [&](auto& arg)
         {
             using T = std::decay_t<decltype(arg)>;
 
-            if constexpr (std::is_same_v<T, node_var_reference>)
+            if constexpr (std::is_same_v<T, ast::var_reference>)
             {
                 return get_place(arg);
             }
-            else if constexpr (std::is_same_v<T, node_pointer_deref>)
+            else if constexpr (std::is_same_v<T, ast::pointer_deref>)
             {
                 return get_place(arg);
             }
             else
             {
-                CAPY_FAIL("LIR can't turn this node type into a place. index=%lu", expr.value.index());
+                CAPY_FAIL("LIR can't turn this node type into a place. index=%lu", expr.index());
                 return lir::place{};
             }
         },
-        expr.value
+        expr
     );
 }
 
@@ -105,7 +105,7 @@ lir_generator::lir_generator(context& ctx)
 {
 }
 
-lir::module lir_generator::generate(const node_module& module_def)
+lir::module lir_generator::generate(const ast::module& module_def)
 {
     lir::module mod;
 
@@ -125,7 +125,7 @@ lir::module lir_generator::generate(const node_module& module_def)
     return mod;
 }
 
-lir::expr_list lir_generator::generate_exprs(const node_number& node)
+lir::expr_list lir_generator::generate_exprs(const ast::number& node)
 {
     lir::number stmt{
         .value = node.number,
@@ -136,7 +136,7 @@ lir::expr_list lir_generator::generate_exprs(const node_number& node)
     return result;
 }
 
-lir::expr_list lir_generator::generate_exprs(const node_char_literal& node)
+lir::expr_list lir_generator::generate_exprs(const ast::char_literal& node)
 {
     lir::char_literal stmt{
         .ch = node.ch,
@@ -146,7 +146,7 @@ lir::expr_list lir_generator::generate_exprs(const node_char_literal& node)
     return result;
 }
 
-lir::expr_list lir_generator::generate_exprs(const node_bool_literal& node)
+lir::expr_list lir_generator::generate_exprs(const ast::bool_literal& node)
 {
     lir::bool_literal stmt{
         .value = node.value,
@@ -156,7 +156,7 @@ lir::expr_list lir_generator::generate_exprs(const node_bool_literal& node)
     return result;
 }
 
-lir::expr_list lir_generator::generate_exprs(const node_string_literal& node)
+lir::expr_list lir_generator::generate_exprs(const ast::string_literal& node)
 {
     lir::string_literal stmt{
         .table_index = node.table_index,
@@ -167,7 +167,7 @@ lir::expr_list lir_generator::generate_exprs(const node_string_literal& node)
     return result;
 }
 
-lir::expr_list lir_generator::generate_exprs(const node_var_reference& node)
+lir::expr_list lir_generator::generate_exprs(const ast::var_reference& node)
 {
     // We assume, we only ever get here from an RHS context and we really
     // only have to generate load expressions. The LHS case should already
@@ -182,7 +182,7 @@ lir::expr_list lir_generator::generate_exprs(const node_var_reference& node)
     return result;
 }
 
-lir::expr_list lir_generator::generate_exprs(const node_pointer_deref& node)
+lir::expr_list lir_generator::generate_exprs(const ast::pointer_deref& node)
 {
     lir::expr_list result = generate_to_exprs(*node.pointer_expression);
     CAPY_ASSERT(result.size() >= 1, "Pointer expression of pointer deref should contain some nodes");
@@ -207,7 +207,7 @@ lir::expr_list lir_generator::generate_exprs(const node_pointer_deref& node)
     return result;
 }
 
-lir::expr_list lir_generator::generate_exprs(const node_if_expression& node)
+lir::expr_list lir_generator::generate_exprs(const ast::if_expression& node)
 {
     auto condition = generate_to_exprs(*node.condition);
 
@@ -242,21 +242,21 @@ lir::expr_list lir_generator::generate_exprs(const node_if_expression& node)
     return result;
 }
 
-lir::expr_list lir_generator::generate_exprs(const node_record_definition& node)
+lir::expr_list lir_generator::generate_exprs(const ast::record_definition& node)
 {
     // In LIR there is no representation for the definition of a record type,
     // instead the record type has been added to the symbol table as new type
     return {};
 }
 
-lir::expr_list lir_generator::generate_exprs(const node_record_initialisation& node)
+lir::expr_list lir_generator::generate_exprs(const ast::record_initialisation& node)
 {
     CAPY_FAIL("LIR generator doesn't expect record initialisations outside of direct assignments");
     lir::expr_list result;
     return result;
 }
 
-lir::expr_list lir_generator::generate_exprs(const node_field_deref& node)
+lir::expr_list lir_generator::generate_exprs(const ast::field_deref& node)
 {
     lir::expr_list result = generate_to_exprs(*node.object);
     CAPY_ASSERT(result.size() == 1, "Field dereference expression should contain exactly one node");
@@ -298,7 +298,7 @@ lir::expr_list lir_generator::generate_exprs(const node_field_deref& node)
     return result;
 }
 
-lir::expr_list lir_generator::generate_exprs(const node_function_call& node)
+lir::expr_list lir_generator::generate_exprs(const ast::function_call& node)
 {
     lir::expr_list arguments;
     for (const auto& expression : node.parameter)
@@ -318,7 +318,7 @@ lir::expr_list lir_generator::generate_exprs(const node_function_call& node)
     return result;
 }
 
-lir::expr_list lir_generator::generate_exprs(const node_cast_expression& node)
+lir::expr_list lir_generator::generate_exprs(const ast::cast_expression& node)
 {
     lir::expr_list expressions = generate_to_exprs(*node.expression);
     CAPY_ASSERT(expressions.size() == 1, "LIR generation for cast expression should produce exactly one expression");
@@ -331,7 +331,7 @@ lir::expr_list lir_generator::generate_exprs(const node_cast_expression& node)
     return result;
 }
 
-lir::expr_list lir_generator::generate_to_exprs(const node_expr& expression)
+lir::expr_list lir_generator::generate_to_exprs(const ast::expr& expression)
 {
     return std::visit(
         [&](auto&& arg)
@@ -342,19 +342,19 @@ lir::expr_list lir_generator::generate_to_exprs(const node_expr& expression)
             }
             else
             {
-                CAPY_FAIL("Specialized node expression type is not expected, index: %lu", expression.value.index());
+                CAPY_FAIL("Specialized node expression type is not expected, index: %lu", expression.index());
                 return lir::expr_list{};
             }
         },
-        expression.value
+        expression
     );
 }
 
-lir::statement_list lir_generator::generate_to_stmts(const node_expr& expression)
+lir::statement_list lir_generator::generate_to_stmts(const ast::expr& expression)
 {
     lir::statement_list result;
 
-    expression.value.visit(
+    expression.visit(
         [&](auto&& expr) -> void
         {
             if constexpr (requires { this->generate_stmts(expr); })
@@ -387,7 +387,7 @@ lir::statement_list lir_generator::generate_to_stmts(const node_expr& expression
     return result;
 }
 
-lir::statement_list lir_generator::generate_stmts(const node_return_expression& node)
+lir::statement_list lir_generator::generate_stmts(const ast::return_expression& node)
 {
     lir::expr_list expressions = generate_to_exprs(*node.expression);
     lir::return_statement stmt{
@@ -399,7 +399,7 @@ lir::statement_list lir_generator::generate_stmts(const node_return_expression& 
     return result;
 }
 
-lir::statement_list lir_generator::generate_stmts(const node_break_statement& node)
+lir::statement_list lir_generator::generate_stmts(const ast::break_statement& node)
 {
     lir::break_statement stmt;
     lir::statement_list result;
@@ -407,11 +407,11 @@ lir::statement_list lir_generator::generate_stmts(const node_break_statement& no
     return result;
 }
 
-lir::statement_list lir_generator::generate_stmts(const node_discard_expression& node)
+lir::statement_list lir_generator::generate_stmts(const ast::discard_expression& node)
 {
     lir::statement_list result;
 
-    node.expression->value.visit(
+    node.expression->visit(
         [&](auto&& expr) -> void
         {
             if constexpr (requires { this->generate_stmts(expr); })
@@ -436,19 +436,19 @@ lir::statement_list lir_generator::generate_stmts(const node_discard_expression&
     return result;
 }
 
-lir::statement_list lir_generator::generate_stmts(const node_let_expression& node)
+lir::statement_list lir_generator::generate_stmts(const ast::let_expression& node)
 {
     auto target = get_place(node);
     lir::statement_list result;
 
     if (node.init_expression)
     {
-        node.init_expression->value.visit(
+        node.init_expression->visit(
             [&](const auto& inite) -> void
             {
                 using INIT_TYPE = std::decay_t<decltype(inite)>;
 
-                if constexpr (std::is_same_v<INIT_TYPE, node_record_initialisation>)
+                if constexpr (std::is_same_v<INIT_TYPE, ast::record_initialisation>)
                 {
                     std::vector<lir::field_initialisation> initialisations;
                     auto record_type_id = parse_context.record_behind(inite.type_spec);
@@ -481,7 +481,7 @@ lir::statement_list lir_generator::generate_stmts(const node_let_expression& nod
                     };
                     result.push_back(std::make_unique<lir::statement>(std::move(stmt)));
                 }
-                else if constexpr (std::is_same_v<INIT_TYPE, node_string_literal>)
+                else if constexpr (std::is_same_v<INIT_TYPE, ast::string_literal>)
                 {
                     lir::store_string_statement stmt{
                         .target = target,
@@ -522,7 +522,7 @@ lir::statement_list lir_generator::generate_stmts(const node_let_expression& nod
     return result;
 }
 
-lir::statement_list lir_generator::generate_stmts(const node_while_expression& node)
+lir::statement_list lir_generator::generate_stmts(const ast::while_expression& node)
 {
     auto condition = generate_to_exprs(*node.condition);
 
@@ -545,7 +545,7 @@ lir::statement_list lir_generator::generate_stmts(const node_while_expression& n
     return result;
 }
 
-lir::expr_list lir_generator::generate_exprs(const node_unary_expression& node)
+lir::expr_list lir_generator::generate_exprs(const ast::unary_expression& node)
 {
     lir::expr_list expressions = generate_to_exprs(*node.expr);
     lir::unary_expression stmt{
@@ -557,7 +557,7 @@ lir::expr_list lir_generator::generate_exprs(const node_unary_expression& node)
     return result;
 }
 
-lir::expr_list lir_generator::generate_exprs(const node_binary_expression& node)
+lir::expr_list lir_generator::generate_exprs(const ast::binary_expression& node)
 {
     auto right = generate_to_exprs(*node.right);
     CAPY_ASSERT(right.size() == 1, "Generated LIR for right binary operand should have returned exactly one node");
@@ -579,12 +579,12 @@ lir::expr_list lir_generator::generate_exprs(const node_binary_expression& node)
     {
         lir::place target = get_place(*node.left);
 
-        node.right->value.visit(
+        node.right->visit(
             [&](const auto& rhs) -> void
             {
                 using RHS_TYPE = std::decay_t<decltype(rhs)>;
 
-                if constexpr (std::is_same_v<RHS_TYPE, node_record_initialisation>)
+                if constexpr (std::is_same_v<RHS_TYPE, ast::record_initialisation>)
                 {
                     auto record_type_id = parse_context.record_behind(rhs.type_spec);
                     CAPY_ASSERT(record_type_id.has_value(), "LIR: the record initialisation should be on a record type or pointer to record type");
@@ -633,7 +633,7 @@ lir::expr_list lir_generator::generate_exprs(const node_binary_expression& node)
     return result;
 }
 
-std::unique_ptr<lir::import_definition> lir_generator::generate(const node_import_definition& imp_def)
+std::unique_ptr<lir::import_definition> lir_generator::generate(const ast::import_definition& imp_def)
 {
     auto imp = std::make_unique<lir::import_definition>();
     imp->function_head.name = imp_def.function_head.name;
@@ -645,7 +645,7 @@ std::unique_ptr<lir::import_definition> lir_generator::generate(const node_impor
     return imp;
 }
 
-std::unique_ptr<lir::global_definition> lir_generator::generate(const node_global_definition& global_def)
+std::unique_ptr<lir::global_definition> lir_generator::generate(const ast::global_definition& global_def)
 {
     auto init_expressions = generate_to_exprs(*global_def.init_expression);
 
@@ -658,7 +658,7 @@ std::unique_ptr<lir::global_definition> lir_generator::generate(const node_globa
     return glob;
 }
 
-std::unique_ptr<lir::function_definition> lir_generator::generate(const node_function_definition& func_def)
+std::unique_ptr<lir::function_definition> lir_generator::generate(const ast::function_definition& func_def)
 {
     auto func = std::make_unique<lir::function_definition>();
     for (const auto& attr : func_def.attributes)

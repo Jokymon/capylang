@@ -11,7 +11,7 @@ class parser : private diagnostic_emitter
 public:
     explicit parser(diagnostic_bag& diagnostics, std::shared_ptr<lexer> l, context& ctx);
 
-    node_module parse();
+    ast::module parse();
 
 private:
     std::shared_ptr<lexer> capy_lexer;
@@ -22,34 +22,34 @@ private:
     void create_builtin_types();
     void populate_intrinsics();
 
-    node_module parse_module();
+    ast::module parse_module();
     void parse_module_body();
     void parse_attribute();
     void parse_parameters(function_signature& signature, function_type& func_type);
     void parse_function_signature(function_signature& signature);
-    node_import_definition parse_import_definition();
-    node_global_definition parse_global();
-    node_function_definition parse_function_definition();
-    node_function_head parse_function_head();
-    node_expr parse_expression(int min_precedence = 0);
-    node_expr parse_function_call(source_range name_range, const std::string function_name);
-    node_expr parse_if_expression();
-    node_expr parse_while_expression();
-    node_expr parse_let_expression();
-    node_expr parse_record_definition();
-    node_expr parse_record_initialisation(source_range name_range, const std::string& record_name, bool is_allocated);
-    node_expr parse_field_deref(node_expr object);
-    node_expr parse_primary();
+    ast::import_definition parse_import_definition();
+    ast::global_definition parse_global();
+    ast::function_definition parse_function_definition();
+    ast::function_head parse_function_head();
+    ast::expr parse_expression(int min_precedence = 0);
+    ast::expr parse_function_call(source_range name_range, const std::string function_name);
+    ast::expr parse_if_expression();
+    ast::expr parse_while_expression();
+    ast::expr parse_let_expression();
+    ast::expr parse_record_definition();
+    ast::expr parse_record_initialisation(source_range name_range, const std::string& record_name, bool is_allocated);
+    ast::expr parse_field_deref(ast::expr object);
+    ast::expr parse_primary();
     type_id parse_type_reference();
-    node_expr parse_number();
-    node_expr parse_string();
+    ast::expr parse_number();
+    ast::expr parse_string();
 
-    void parse_body(std::vector<std::unique_ptr<node_expr>>& body);
+    void parse_body(std::vector<std::unique_ptr<ast::expr>>& body);
 
     size_t collect_literal(const std::string& literal);
 
-    attribute_bag collected_attributes;
+    std::vector<std::string> collected_attributes;
     scope* current_scope;
-    node_module* current_module;
+    ast::module* current_module;
     symbol_id error_symbol;
 };

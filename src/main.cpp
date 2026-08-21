@@ -1,4 +1,5 @@
 #include "args_parse.hpp"
+#include "ast_dump.hpp"
 #include "diagnostics.hpp"
 #include "lir_based_emitter.hpp"
 #include "lir_dump.hpp"
@@ -31,6 +32,16 @@ void dump_value(std::ostream& out, context& context, const type_id& value)
 void dump_value(std::ostream& out, context& context, const symbol_id& value)
 {
     out << context.repr(value);
+}
+
+void dump_value(std::ostream& out, context&, const capy_attribute& value)
+{
+    out << value.name;
+}
+
+void dump_value(std::ostream& out, context& ctx, const record_type::field_type& value)
+{
+    out << value.first << ": " << ctx.repr(value.second);
 }
 
 int main(int argc, char* argv[])
@@ -132,7 +143,7 @@ int main(int argc, char* argv[])
 
     if (args.dump_ast)
     {
-        dump_node(std::cout, parse_context, root_node);
+        ast::dump(std::cout, parse_context, root_node);
         return 0;
     }
 

@@ -3,6 +3,29 @@
 #include <array>
 #include <unordered_set>
 
+std::string repr_field_deref_object(const ast::expr& object)
+{
+    return std::visit(
+        [](const auto& node) -> std::string
+        {
+            using node_type = std::decay_t<decltype(node)>;
+            if constexpr (std::is_same_v<node_type, ast::var_reference>)
+            {
+                return node.name;
+            }
+            else if constexpr (std::is_same_v<node_type, ast::field_deref>)
+            {
+                return repr_field_deref_object(*node.object) + "." + node.fieldname;
+            }
+            else
+            {
+                return {};
+            }
+        },
+        object
+    );
+}
+
 struct number_range_rule
 {
     primitive_type primitive;
@@ -20,42 +43,42 @@ constexpr std::array<number_range_rule, 6> NUMBER_RANGE_RULES{{
     {primitive_type::S32, std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::max(), "s32"},
 }};
 
-type_id assigned_node_type(const node_expr& node, context& ctx)
+type_id assigned_node_type(const ast::expr& node, context& ctx)
 {
     return std::visit(
         [&](const auto& n) -> type_id
         {
             using T = std::decay_t<decltype(n)>;
 
-            if constexpr (std::is_same_v<T, node_number>)
+            if constexpr (std::is_same_v<T, ast::number>)
             {
                 return ctx.resolved_type(n.assigned_type);
             }
-            else if constexpr (std::is_same_v<T, node_char_literal>)
+            else if constexpr (std::is_same_v<T, ast::char_literal>)
             {
                 return ctx.intern_primitive(primitive_type::Char);
             }
-            else if constexpr (std::is_same_v<T, node_bool_literal>)
+            else if constexpr (std::is_same_v<T, ast::bool_literal>)
             {
                 return ctx.intern_primitive(primitive_type::Boolean);
             }
-            else if constexpr (std::is_same_v<T, node_string_literal>)
+            else if constexpr (std::is_same_v<T, ast::string_literal>)
             {
                 return ctx.BUILTIN_STRING;
             }
-            else if constexpr (std::is_same_v<T, node_var_reference>)
+            else if constexpr (std::is_same_v<T, ast::var_reference>)
             {
                 return ctx.resolved_type(ctx.symbol_at(n.symbol_ref).symbol_type);
             }
-            else if constexpr (std::is_same_v<T, node_pointer_deref>)
+            else if constexpr (std::is_same_v<T, ast::pointer_deref>)
             {
                 return ctx.resolved_type(n.assigned_type);
             }
-            else if constexpr (std::is_same_v<T, node_function_definition>)
+            else if constexpr (std::is_same_v<T, ast::function_definition>)
             {
                 return ctx.function_return_type(n.function_head->signature.function_type).value();
             }
-            else if constexpr (std::is_same_v<T, node_function_call>)
+            else if constexpr (std::is_same_v<T, ast::function_call>)
             {
                 const auto& sym = ctx.symbol_at(n.symbol_ref);
                 if (sym.kind != symbol_kind::function)
@@ -69,23 +92,23 @@ type_id assigned_node_type(const node_expr& node, context& ctx)
                 }
                 return return_type.value();
             }
-            else if constexpr (std::is_same_v<T, node_let_expression>)
+            else if constexpr (std::is_same_v<T, ast::let_expression>)
             {
                 return ctx.intern_primitive(primitive_type::Void);
             }
-            else if constexpr (std::is_same_v<T, node_record_initialisation>)
+            else if constexpr (std::is_same_v<T, ast::record_initialisation>)
             {
                 return n.type_spec;
             }
-            else if constexpr (std::is_same_v<T, node_if_expression>)
+            else if constexpr (std::is_same_v<T, ast::if_expression>)
             {
                 return ctx.resolved_type(n.assigned_type);
             }
-            else if constexpr (std::is_same_v<T, node_while_expression>)
+            else if constexpr (std::is_same_v<T, ast::while_expression>)
             {
                 return ctx.intern_primitive(primitive_type::Void);
             }
-            else if constexpr (std::is_same_v<T, node_field_deref>)
+            else if constexpr (std::is_same_v<T, ast::field_deref>)
             {
                 auto rec_type = ctx.record_behind(n.object_type);
                 CAPY_ASSERT(rec_type.has_value(), "Base types for field derefs must either be records or pointers");
@@ -98,23 +121,23 @@ type_id assigned_node_type(const node_expr& node, context& ctx)
                 }
                 return ILLEGAL_TYPE;
             }
-            else if constexpr (std::is_same_v<T, node_cast_expression>)
+            else if constexpr (std::is_same_v<T, ast::cast_expression>)
             {
                 return n.cast_type;
             }
-            else if constexpr (std::is_same_v<T, node_discard_expression>)
+            else if constexpr (std::is_same_v<T, ast::discard_expression>)
             {
                 return ctx.intern_primitive(primitive_type::Void);
             }
-            else if constexpr (std::is_same_v<T, node_return_expression>)
+            else if constexpr (std::is_same_v<T, ast::return_expression>)
             {
                 return ctx.intern_primitive(primitive_type::Void);
             }
-            else if constexpr (std::is_same_v<T, node_unary_expression>)
+            else if constexpr (std::is_same_v<T, ast::unary_expression>)
             {
                 return ctx.resolved_type(n.assigned_type);
             }
-            else if constexpr (std::is_same_v<T, node_binary_expression>)
+            else if constexpr (std::is_same_v<T, ast::binary_expression>)
             {
                 return ctx.resolved_type(n.assigned_type);
             }
@@ -123,24 +146,26 @@ type_id assigned_node_type(const node_expr& node, context& ctx)
                 return ILLEGAL_TYPE;
             }
         },
-        node.value
+        node
     );
 }
 
 semantic_analyser::semantic_analyser(diagnostic_bag& diagnostics, context& ctx)
-: ast_visitor()
+: ast::visitor()
 , diagnostic_emitter(diagnostics, diagnostic_phase::semantics)
 , parse_context(ctx)
+, current_context{ast::assign_context_t::Rhs}
+, while_nesting_level(0)
 , current_func_head(nullptr)
 {
 }
 
-void semantic_analyser::semantic_analysis(node_module& module)
+void semantic_analyser::semantic_analysis(ast::module& module)
 {
-    visit_nodes(module);
+    visit(module);
 }
 
-void semantic_analyser::process(source_range location, node_number& n)
+void semantic_analyser::leave(ast::number& n)
 {
     auto primitive = parse_context.primitive_type_of(n.assigned_type);
     if (primitive.has_value())
@@ -154,7 +179,7 @@ void semantic_analyser::process(source_range location, node_number& n)
             if ((n.number < rule.min_value) || (n.number > rule.max_value))
             {
                 append_error_at(
-                    location.start,
+                    n.location.start,
                     std::format("Numeric literal '{}' exceeds valid range for {} ({}..{})", n.number, rule.label, rule.min_value, rule.max_value)
                 );
             }
@@ -163,7 +188,7 @@ void semantic_analyser::process(source_range location, node_number& n)
     }
 }
 
-void semantic_analyser::process(source_range location, node_var_reference& n)
+void semantic_analyser::leave(ast::var_reference& n)
 {
     n.context = current_context;
 
@@ -173,31 +198,29 @@ void semantic_analyser::process(source_range location, node_var_reference& n)
         return;
     }
 
-    if (current_context == assign_context::rhs)
+    if (current_context == ast::assign_context_t::Rhs)
     {
         if (!sym.is_assigned)
         {
             append_error_at(
-                location.start,
+                n.location.start,
                 "Variable '" + n.name + "' used without assigning a value before"
             );
         }
     }
-    else if (current_context == assign_context::lhs)
+    else if (current_context == ast::assign_context_t::Lhs)
     {
         sym.is_assigned = true;
     }
 }
 
-void semantic_analyser::process(source_range location, node_pointer_deref& n)
+void semantic_analyser::leave(ast::pointer_deref& n)
 {
-    visit_nodes(n);
-
     type_id expression_type = assigned_node_type(*n.pointer_expression, parse_context);
     if (!parse_context.is_pointer_type(expression_type))
     {
         append_error_at(
-            location.start,
+            n.location.start,
             "Can't dereference non-pointer type " + parse_context.repr(expression_type)
         );
     }
@@ -209,7 +232,7 @@ void semantic_analyser::process(source_range location, node_pointer_deref& n)
     }
 }
 
-void semantic_analyser::process(source_range location, node_record_initialisation& n)
+void semantic_analyser::leave(ast::record_initialisation& n)
 {
     auto rec_type = parse_context.record_behind(n.type_spec);
     CAPY_ASSERT(rec_type.has_value(), "Compiler error, semantics check should be on a record initialisation");
@@ -236,37 +259,34 @@ void semantic_analyser::process(source_range location, node_record_initialisatio
         {
             // TODO: Add the name of the type in the error output
             append_error_at(
-                location.start,
+                n.location.start,
                 "Record field '" + field.first + "' not initialised"
             );
         }
     }
-
-    visit_nodes(n);
 
     for (const auto& init : n.initialisations)
     {
         if (!expected_fields.contains(init.field_name))
         {
             append_error_at(
-                init.location,
+                init.location.start,
                 "Unknown record field '" + init.field_name + "'"
             );
         }
     }
 }
 
-void semantic_analyser::process(source_range location, node_field_deref& n)
+void semantic_analyser::leave(ast::field_deref& n)
 {
-    visit(*n.object);
     n.object_type = assigned_node_type(*n.object, parse_context);
 
     auto rec_type = parse_context.record_behind(n.object_type);
     if (!rec_type.has_value() || !parse_context.is_record_type(rec_type.value()))
     {
         append_error_at(
-            location.start,
-            "Dereferencing non-record variable or field '" + n.repr_obj() + "'"
+            n.location.start,
+            "Dereferencing non-record variable or field '" + repr_field_deref_object(*n.object) + "'"
         );
         return;
     }
@@ -277,21 +297,19 @@ void semantic_analyser::process(source_range location, node_field_deref& n)
     if (!field_type.has_value())
     {
         append_error_at(
-            location.start,
+            n.location.start,
             "Unknown record field '" + n.fieldname + "'"
         );
     }
 }
 
-void semantic_analyser::process(source_range location, node_function_call& n)
+void semantic_analyser::leave(ast::function_call& n)
 {
     const auto& symbol = parse_context.symbol_at(n.symbol_ref);
     if (symbol.kind != symbol_kind::function)
     {
         return;
     }
-
-    visit_nodes(n);
 
     function_type actual_func_type;
     for (const auto& param : n.parameter)
@@ -307,16 +325,14 @@ void semantic_analyser::process(source_range location, node_function_call& n)
     if (!actual_func_type.is_call_signature_eq(*declared_function_type))
     {
         append_error_at(
-            location.start,
+            n.location.start,
             "Function '" + symbol.name + "' expects signature " + declared_function_type->repr_call_sig(parse_context) + "; called with signature " + actual_func_type.repr_call_sig(parse_context)
         );
     }
 }
 
-void semantic_analyser::process(source_range location, node_if_expression& n)
+void semantic_analyser::leave(ast::if_expression& n)
 {
-    visit_nodes(n);
-
     type_id then_return_type = parse_context.intern_primitive(primitive_type::Void);
     if (!n.then_code.empty())
     {
@@ -334,14 +350,14 @@ void semantic_analyser::process(source_range location, node_if_expression& n)
         if (n.else_code.empty())
         {
             append_error_at(
-                location.start,
+                n.location.start,
                 "'if' with return type is missing an 'else' branch"
             );
         }
         else
         {
             append_error_at(
-                location.start,
+                n.location.start,
                 "'then' and 'else' branches have mismatching types '" +
                     parse_context.repr(then_return_type) +
                     "' and '" + parse_context.repr(else_return_type) + "'"
@@ -352,12 +368,21 @@ void semantic_analyser::process(source_range location, node_if_expression& n)
     n.assigned_type = then_return_type;
 }
 
-void semantic_analyser::process(source_range location, node_while_expression& n)
+void semantic_analyser::enter(ast::while_expression& n)
 {
-    visit_nodes(n);
+    // TODO: This will already raise the while-nesting-level for the
+    // condition expression; This shouldn't really be a problem since
+    // the nesting level is only relevant for break statements and we
+    // don't want any break statements in the condition
+    while_nesting_level++;
 }
 
-void semantic_analyser::process(source_range location, node_let_expression& n)
+void semantic_analyser::leave(ast::while_expression& n)
+{
+    while_nesting_level--;
+}
+
+void semantic_analyser::leave(ast::let_expression& n)
 {
     if (!n.init_expression)
     {
@@ -366,42 +391,43 @@ void semantic_analyser::process(source_range location, node_let_expression& n)
         return;
     }
 
-    visit_nodes(n);
-
     const auto& symbol = parse_context.symbol_at(n.symbol_ref);
     if (parse_context.resolved_type(symbol.symbol_type) !=
         assigned_node_type(*n.init_expression, parse_context))
     {
         append_error_at(
-            location.start,
+            n.location.start,
             "Type mismatch in let statement. Variable is of type '" + parse_context.repr(symbol.symbol_type) + "' but expression has type '" + parse_context.repr(assigned_node_type(*n.init_expression, parse_context)) + "'"
         );
     }
 }
 
-void semantic_analyser::process(source_range location, node_function_definition& n)
+void semantic_analyser::enter(ast::function_definition& n)
 {
+    current_func_head = &n.function_head;
+}
+
+void semantic_analyser::leave(ast::function_definition& n)
+{
+    current_func_head = nullptr;
+
     auto declared_return_type = parse_context.function_return_type(n.function_head.signature.function_type);
     if (!declared_return_type.has_value())
     {
-        CAPY_FAIL("In a node_function_definition, the function_type should be a function and have a return type");
+        CAPY_FAIL("In a ast::function_definition, the function_type should be a function and have a return type");
         append_error_at(
-            location.start,
+            n.location.start,
             "Fatal parser error in semantics check from this source location"
         );
         return;
     }
-
-    current_func_head = &n.function_head;
-    visit_nodes(n);
-    current_func_head = nullptr;
 
     type_id actual_return_type = parse_context.intern_primitive(primitive_type::Void);
     source_range error_location;
     if (!n.code.empty())
     {
         actual_return_type = assigned_node_type(*n.code.back(), parse_context);
-        error_location = n.code.back()->location;
+        error_location = ast::as_trait<ast::location>(*n.code.back()).location;
     }
 
     if (declared_return_type.value() != actual_return_type)
@@ -415,26 +441,14 @@ void semantic_analyser::process(source_range location, node_function_definition&
     }
 }
 
-void semantic_analyser::process(source_range location, node_cast_expression& n)
+void semantic_analyser::leave(ast::return_expression& n)
 {
-    visit_nodes(n);
-}
-
-void semantic_analyser::process(source_range location, node_discard_expression& n)
-{
-    visit_nodes(n);
-}
-
-void semantic_analyser::process(source_range location, node_return_expression& n)
-{
-    visit_nodes(n);
-
-    source_position error_position = location.end;
+    source_position error_position = n.location.end;
     type_id return_expression_type = parse_context.intern_primitive(primitive_type::Void);
     if (n.expression)
     {
         return_expression_type = assigned_node_type(*n.expression, parse_context);
-        error_position = n.expression->location.start;
+        error_position = ast::as_trait<ast::location>(*n.expression).location.start;
     }
 
     auto declared_return_type = parse_context.function_return_type(current_func_head->signature.function_type);
@@ -449,27 +463,38 @@ void semantic_analyser::process(source_range location, node_return_expression& n
     }
 }
 
-void semantic_analyser::process(source_range location, node_break_statement&)
+void semantic_analyser::leave(ast::break_statement& n)
 {
     if (while_nesting_level == 0)
     {
         append_error_at(
-            location.start,
+            n.location.start,
             "'break' is not allowed outside 'while' loops"
         );
     }
 }
 
-void semantic_analyser::process(source_range location, node_unary_expression& n)
+void semantic_analyser::leave(ast::unary_expression& n)
 {
-    visit_nodes(n);
     n.assigned_type = assigned_node_type(*n.expr, parse_context);
 }
 
-void semantic_analyser::process(source_range location, node_binary_expression& n)
+void semantic_analyser::enter(ast::binary_expression& n)
 {
-    visit_nodes(n);
+    if (n.operation == op_assignment)
+    {
+        current_context = ast::assign_context_t::Lhs;
+    }
+    else
+    {
+        current_context = ast::assign_context_t::Rhs;
+    }
+    // TODO: we have to be able to reset the assign_context to Rhs after
+    // visiting the left operand
+}
 
+void semantic_analyser::leave(ast::binary_expression& n)
+{
     auto lhs_type = assigned_node_type(*n.left, parse_context);
     auto rhs_type = assigned_node_type(*n.right, parse_context);
 
@@ -477,10 +502,10 @@ void semantic_analyser::process(source_range location, node_binary_expression& n
     if (n.operation == op_assignment)
     {
         n.assigned_type = parse_context.intern_primitive(primitive_type::Void);
-        if (std::holds_alternative<node_pointer_deref>(n.left->value) ||
-            std::holds_alternative<node_var_reference>(n.left->value))
+        if (std::holds_alternative<ast::pointer_deref>(*n.left) ||
+            std::holds_alternative<ast::var_reference>(*n.left))
         {
-            auto* var_node = std::get_if<node_var_reference>(&n.left->value);
+            auto* var_node = std::get_if<ast::var_reference>(&*n.left);
             if (var_node != nullptr)
             {
                 const auto& symbol = parse_context.symbol_at(var_node->symbol_ref);
@@ -488,7 +513,7 @@ void semantic_analyser::process(source_range location, node_binary_expression& n
                 if (!symbol.mutab)
                 {
                     append_error_at(
-                        location.start,
+                        n.location.start,
                         "Can't assign to immutable variable '" + symbol.name + "'"
                     );
                 }
@@ -497,7 +522,7 @@ void semantic_analyser::process(source_range location, node_binary_expression& n
         else
         {
             append_error_at(
-                location.start,
+                n.location.start,
                 "Trying to assign to non-lvalue expression"
             );
         }
@@ -520,9 +545,4 @@ void semantic_analyser::process(source_range location, node_binary_expression& n
                 parse_context.repr(lhs_type) + "' and '" + parse_context.repr(rhs_type) + "'"
         );
     }
-}
-
-void semantic_analyser::process(source_range location, node_module& module)
-{
-    visit_nodes(module);
 }

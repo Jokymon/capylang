@@ -1,28 +1,17 @@
 #pragma once
 #include "ast.hpp"
+#include "ast_visitor.hpp"
 #include "parser.hpp"
 
-class normalization : public ast_visitor
+class normalization : public ast::visitor
 {
 public:
     explicit normalization(context& ctx);
-    void normalize(node_module& module);
+    void normalize(ast::module& module);
 
 private:
-    void process(source_range location, node_pointer_deref& n) override;
-    void process(source_range location, node_record_initialisation& n) override;
-    void process(source_range location, node_field_deref& n) override;
-    void process(source_range location, node_function_call& n) override;
-    void process(source_range location, node_cast_expression& n) override;
-    void process(source_range location, node_discard_expression& n) override;
-    void process(source_range location, node_return_expression& n) override;
-    void process(source_range location, node_unary_expression& n) override;
-    void process(source_range location, node_binary_expression& n) override;
-    void process(source_range location, node_if_expression& n) override;
-    void process(source_range location, node_while_expression& n) override;
-    void process(source_range location, node_let_expression& n) override;
-    void process(source_range location, node_function_definition& n) override;
-    void process(source_range location, node_module& n) override;
+    void leave(ast::field_deref& n) override;
+    void leave(ast::function_definition& n) override;
 
 private:
     context& parse_context;
