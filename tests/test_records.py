@@ -106,6 +106,28 @@ fn _start() {
 
 # ######## FAILURE HANDLING ###########
 @pytest.mark.parse_error
+def test_failure_initialising_unknown_record_type_does_not_hang():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let v: *missing_record_type = allocate missing_record_type{
+        field1=18u32,
+    };
+    proc_exit(1u32)
+}
+"""
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str(), timeout=5)
+
+    assert exit_code == 1
+    assert (
+        tools.normalize_filename_from_output(stderr)
+        == "filename:6:32: Unknown type specification: missing_record_type\nfilename:6:63: Trying to initialise record of unknown type 'missing_record_type'\n"
+    )
+
+
+@pytest.mark.parse_error
 def test_failure_illegal_deref_syntax():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
