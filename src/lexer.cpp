@@ -430,6 +430,11 @@ token lexer::next_token()
 
 int lexer::peek_ahead()
 {
+    if (input_.peek() == std::char_traits<char>::eof())
+    {
+        return std::char_traits<char>::eof();
+    }
+
     input_.get();
     int ch = input_.peek();
     input_.unget();
@@ -439,7 +444,11 @@ int lexer::peek_ahead()
 
 int lexer::get_char()
 {
-    char ch = input_.get();
+    int ch = input_.get();
+    if (ch == std::char_traits<char>::eof())
+    {
+        return ch;
+    }
 
     if (ch == '\n')
     {
@@ -769,10 +778,15 @@ token lexer::parse_char_literal()
     auto start_position = look_ahead_position;
     get_char(); // parse over the opening '
     auto ch = get_char();
+    if (ch == std::char_traits<char>::eof())
+    {
+        append_error_at(start_position, "Unterminated character literal");
+        return token_illegal{start_position, look_ahead_position, "unterminated character literal"};
+    }
     if (ch == '\\')
     {
         // handle escape sequences
-        char next_ch = get_char();
+        int next_ch = get_char();
         switch (next_ch)
         {
             case 'n':
@@ -796,6 +810,11 @@ token lexer::parse_char_literal()
                 break;
         }
     }
+    if (input_.peek() == std::char_traits<char>::eof())
+    {
+        append_error_at(start_position, "Unterminated character literal");
+        return token_illegal{start_position, look_ahead_position, "unterminated character literal"};
+    }
     get_char(); // parse over the closing '
 
     return token_char_literal{start_position, look_ahead_position, static_cast<uint32_t>(ch)};
@@ -807,7 +826,7 @@ token lexer::parse_string_literal()
     get_char(); // parse over the opening "
     std::string string_literal;
 
-    while (input_.peek() != '\"')
+    while ((input_.peek() != '\"') && (input_.peek() != std::char_traits<char>::eof()))
     {
         auto current_char_pos = look_ahead_position;
 
@@ -850,6 +869,11 @@ token lexer::parse_string_literal()
             string_literal += ch;
         }
     }
+    if (input_.peek() == std::char_traits<char>::eof())
+    {
+        append_error_at(start_position, "Unterminated string literal");
+        return token_illegal{start_position, look_ahead_position, "unterminated string literal"};
+    }
     get_char(); // parse over the closing "
 
     return token_string_literal{start_position, look_ahead_position, string_literal};
@@ -862,7 +886,7 @@ token lexer::parse_blob_literal()
     get_char(); // parse over the opening "
     std::string string_literal;
 
-    while (input_.peek() != '\"')
+    while ((input_.peek() != '\"') && (input_.peek() != std::char_traits<char>::eof()))
     {
         auto current_char_pos = look_ahead_position;
 
@@ -904,6 +928,11 @@ token lexer::parse_blob_literal()
             string_literal += ch;
         }
     }
+    if (input_.peek() == std::char_traits<char>::eof())
+    {
+        append_error_at(start_position, "Unterminated blob literal");
+        return token_illegal{start_position, look_ahead_position, "unterminated blob literal"};
+    }
     get_char(); // parse over the closing "
 
     return token_string_literal{start_position, look_ahead_position, string_literal};
@@ -924,7 +953,7 @@ uint32_t lexer::parse_unicode_escape()
         append_error_at(current_char_pos, "Unicode escape sequence must start with '\\u{'");
     }
 
-    while (digit != '}')
+    while ((digit != '}') && (digit != std::char_traits<char>::eof()))
     {
         if ((digit >= '0') && (digit <= '9'))
         {
@@ -936,6 +965,10 @@ uint32_t lexer::parse_unicode_escape()
         }
         // TODO: handle invalid digit
         digit = get_char();
+    }
+    if (digit == std::char_traits<char>::eof())
+    {
+        append_error_at(current_char_pos, "Unterminated Unicode escape sequence");
     }
 
     return char_code;

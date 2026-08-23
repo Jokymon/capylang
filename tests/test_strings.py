@@ -252,3 +252,74 @@ fn _start() {
         tools.normalize_filename_from_output(stderr)
         == "filename:6:24: Unicode escape sequence must start with '\\u{'\n"
     )
+
+
+@pytest.mark.parse_error
+def test_unterminated_string_literal_at_eof_reports_error():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let s: string = "unterminated
+"""
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str(), timeout=5)
+
+    assert exit_code == 1
+    assert (
+        "filename:6:21: Unterminated string literal\n"
+        in tools.normalize_filename_from_output(stderr)
+    )
+
+
+@pytest.mark.parse_error
+def test_unterminated_blob_literal_at_eof_reports_error():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let s: string = b"unterminated
+"""
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str(), timeout=5)
+
+    assert exit_code == 1
+    assert (
+        "filename:6:21: Unterminated blob literal\n"
+        in tools.normalize_filename_from_output(stderr)
+    )
+
+
+@pytest.mark.parse_error
+def test_unterminated_unicode_escape_at_eof_reports_error():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let s: string = "\\u{1234
+"""
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str(), timeout=5)
+
+    assert exit_code == 1
+    assert (
+        "filename:6:24: Unterminated Unicode escape sequence\n"
+        in tools.normalize_filename_from_output(stderr)
+    )
+
+
+@pytest.mark.parse_error
+def test_unterminated_character_literal_at_eof_reports_error():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let c: char = '"""
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str(), timeout=5)
+
+    assert exit_code == 1
+    assert (
+        "filename:6:19: Unterminated character literal\n"
+        in tools.normalize_filename_from_output(stderr)
+    )

@@ -16,7 +16,7 @@ def set_compile_func(compile_func):
     _compile_func = compile_func
 
 
-def run_compile_error(source_path, wat_path) -> tuple[int, str]:
+def run_compile_error(source_path, wat_path, timeout=None) -> tuple[int, str]:
     res = subprocess.run(
         [
             "wasmtime",
@@ -30,6 +30,7 @@ def run_compile_error(source_path, wat_path) -> tuple[int, str]:
             wat_path.as_posix(),
         ],
         capture_output=True,
+        timeout=timeout,
     )
     return res.returncode, res.stderr.decode()
 
@@ -79,7 +80,7 @@ def run_test_code(source_code, options={}) -> tuple[int, str]:
     return exit_code, stdout
 
 
-def compile_test_code(source_code) -> tuple[int, str]:
+def compile_test_code(source_code, timeout=None) -> tuple[int, str]:
     """Compiles the given source_code into a WASM module
     The returned values represent the exit code of the
     compile execution including the run code and the
@@ -92,7 +93,7 @@ def compile_test_code(source_code) -> tuple[int, str]:
     source_file_path = pathlib.Path(source_file.name)
     wat_file_path = source_file_path.with_suffix(".wat")
 
-    exit_code, stderr = run_compile_error(source_file_path, wat_file_path)
+    exit_code, stderr = run_compile_error(source_file_path, wat_file_path, timeout)
 
     os.remove(source_file.name)
     if os.path.exists(wat_file_path):

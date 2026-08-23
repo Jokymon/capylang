@@ -1161,11 +1161,17 @@ ast::expr parser::parse_primary()
     }
     else
     {
+        auto error_position = capy_lexer->current_source_position();
         append_error("Expected a primary (function call, number, variable)");
+        if (!capy_lexer->ahead_is<token_eof>() &&
+            !capy_lexer->ahead_is_sym(token_symbol::sym_curly_close))
+        {
+            capy_lexer->next_token();
+        }
         // just create one of the simplest primaries in case we couldn't parse one
         return make_located<ast::number>(
-            capy_lexer->current_source_position(),
-            capy_lexer->current_source_position(),
+            error_position,
+            error_position,
             0,
             parse_context.intern_primitive(primitive_type::U32)
         );
