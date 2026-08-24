@@ -39,5 +39,5 @@ for ($i = 0; $i -lt $args.Count; $i++) {
     }
 }
 
-wasmtime.exe run --dir . .\build\capylang.wasm @forwardArgs
+wasmtime.exe run --dir . --dir .::/ .\build\capylang.wasm @forwardArgs
 exit $LASTEXITCODE
