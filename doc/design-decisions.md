@@ -248,3 +248,29 @@ The main motivation of this change was the growing complexity of maintaining and
 extending the X-Macros. The bigger and bigger snippets of code that somehow got
 stitched together with multiple layers of macro code didn't help readability and
 a new approach was in need.
+
+## Modularization
+
+With more and more example code, tests and other experiments, it also becomes
+more interesting, to add features for modularization. This should simplify
+reuse of recurring patterns.
+
+Modern languages add support for some combination of modules, libraries,
+packages. This involves concepts for including other code than your own, adding
+namespaces and fetch code from some form of potentially centralised repository.
+
+### Decision
+
+In capylang we are not yet in a position to sketch out a sophisticated system
+for modules. But we still want to add some feature to simplify reuse of common
+code. Therefore we decided to start with a very simple C-like `include` approach
+for including other code. This is considered to be only a temporary assignment
+and should later be completely replaced with the proper module/package concept.
+The following aspects were decided:
+
+ * `include` works on a parser level and "includes" code by temporarily
+   switching the lexer.
+ * In `compile.ps1` the root folder of the project is additionally mounted into
+   the wasmtime runtime under `/` to allow access to paths like
+   `/lib/wasi.capy`. The idea is, to get started with some kind of absolute
+   paths giving access to library functions and definitions

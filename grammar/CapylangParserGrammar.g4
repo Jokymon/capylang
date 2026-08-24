@@ -3,12 +3,17 @@ options { tokenVocab=CapylangLexerGrammar; }
 
 module
     : (
-        function_import
+        include
+        | function_import
         | global_definition
         | record_definition
         | function_definition
       )*
       EOF
+    ;
+
+include
+    : KW_INCLUDE STRING_LITERAL
     ;
 
 global_definition

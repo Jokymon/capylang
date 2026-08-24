@@ -1,7 +1,10 @@
+import pathlib
 import pytest
 import subprocess
 import tools
 
+
+PROJECT_ROOT = (pathlib.Path(__file__).parent / "..").resolve()
 
 def run_compile_wat(source_path, wat_path, wasm_path, cli_options=[]) -> tuple[int, str]:
     res = subprocess.run(
@@ -10,6 +13,8 @@ def run_compile_wat(source_path, wat_path, wasm_path, cli_options=[]) -> tuple[i
             "run",
             "--dir",
             source_path.parent.as_posix(),
+            "--dir",
+            f"{PROJECT_ROOT / 'lib'}::/lib",
             "./build/capylang.wasm",
             "-i",
             source_path.as_posix(),
@@ -34,6 +39,8 @@ def run_compile_wasm(source_path, _wat_path, wasm_path, cli_options=[]) -> tuple
             "run",
             "--dir",
             source_path.parent.as_posix(),
+            "--dir",
+            f"{PROJECT_ROOT / 'lib'}::/lib",
             "./build/capylang.wasm",
             "-i",
             source_path.as_posix(),

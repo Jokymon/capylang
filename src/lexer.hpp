@@ -43,6 +43,7 @@ struct token_symbol : public located_token
         sym_kw_global,
         sym_kw_if,
         sym_kw_import,
+        sym_kw_include,
         sym_kw_let,
         sym_kw_mut,
         sym_kw_record,

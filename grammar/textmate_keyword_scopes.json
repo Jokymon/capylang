@@ -6,6 +6,7 @@
   "KW_GLOBAL": "keyword.other.capy",
   "KW_IF": "keyword.control.capy",
   "KW_IMPORT": "keyword.other.capy",
+  "KW_INCLUDE": "keyword.other.capy",
   "KW_LET": "keyword.other.capy storage.type.capy",
   "KW_MUT": "storage.modifier.capy",
   "KW_RECORD": "keyword.declaration.struct.capy storage.type.capy",

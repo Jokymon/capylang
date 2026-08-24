@@ -2,6 +2,7 @@
 #include "diagnostics.hpp"
 #include "tools.hpp"
 #include <format>
+#include <fstream>
 #include <limits>
 #include <memory>
 #include <ranges>
@@ -64,6 +65,7 @@ parser::parser(diagnostic_bag& diagnostics, std::shared_ptr<lexer> l, context& c
 : diagnostic_emitter(diagnostics, diagnostic_phase::parser)
 , capy_lexer(l)
 , parse_context(ctx)
+, diagnostics(diagnostics)
 , error_symbol(ILLEGAL_SYMBOL)
 {
     error_symbol = parse_context.create_symbol(symbol{
@@ -231,6 +233,7 @@ void parser::parse_module_body()
 {
     while (capy_lexer->ahead_is_sym(token_symbol::sym_at) ||
            capy_lexer->ahead_is_sym(token_symbol::sym_kw_import) ||
+           capy_lexer->ahead_is_sym(token_symbol::sym_kw_include) ||
            capy_lexer->ahead_is_sym(token_symbol::sym_kw_global) ||
            capy_lexer->ahead_is_sym(token_symbol::sym_kw_record) ||
            capy_lexer->ahead_is_sym(token_symbol::sym_kw_fn))
@@ -238,6 +241,10 @@ void parser::parse_module_body()
         if (capy_lexer->ahead_is_sym(token_symbol::sym_at))
         {
             parse_attribute();
+        }
+        else if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_include))
+        {
+            parse_include();
         }
         else if (capy_lexer->ahead_is_sym(token_symbol::sym_kw_import))
         {
@@ -262,6 +269,25 @@ void parser::parse_module_body()
             current_module->functions.push_back(std::make_unique<ast::function_definition>(std::move(function)));
         }
     }
+}
+
+void parser::parse_include()
+{
+    capy_lexer->expect_symbol(token_symbol::sym_kw_include);
+    auto file_name = capy_lexer->expect<token_string_literal>();
+
+    std::ifstream include_file;
+    include_file.open(file_name.str);
+    if (!include_file)
+    {
+        append_error_at(file_name.location.start, "Could not open include file '" + file_name.str + "'");
+        return;
+    }
+
+    auto previous_lexer = capy_lexer;
+    capy_lexer = std::make_shared<lexer>(diagnostics, include_file, file_name.str);
+    parse_module_body();
+    capy_lexer = previous_lexer;
 }
 
 void parser::parse_attribute()
@@ -1089,7 +1115,7 @@ ast::expr parser::parse_primary()
             auto id = capy_lexer->expect<token_identifier>();
             auto id_range = id.location;
 
-            if (current_scope->lookup_type(id.name).has_value() && capy_lexer->ahead_is_sym(token_symbol::sym_curly_open))
+            if (capy_lexer->ahead_is_sym(token_symbol::sym_curly_open))
             {
                 return parse_record_initialisation(id_range, id.name, true);
             }

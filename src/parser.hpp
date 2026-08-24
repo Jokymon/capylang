@@ -16,6 +16,7 @@ public:
 private:
     std::shared_ptr<lexer> capy_lexer;
     context& parse_context;
+    diagnostic_bag& diagnostics;
 
     void append_error(const std::string& error_message);
 
@@ -24,6 +25,7 @@ private:
 
     ast::module parse_module();
     void parse_module_body();
+    void parse_include();
     void parse_attribute();
     void parse_parameters(function_signature& signature, function_type& func_type);
     void parse_function_signature(function_signature& signature);

@@ -83,6 +83,8 @@ std::string token_symbol::to_string() const
             return "if";
         case sym_kw_import:
             return "import";
+        case sym_kw_include:
+            return "include";
         case sym_kw_let:
             return "let";
         case sym_kw_mut:
@@ -738,6 +740,10 @@ token lexer::parse_identifier_or_keyword()
     else if (id_name == "import")
     {
         return token_symbol{start_position, look_ahead_position, token_symbol::sym_kw_import};
+    }
+    else if (id_name == "include")
+    {
+        return token_symbol{start_position, look_ahead_position, token_symbol::sym_kw_include};
     }
     else if (id_name == "let")
     {

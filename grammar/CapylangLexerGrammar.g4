@@ -33,6 +33,7 @@ KW_FN : 'fn';
 KW_GLOBAL : 'global';
 KW_IF : 'if';
 KW_IMPORT : 'import';
+KW_INCLUDE : 'include';
 KW_LET : 'let';
 KW_MUT : 'mut';
 KW_RECORD : 'record';

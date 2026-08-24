@@ -6,6 +6,9 @@
 			"include": "#comments"
 		},
 		{
+			"include": "#includes"
+		},
+		{
 			"include": "#constants"
 		},
 		{
@@ -74,7 +77,7 @@
 			"patterns": [
 				{
 					"name": "keyword.other.capy",
-					"match": "\\b(allocate|global|import|as)\\b"
+					"match": "\\b(allocate|global|import|include|as)\\b"
 				},
 				{
 					"name": "keyword.control.capy",
@@ -95,6 +98,28 @@
 				{
 					"name": "keyword.declaration.struct.capy storage.type.capy",
 					"match": "\\b(record)\\b"
+				}
+			]
+		},
+		"includes": {
+			"patterns": [
+				{
+					"name": "meta.include.capy",
+					"match": "\\b(include)\\s+(\")((?:\\\\.|[^\"\\\\])*)(\")",
+					"captures": {
+						"1": {
+							"name": "keyword.control.import.include.capy"
+						},
+						"2": {
+							"name": "punctuation.definition.string.begin.capy"
+						},
+						"3": {
+							"name": "entity.name.filename.capy markup.underline.link.capy"
+						},
+						"4": {
+							"name": "punctuation.definition.string.end.capy"
+						}
+					}
 				}
 			]
 		},
