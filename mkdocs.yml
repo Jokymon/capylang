@@ -22,6 +22,7 @@ nav:
     - Compiler Pipeline: compiler-pipeline.md
     - Places and storage locations: places-and-locations.md
     - Design Decisions: design-decisions.md
+    - Checklists: checklists.md
   - Roadmap: roadmap.md
 
 exclude_docs: |

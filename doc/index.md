@@ -13,6 +13,8 @@ core compiler pipeline:
   locations as used by LIR and the LIR-emitter in more details.
 - [Design decisions](design-decisions.md) records architectural choices that
   affect the language and compiler implementation.
+- [Checklists for adding new features](checklists.md) gives comprehensive lists of items to
+  check before declaring a new Capylang language feature as "completed".
 - [Roadmap](roadmap.md) collects open compiler work that is relevant for future
   implementation and documentation.
 - [Journey](journey.md) describes some of the bigger milestones and roadblocks encountered along the way
