@@ -12,6 +12,8 @@
  * **21.05.2026** initial LIR, replacing ANF approach
  * **22.05.2026** Add GitHub CI automation
  * **13.07.2026** Big move to LIR
+ * **21.08.2026** Complete migration of AST to NDEF/Silwright
+ * **24.08.2026** Introduction of a simple include file concept
 
 ## Handcrafting the lexer and parser
 
@@ -41,21 +43,22 @@ dependencies of this project, that may not be a particularly strong argument.
 Once I started thinking about building and maintaining tooling around Capylang,
 the need for a formally defined grammar became more obvious though. To build
 tools such as language servers, syntax highlighters, and linters, having a
-reference grammar is an important foundation. That was the point where I started deriving
-an ANTLR grammar from the handwritten parser. So far, though, I have decided to
-focus on keeping that grammar in sync with my own implementation of the
-language by automating some form of consistency check. The existing compiler
+reference grammar is an important foundation. That was the point where I started
+deriving an ANTLR grammar from the handwritten parser. So far, though, I have
+decided to focus on keeping that grammar in sync with my own implementation of
+the language by automating some form of consistency check. The existing compiler
 has already come quite far, and I did not want to replace the entire frontend
 just to introduce different tooling at this stage.
 
-Over time, more formal descriptions may find their way into the compiler, for
-example for the AST, to make further development easier and more ergonomic. So
-the idea of replacing the handwritten parser with an ANTLR-based
-implementation, or with some other tooling and grammar, is not completely off
-the table. In the short term, though, the main compiler will remain
-handwritten, while the ANTLR part may find its place in some of the surrounding
-tooling. One area where this has already happened is the automatic updating of
-the keywords section in the TextMate grammar used for VSCode highlighting.
+Over time, more formal descriptions may find their way into the compiler. Some
+work in that direction has already been made in the form of NDEF descriptions
+for the AST and the LIR trees. So the idea of replacing the handwritten parser
+with an ANTLR-based implementation, or with some other tooling and grammar, is
+not completely off the table. In the short term, though, the main compiler will
+remain handwritten, while the ANTLR part may find its place in some of the
+surrounding tooling. One area where this has already happened is the automatic
+updating of the keywords section in the TextMate grammar used for VSCode
+highlighting.
 
 ## Dealing with data structures
 
@@ -93,11 +96,15 @@ automatically generated transforming visitor, I felt that the X-Macros would
 become too hard to maintain. I also started thinking about describing
 transformations within a tree structure, or from one tree structure to another,
 in a more declarative style. That is where the X-Macro approach would definitely
-fall short. This is when I started developing
+fall short. And this is when I started developing
 [Silwright](https://pypi.org/project/silwright/). The goal of this project is to
-describe node structures, and perhaps later even transformations, in a simple
-DSL, then generate the corresponding C++ structs, visitors, dump functions, and
-now also transformers from those descriptions.
-At the time of writing this journey entry, I have reached a workable version
-0.2.0 of Silwright, and I am in the middle of migrating again. My hope is that
-this change will be more sustainable in the long run.
+describe node structures, and perhaps later even transformations, in a
+specialized DSL, then generate the corresponding C++ structs, visitors, dump
+functions, and later also transformers from those descriptions.
+The approach with Silwright has proven to be a workable direction and as of end
+of August 2026 and using Silwright version 0.5.0, I completed the migration of
+the AST to NDEF/Silwright thus completely removing any traces of X-Macros. On
+that basis, the hope is, that we might even be able to migrate the WASM IR
+structures to NDEF/Silwright one day and then start thinking about describing
+actual transformations all the way from AST through LIR down to WASM IR in some
+Silwright based DSL.
