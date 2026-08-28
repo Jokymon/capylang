@@ -206,17 +206,22 @@ wasm_size_e wasm_type_size(wasm_type typ)
     }
 }
 
-uint32_t resolve_block_label(const wasm_block& block, const wasm_branch_label& label, uint32_t nesting_level)
+uint32_t resolve_block_label(const wasm_block* block, const wasm_branch_label& label, uint32_t nesting_level)
 {
-    if (label == block.label())
-    {
-        return nesting_level;
-    }
-    if (block.enclosing_block == nullptr)
+    if (block == nullptr)
     {
         return std::numeric_limits<uint32_t>::max();
     }
-    return resolve_block_label(*block.enclosing_block, label, nesting_level + 1);
+
+    if (label == block->label())
+    {
+        return nesting_level;
+    }
+    if (block->enclosing_block == nullptr)
+    {
+        return std::numeric_limits<uint32_t>::max();
+    }
+    return resolve_block_label(block->enclosing_block, label, nesting_level + 1);
 }
 
 wasm_generator::wasm_generator()
@@ -399,7 +404,7 @@ void wasm_generator::generate_globals(const wasm_module& module, std::ostream& o
         // We need a dummy function for generate_block(), because generate_block wants to look up locals; in globals we can't
         // use any locals, so an empty function should be ok
         wasm_function dummy_function{0, "", wasm_type::none, {}};
-        generate_block(module, dummy_function, g.init_expression, content);
+        generate_expr(module, dummy_function, g.init_expression, content);
         content.put(INST_TERMINATOR);
     }
 
@@ -447,7 +452,7 @@ void wasm_generator::generate_code(const wasm_module& module, std::ostream& outp
         encode_leb128(function_code, func.locals.size());
         function_code.put(encode_wasm_type(wasm_type::i32));
 
-        generate_block(module, func, func.body_const(), function_code);
+        generate_expr(module, func, func.function_body, function_code);
         function_code.put(INST_TERMINATOR);
 
         encode_leb128(content, function_code.str().size());
@@ -544,26 +549,9 @@ void wasm_generator::generate_names(const wasm_module& module, std::ostream& out
     output.write(content.str().c_str(), content.str().size());
 }
 
-void wasm_generator::generate_block(const wasm_module& module, const wasm_function& function, const wasm_block& block, std::ostream& output)
+void wasm_generator::generate_expr(const wasm_module& module, const wasm_function& function, const wasm_expr& expr, std::ostream& output)
 {
-    const wasm_block* previous_block = current_block;
-    current_block = &block;
-
-    switch (block.block_type)
-    {
-        case wasm_block::t_plain:
-            break;
-        case wasm_block::t_block:
-            output.put(INST_BLOCK);
-            output.put(0x40);
-            break;
-        case wasm_block::t_loop:
-            output.put(INST_LOOP);
-            output.put(0x40);
-            break;
-    }
-
-    for (const auto& inst : block.instructions)
+    for (const auto& inst : expr)
     {
         std::visit([&](const auto& t)
                    {
@@ -787,7 +775,7 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
                        }
                        else if constexpr (std::is_same_v<T, wasm_op_label>)
                        {
-                           uint32_t block_label = resolve_block_label(*current_block, t.label, 0);
+                           uint32_t block_label = resolve_block_label(current_block, t.label, 0);
                            CAPY_ASSERT(block_label != std::numeric_limits<uint32_t>::max(), "Can't resolve block label in jump instruction");
 
                            switch (t.op)
@@ -838,6 +826,28 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
                        } },
                    *inst);
     }
+}
+
+void wasm_generator::generate_block(const wasm_module& module, const wasm_function& function, const wasm_block& block, std::ostream& output)
+{
+    const wasm_block* previous_block = current_block;
+    current_block = &block;
+
+    switch (block.block_type)
+    {
+        case wasm_block::t_plain:
+            break;
+        case wasm_block::t_block:
+            output.put(INST_BLOCK);
+            output.put(0x40);
+            break;
+        case wasm_block::t_loop:
+            output.put(INST_LOOP);
+            output.put(0x40);
+            break;
+    }
+
+    generate_expr(module, function, block.instructions, output);
 
     switch (block.block_type)
     {

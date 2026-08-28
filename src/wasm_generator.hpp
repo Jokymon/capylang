@@ -21,6 +21,7 @@ private:
     void generate_data(const wasm_module& module, std::ostream& output);
     void generate_names(const wasm_module& module, std::ostream& output);
 
+    void generate_expr(const wasm_module& module, const wasm_function& function, const wasm_expr& expr, std::ostream& output);
     void generate_block(const wasm_module& module, const wasm_function& function, const wasm_block& block, std::ostream& output);
 
 private:

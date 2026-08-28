@@ -14,6 +14,7 @@ private:
     void generate(const wasm_block& block, std::ostream& output, size_t indent);
     void generate(const wasm_if_block& block, std::ostream& output, size_t indent);
 
+    void generate(const wasm_expr& expr, std::ostream& output, size_t indent);
     void generate(const wasm_op_base&, std::ostream& output, size_t indent);
     void generate(const wasm_op_index&, std::ostream& output, size_t indent);
     void generate(const wasm_op_type&, std::ostream& output, size_t indent);

@@ -311,8 +311,6 @@ struct wasm_function : public exportable, public importable
 {
 public:
     void allocate_local(const char* name, wasm_type var_type);
-    wasm_block& body();
-    const wasm_block& body_const() const;
 
     // prefer to use the create..() function of the module
     explicit wasm_function(index_type index, const std::string& name, wasm_type return_type, arguments_type arguments);
@@ -324,7 +322,7 @@ public:
     arguments_type locals;
     // the locals_map maps both, argument names and local variable names to indices
     std::map<std::string, size_t> locals_map;
-    wasm_block function_body;
+    wasm_expr function_body;
 };
 
 struct wasm_data_section
@@ -351,7 +349,7 @@ struct wasm_global
     std::string name;
     access_type access;
     wasm_type typ;
-    wasm_block init_expression;
+    wasm_expr init_expression;
 };
 
 struct wasm_module

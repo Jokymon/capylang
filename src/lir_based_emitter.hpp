@@ -53,5 +53,7 @@ private:
 
     wasm_data_section* cur_data;
     wasm_module* cur_mod;
+
     wasm_block* cur_block;
+    wasm_expr* cur_expr;
 };

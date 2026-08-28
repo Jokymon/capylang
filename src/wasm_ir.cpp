@@ -347,16 +347,6 @@ void wasm_function::allocate_local(const char* name, wasm_type var_type)
     locals_map[name] = index;
 }
 
-wasm_block& wasm_function::body()
-{
-    return function_body;
-}
-
-const wasm_block& wasm_function::body_const() const
-{
-    return function_body;
-}
-
 wasm_memory::wasm_memory(index_type index, size_t initial_block_count)
 : exportable(index, wasm_extern_index::memidx)
 , initial_block_count(initial_block_count)
@@ -397,7 +387,7 @@ wasm_data_section& wasm_module::create_data_section(size_t init_offset)
 wasm_global& wasm_module::create_global(const char* name, wasm_type g_type, access_type access)
 {
     size_t index = globals.size();
-    globals.push_back(wasm_global{name, access, g_type, wasm_block::create_init_block()});
+    globals.push_back(wasm_global{name, access, g_type, {}});
     globals_map[name] = index;
 
     return globals.back();
