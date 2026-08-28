@@ -7,18 +7,19 @@
 class wasm_generator
 {
 public:
-    void generate(const wasm_module& module, std::ostream &output);
+    wasm_generator();
+    void generate(const wasm_module& module, std::ostream& output);
 
 private:
-    void generate_types(const wasm_module& module, std::ostream &output);
-    void generate_imports(const wasm_module& module, std::ostream &output);
-    void generate_functions(const wasm_module& module, std::ostream &output);
-    void generate_memories(const wasm_module& module, std::ostream &output);
-    void generate_globals(const wasm_module& module, std::ostream &output);
-    void generate_exports(const wasm_module& module, std::ostream &output);
-    void generate_code(const wasm_module& module, std::ostream &output);
-    void generate_data(const wasm_module& module, std::ostream &output);
-    void generate_names(const wasm_module& module, std::ostream &output);
+    void generate_types(const wasm_module& module, std::ostream& output);
+    void generate_imports(const wasm_module& module, std::ostream& output);
+    void generate_functions(const wasm_module& module, std::ostream& output);
+    void generate_memories(const wasm_module& module, std::ostream& output);
+    void generate_globals(const wasm_module& module, std::ostream& output);
+    void generate_exports(const wasm_module& module, std::ostream& output);
+    void generate_code(const wasm_module& module, std::ostream& output);
+    void generate_data(const wasm_module& module, std::ostream& output);
+    void generate_names(const wasm_module& module, std::ostream& output);
 
     void generate_block(const wasm_module& module, const wasm_function& function, const wasm_block& block, std::ostream& output);
 
@@ -27,4 +28,6 @@ private:
 
 private:
     std::vector<std::string> type_entries;
+    // keep track of the current wasm_block that is processed during WASM binary generation
+    const wasm_block* current_block;
 };

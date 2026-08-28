@@ -219,6 +219,12 @@ uint32_t resolve_block_label(const wasm_block& block, const wasm_branch_label& l
     return resolve_block_label(*block.enclosing_block, label, nesting_level + 1);
 }
 
+wasm_generator::wasm_generator()
+: type_entries()
+, current_block(nullptr)
+{
+}
+
 void wasm_generator::generate(const wasm_module& module, std::ostream& output)
 {
     output.write(MAGIC, 4);
@@ -540,6 +546,9 @@ void wasm_generator::generate_names(const wasm_module& module, std::ostream& out
 
 void wasm_generator::generate_block(const wasm_module& module, const wasm_function& function, const wasm_block& block, std::ostream& output)
 {
+    const wasm_block* previous_block = current_block;
+    current_block = &block;
+
     switch (block.block_type)
     {
         case wasm_block::t_plain:
@@ -778,7 +787,7 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
                        }
                        else if constexpr (std::is_same_v<T, wasm_op_label>)
                        {
-                           uint32_t block_label = resolve_block_label(block, t.label, 0);
+                           uint32_t block_label = resolve_block_label(*current_block, t.label, 0);
                            CAPY_ASSERT(block_label != std::numeric_limits<uint32_t>::max(), "Can't resolve block label in jump instruction");
 
                            switch (t.op)
@@ -839,6 +848,8 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
             output.put(INST_TERMINATOR);
             break;
     }
+
+    current_block = previous_block;
 }
 
 size_t wasm_generator::intern_func_type(const wasm_function& function)
