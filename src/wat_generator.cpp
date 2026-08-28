@@ -306,7 +306,7 @@ void wat_generator::generate(const wasm_if_block& block, std::ostream& output, s
     output << ind << "end\n";
 }
 
-void wat_generator::generate(const wasm_instruction& inst, std::ostream& output, size_t indent)
+void wat_generator::generate(const wasm_op_base& inst, std::ostream& output, size_t indent)
 {
     std::string ind(indent, ' ');
     output << ind;

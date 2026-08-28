@@ -29,38 +29,38 @@ std::string wasm_function_ref::name() const
     return name_;
 }
 
-wasm_instruction::wasm_instruction(wasm_op op)
+wasm_op_base::wasm_op_base(wasm_op op)
 : op(op)
 {
 }
 
 wasm_op_index::wasm_op_index(wasm_op op, const std::string var_name)
-: wasm_instruction(op)
+: wasm_op_base(op)
 , name(var_name)
 {
 }
 
 wasm_op_type::wasm_op_type(wasm_op op, wasm_type type)
-: wasm_instruction(op)
+: wasm_op_base(op)
 , value_type(type)
 {
 }
 
 wasm_op_type_sign::wasm_op_type_sign(wasm_op op, wasm_type type)
-: wasm_instruction(op)
+: wasm_op_base(op)
 , value_type(type)
 {
 }
 
 wasm_op_type_value::wasm_op_type_value(wasm_op op, wasm_type type, int64_t value)
-: wasm_instruction(op)
+: wasm_op_base(op)
 , value_type(type)
 , value(value)
 {
 }
 
 wasm_op_align_offset::wasm_op_align_offset(wasm_op op, wasm_type type, uint32_t alignment, uint64_t offset)
-: wasm_instruction(op)
+: wasm_op_base(op)
 , value_type(type)
 , alignment(alignment)
 , offset(offset)
@@ -68,13 +68,13 @@ wasm_op_align_offset::wasm_op_align_offset(wasm_op op, wasm_type type, uint32_t 
 }
 
 wasm_op_label::wasm_op_label(wasm_op op, wasm_branch_label label)
-: wasm_instruction(op)
+: wasm_op_base(op)
 , label(label)
 {
 }
 
 wasm_op_func::wasm_op_func(wasm_op op, wasm_function_ref function)
-: wasm_instruction(op)
+: wasm_op_base(op)
 , function(function)
 {
 }
@@ -105,7 +105,7 @@ wasm_branch_label wasm_block::label() const
 
 wasm_block& wasm_block::block(wasm_type return_type)
 {
-    auto block = std::make_unique<wasm_statement>(
+    auto block = std::make_unique<wasm_instruction>(
         wasm_block{
             wasm_block::t_block, return_type, wasm_branch_label(), this
         }
@@ -117,7 +117,7 @@ wasm_block& wasm_block::block(wasm_type return_type)
 
 wasm_block& wasm_block::loop(wasm_type return_type)
 {
-    auto block = std::make_unique<wasm_statement>(
+    auto block = std::make_unique<wasm_instruction>(
         wasm_block{
             wasm_block::t_loop, return_type, wasm_branch_label(), this
         }
@@ -129,7 +129,7 @@ wasm_block& wasm_block::loop(wasm_type return_type)
 
 std::pair<wasm_block&, wasm_block&> wasm_block::if_block(wasm_type return_type)
 {
-    auto if_block = std::make_unique<wasm_statement>(wasm_if_block{return_type, this});
+    auto if_block = std::make_unique<wasm_instruction>(wasm_if_block{return_type, this});
     auto blocks = std::get<wasm_if_block>(*if_block).blocks();
     instructions.push_back(std::move(if_block));
     return blocks;
@@ -137,162 +137,162 @@ std::pair<wasm_block&, wasm_block&> wasm_block::if_block(wasm_type return_type)
 
 void wasm_block::local_get(const char* variable_name)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_index(wasm_op::local_get, variable_name)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_index(wasm_op::local_get, variable_name)));
 }
 
 void wasm_block::local_set(const char* variable_name)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_index(wasm_op::local_set, variable_name)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_index(wasm_op::local_set, variable_name)));
 }
 
 void wasm_block::global_get(const char* variable_name)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_index(wasm_op::global_get, variable_name)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_index(wasm_op::global_get, variable_name)));
 }
 
 void wasm_block::global_set(const char* variable_name)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_index(wasm_op::global_set, variable_name)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_index(wasm_op::global_set, variable_name)));
 }
 
 void wasm_block::const_val(wasm_type type, int64_t value)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type_value(wasm_op::typ_const, type, value)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_type_value(wasm_op::typ_const, type, value)));
 }
 
 void wasm_block::drop()
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_instruction(wasm_op::drop)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_base(wasm_op::drop)));
 }
 
 void wasm_block::add(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type(wasm_op::iadd, type)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_type(wasm_op::iadd, type)));
 }
 
 void wasm_block::and_instr(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type(wasm_op::iand, type)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_type(wasm_op::iand, type)));
 }
 
 void wasm_block::div(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type_sign(wasm_op::idiv, type)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_type_sign(wasm_op::idiv, type)));
 }
 
 void wasm_block::mod(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type_sign(wasm_op::irem, type)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_type_sign(wasm_op::irem, type)));
 }
 
 void wasm_block::mul(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type(wasm_op::imul, type)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_type(wasm_op::imul, type)));
 }
 
 void wasm_block::or_instr(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type(wasm_op::ior, type)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_type(wasm_op::ior, type)));
 }
 
 void wasm_block::sub(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type(wasm_op::isub, type)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_type(wasm_op::isub, type)));
 }
 
 void wasm_block::shl(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type(wasm_op::ishl, type)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_type(wasm_op::ishl, type)));
 }
 
 void wasm_block::shr(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type_sign(wasm_op::ishr, type)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_type_sign(wasm_op::ishr, type)));
 }
 
 void wasm_block::load(wasm_type type, size_t offset)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_align_offset(wasm_op::load, type, 0, offset)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_align_offset(wasm_op::load, type, 0, offset)));
 }
 
 void wasm_block::store(wasm_type type, size_t offset)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_align_offset(wasm_op::store, type, 0, offset)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_align_offset(wasm_op::store, type, 0, offset)));
 }
 
 void wasm_block::eq(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type(wasm_op::eq, type)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_type(wasm_op::eq, type)));
 }
 
 void wasm_block::ne(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type(wasm_op::ne, type)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_type(wasm_op::ne, type)));
 }
 
 void wasm_block::eqz(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type(wasm_op::eqz, type)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_type(wasm_op::eqz, type)));
 }
 
 void wasm_block::lt(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type_sign(wasm_op::ilt, type)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_type_sign(wasm_op::ilt, type)));
 }
 
 void wasm_block::lte(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type_sign(wasm_op::ilte, type)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_type_sign(wasm_op::ilte, type)));
 }
 
 void wasm_block::gt(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type_sign(wasm_op::igt, type)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_type_sign(wasm_op::igt, type)));
 }
 
 void wasm_block::gte(wasm_type type)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_type_sign(wasm_op::igte, type)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_type_sign(wasm_op::igte, type)));
 }
 
 void wasm_block::br(wasm_branch_label branch_label)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_label(wasm_op::br, branch_label)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_label(wasm_op::br, branch_label)));
 }
 
 void wasm_block::br_if(wasm_branch_label branch_label)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_label(wasm_op::br_if, branch_label)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_label(wasm_op::br_if, branch_label)));
 }
 
 void wasm_block::call(const char* function_name)
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_op_func(wasm_op::call, wasm_function_ref(function_name))));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_func(wasm_op::call, wasm_function_ref(function_name))));
 }
 
 void wasm_block::ret()
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_instruction(wasm_op::ret)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_base(wasm_op::ret)));
 }
 
 void wasm_block::memory_size()
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_instruction(wasm_op::memory_size)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_base(wasm_op::memory_size)));
 }
 
 void wasm_block::memory_grow()
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_instruction(wasm_op::memory_grow)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_base(wasm_op::memory_grow)));
 }
 
 void wasm_block::memory_fill()
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_instruction(wasm_op::memory_fill)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_base(wasm_op::memory_fill)));
 }
 
 void wasm_block::unreachable()
 {
-    instructions.push_back(std::make_unique<wasm_statement>(wasm_instruction(wasm_op::unreachable)));
+    instructions.push_back(std::make_unique<wasm_instruction>(wasm_op_base(wasm_op::unreachable)));
 }
 
 wasm_block wasm_block::create_init_block()

@@ -560,7 +560,7 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
                    {
                        using T = std::decay_t<decltype(t)>;
 
-                       if constexpr (std::is_same_v<T, wasm_instruction>)
+                       if constexpr (std::is_same_v<T, wasm_op_base>)
                        {
                            switch (t.op)
                            {

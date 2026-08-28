@@ -117,7 +117,7 @@ private:
     std::string name_;
 };
 
-struct wasm_instruction;
+struct wasm_op_base;
 struct wasm_block;
 struct wasm_if_block;
 struct wasm_op_index;
@@ -127,8 +127,9 @@ struct wasm_op_type_value;
 struct wasm_op_align_offset;
 struct wasm_op_label;
 struct wasm_op_func;
-using wasm_statement = std::variant<
-    wasm_instruction,
+// wasm_instruction roughly maps to the 'instr' element in the WASM spec
+using wasm_instruction = std::variant<
+    wasm_op_base,
     wasm_block,
     wasm_if_block,
     wasm_op_index,
@@ -140,35 +141,35 @@ using wasm_statement = std::variant<
     wasm_op_func
 >;
 
-struct wasm_instruction
+struct wasm_op_base
 {
-    explicit wasm_instruction(wasm_op op);
+    explicit wasm_op_base(wasm_op op);
 
     wasm_op op;
 };
 
-struct wasm_op_index : public wasm_instruction
+struct wasm_op_index : public wasm_op_base
 {
     explicit wasm_op_index(wasm_op op, const std::string var_name);
 
     std::string name;
 };
 
-struct wasm_op_type : public wasm_instruction
+struct wasm_op_type : public wasm_op_base
 {
     explicit wasm_op_type(wasm_op op, wasm_type type);
 
     wasm_type value_type;
 };
 
-struct wasm_op_type_sign : public wasm_instruction
+struct wasm_op_type_sign : public wasm_op_base
 {
     explicit wasm_op_type_sign(wasm_op op, wasm_type type);
 
     wasm_type value_type;
 };
 
-struct wasm_op_type_value : public wasm_instruction
+struct wasm_op_type_value : public wasm_op_base
 {
     explicit wasm_op_type_value(wasm_op op, wasm_type type, int64_t value);
 
@@ -176,7 +177,7 @@ struct wasm_op_type_value : public wasm_instruction
     int64_t value;
 };
 
-struct wasm_op_align_offset : public wasm_instruction
+struct wasm_op_align_offset : public wasm_op_base
 {
     explicit wasm_op_align_offset(wasm_op op, wasm_type type, uint32_t alignment, uint64_t offset);
 
@@ -185,14 +186,14 @@ struct wasm_op_align_offset : public wasm_instruction
     uint64_t offset;
 };
 
-struct wasm_op_label : public wasm_instruction
+struct wasm_op_label : public wasm_op_base
 {
     explicit wasm_op_label(wasm_op op, wasm_branch_label label);
 
     wasm_branch_label label;
 };
 
-struct wasm_op_func : public wasm_instruction
+struct wasm_op_func : public wasm_op_base
 {
     explicit wasm_op_func(wasm_op op, wasm_function_ref function);
 
@@ -266,7 +267,7 @@ public:
     wasm_branch_label block_label;
     wasm_block* enclosing_block = nullptr;
 
-    std::vector<std::unique_ptr<wasm_statement>> instructions;
+    std::vector<std::unique_ptr<wasm_instruction>> instructions;
 
 public:
     // Create a very simple block usable for the initialiser expression of globals
