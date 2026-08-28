@@ -140,6 +140,8 @@ using wasm_instruction = std::variant<
     wasm_op_label,
     wasm_op_func
 >;
+// wasm_expr roughly maps to the 'expr' element in the WASM spec
+using wasm_expr = std::vector<std::unique_ptr<wasm_instruction>>;
 
 struct wasm_op_base
 {
@@ -210,6 +212,46 @@ struct wasm_if_block
     std::unique_ptr<wasm_block> else_block;
 };
 
+namespace wasm_builder
+{
+    wasm_block& block(wasm_expr& expr, wasm_block* parent, wasm_type return_type);
+    wasm_block& loop(wasm_expr& expr, wasm_block* parent, wasm_type return_type);
+    std::pair<wasm_block&, wasm_block&> if_block(wasm_expr& expr, wasm_block* parent, wasm_type return_type);
+
+    void local_get(wasm_expr& expr, const char* variable_name);
+    void local_set(wasm_expr& expr, const char* variable_name);
+    void global_get(wasm_expr& expr, const char* variable_name);
+    void global_set(wasm_expr& expr, const char* variable_name);
+    void const_val(wasm_expr& expr, wasm_type type, int64_t value);
+    void drop(wasm_expr& expr);
+    void add(wasm_expr& expr, wasm_type type);
+    void and_instr(wasm_expr& expr, wasm_type type);
+    void div(wasm_expr& expr, wasm_type type);
+    void mod(wasm_expr& expr, wasm_type type);
+    void mul(wasm_expr& expr, wasm_type type);
+    void or_instr(wasm_expr& expr, wasm_type type);
+    void sub(wasm_expr& expr, wasm_type type);
+    void shl(wasm_expr& expr, wasm_type type);
+    void shr(wasm_expr& expr, wasm_type type);
+    void load(wasm_expr& expr, wasm_type type, size_t offset = 0);
+    void store(wasm_expr& expr, wasm_type type, size_t offset = 0);
+    void eq(wasm_expr& expr, wasm_type type);
+    void ne(wasm_expr& expr, wasm_type type);
+    void eqz(wasm_expr& expr, wasm_type type);
+    void lt(wasm_expr& expr, wasm_type type);
+    void lte(wasm_expr& expr, wasm_type type);
+    void gt(wasm_expr& expr, wasm_type type);
+    void gte(wasm_expr& expr, wasm_type type);
+    void br(wasm_expr& expr, wasm_branch_label branch_label);
+    void br_if(wasm_expr& expr, wasm_branch_label branch_label);
+    void call(wasm_expr& expr, const char* function_name);
+    void ret(wasm_expr& expr);
+    void memory_size(wasm_expr& expr);
+    void memory_grow(wasm_expr& expr);
+    void memory_fill(wasm_expr& expr);
+    void unreachable(wasm_expr& expr);
+}
+
 struct wasm_block
 {
 public:
@@ -224,50 +266,13 @@ public:
     size_t inst_count() const;
     wasm_branch_label label() const;
 
-    wasm_block& block(wasm_type return_type);
-    wasm_block& loop(wasm_type return_type);
-    std::pair<wasm_block&, wasm_block&> if_block(wasm_type return_type);
-
-    void local_get(const char* variable_name);
-    void local_set(const char* variable_name);
-    void global_get(const char* variable_name);
-    void global_set(const char* variable_name);
-    void const_val(wasm_type type, int64_t value);
-    void drop();
-    void add(wasm_type type);
-    void and_instr(wasm_type type);
-    void div(wasm_type type);
-    void mod(wasm_type type);
-    void mul(wasm_type type);
-    void or_instr(wasm_type type);
-    void sub(wasm_type type);
-    void shl(wasm_type type);
-    void shr(wasm_type type);
-    void load(wasm_type type, size_t offset = 0);
-    void store(wasm_type type, size_t offset = 0);
-    void eq(wasm_type type);
-    void ne(wasm_type type);
-    void eqz(wasm_type type);
-    void lt(wasm_type type);
-    void lte(wasm_type type);
-    void gt(wasm_type type);
-    void gte(wasm_type type);
-    void br(wasm_branch_label branch_label);
-    void br_if(wasm_branch_label branch_label);
-    void call(const char* function_name);
-    void ret();
-    void memory_size();
-    void memory_grow();
-    void memory_fill();
-    void unreachable();
-
     wasm_block_type block_type;
     wasm_type return_type;
 
     wasm_branch_label block_label;
     wasm_block* enclosing_block = nullptr;
 
-    std::vector<std::unique_ptr<wasm_instruction>> instructions;
+    wasm_expr instructions;
 
 public:
     // Create a very simple block usable for the initialiser expression of globals

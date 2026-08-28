@@ -209,19 +209,19 @@ storage_loc transform_place(const context& parse_context, const storage_loc& sto
                     overloaded{
                         [&](const sl_argument& arg)
                         {
-                            code_block.local_get(arg.name.c_str());
+                            wasm_builder::local_get(code_block.instructions, arg.name.c_str());
                             // TODO: These .value() are actually ugly and we should make
                             // sure that they are really resolved
                             deref_type = parse_context.derefed_type(arg.type).value();
                         },
                         [&](const sl_local_var& local)
                         {
-                            code_block.local_get(local.name.c_str());
+                            wasm_builder::local_get(code_block.instructions, local.name.c_str());
                             deref_type = parse_context.derefed_type(local.type).value();
                         },
                         [&](const sl_global_var& global)
                         {
-                            code_block.global_get(global.name.c_str());
+                            wasm_builder::global_get(code_block.instructions, global.name.c_str());
                             deref_type = parse_context.derefed_type(global.type).value();
                         },
                         [&](const sl_ptr& ptr)
@@ -231,7 +231,7 @@ storage_loc transform_place(const context& parse_context, const storage_loc& sto
                             // the WASM IR.
                             // The offset is taken from the given sl_ptr because we need
                             // to include this in our load here.
-                            code_block.load(wasm_type::i32, ptr.offset);
+                            wasm_builder::load(code_block.instructions, wasm_type::i32, ptr.offset);
                             deref_type = parse_context.derefed_type(ptr.type).value();
                         }
                     }
@@ -323,13 +323,13 @@ void transform_load(const context& parse_context, const storage_loc& storage, wa
                     size_t field_index = 0;
                     for (const auto& field_definition : rec_type->fields)
                     {
-                        code_block.local_get((arg.name + "_" + std::to_string(field_index)).c_str());
+                        wasm_builder::local_get(code_block.instructions, (arg.name + "_" + std::to_string(field_index)).c_str());
                         field_index++;
                     }
                 }
                 else
                 {
-                    code_block.local_get(arg.name.c_str());
+                    wasm_builder::local_get(code_block.instructions, arg.name.c_str());
                 }
             },
             [&](const sl_local_var& local)
@@ -341,13 +341,13 @@ void transform_load(const context& parse_context, const storage_loc& storage, wa
                     size_t field_index = 0;
                     for (const auto& field_definition : rec_type->fields)
                     {
-                        code_block.local_get((local.name + "_" + std::to_string(field_index)).c_str());
+                        wasm_builder::local_get(code_block.instructions, (local.name + "_" + std::to_string(field_index)).c_str());
                         field_index++;
                     }
                 }
                 else
                 {
-                    code_block.local_get(local.name.c_str());
+                    wasm_builder::local_get(code_block.instructions, local.name.c_str());
                 }
             },
             [&](const sl_global_var& global)
@@ -359,13 +359,13 @@ void transform_load(const context& parse_context, const storage_loc& storage, wa
                     size_t field_index = 0;
                     for (const auto& field_definition : rec_type->fields)
                     {
-                        code_block.global_get((global.name + "_" + std::to_string(field_index)).c_str());
+                        wasm_builder::global_get(code_block.instructions, (global.name + "_" + std::to_string(field_index)).c_str());
                         field_index++;
                     }
                 }
                 else
                 {
-                    code_block.global_get(global.name.c_str());
+                    wasm_builder::global_get(code_block.instructions, global.name.c_str());
                 }
             },
             [&](const sl_ptr& ptr)
@@ -374,15 +374,15 @@ void transform_load(const context& parse_context, const storage_loc& storage, wa
                 {
                     // TODO: we should simplify this by using a mapping from
                     // primitive types to wasm_types
-                    code_block.load(wasm_type::u8, ptr.offset);
+                    wasm_builder::load(code_block.instructions, wasm_type::u8, ptr.offset);
                 }
                 else if (parse_context.is_primitive_type(ptr.type, primitive_type::U16))
                 {
-                    code_block.load(wasm_type::u16, ptr.offset);
+                    wasm_builder::load(code_block.instructions, wasm_type::u16, ptr.offset);
                 }
                 else
                 {
-                    code_block.load(wasm_type::i32, ptr.offset);
+                    wasm_builder::load(code_block.instructions, wasm_type::i32, ptr.offset);
                 }
             }
         }
@@ -403,13 +403,13 @@ void transform_store(const context& parse_context, const storage_loc& storage, w
                     for (const auto& field_definition : rec_type->fields)
                     {
                         // TODO: do we need to reverse the field order here?
-                        code_block.local_set((arg.name + "_" + std::to_string(field_index)).c_str());
+                        wasm_builder::local_set(code_block.instructions, (arg.name + "_" + std::to_string(field_index)).c_str());
                         field_index++;
                     }
                 }
                 else
                 {
-                    code_block.local_set(arg.name.c_str());
+                    wasm_builder::local_set(code_block.instructions, arg.name.c_str());
                 }
             },
             [&](const sl_local_var& local)
@@ -422,13 +422,13 @@ void transform_store(const context& parse_context, const storage_loc& storage, w
                     for (const auto& field_definition : rec_type->fields)
                     {
                         // TODO: do we need to reverse the field order here?
-                        code_block.local_set((local.name + "_" + std::to_string(field_index)).c_str());
+                        wasm_builder::local_set(code_block.instructions, (local.name + "_" + std::to_string(field_index)).c_str());
                         field_index++;
                     }
                 }
                 else
                 {
-                    code_block.local_set(local.name.c_str());
+                    wasm_builder::local_set(code_block.instructions, local.name.c_str());
                 }
             },
             [&](const sl_global_var& global)
@@ -441,13 +441,13 @@ void transform_store(const context& parse_context, const storage_loc& storage, w
                     for (const auto& field_definition : rec_type->fields)
                     {
                         // TODO: do we need to reverse the field order here?
-                        code_block.global_set((global.name + "_" + std::to_string(field_index)).c_str());
+                        wasm_builder::global_set(code_block.instructions, (global.name + "_" + std::to_string(field_index)).c_str());
                         field_index++;
                     }
                 }
                 else
                 {
-                    code_block.global_set(global.name.c_str());
+                    wasm_builder::global_set(code_block.instructions, global.name.c_str());
                 }
             },
             [&](const sl_ptr& ptr)
@@ -456,15 +456,15 @@ void transform_store(const context& parse_context, const storage_loc& storage, w
                 {
                     // TODO: we should simplify this by using a mapping from
                     // primitive types to wasm_types
-                    code_block.store(wasm_type::u8, ptr.offset);
+                    wasm_builder::store(code_block.instructions, wasm_type::u8, ptr.offset);
                 }
                 else if (parse_context.is_primitive_type(ptr.type, primitive_type::U16))
                 {
-                    code_block.store(wasm_type::u16, ptr.offset);
+                    wasm_builder::store(code_block.instructions, wasm_type::u16, ptr.offset);
                 }
                 else
                 {
-                    code_block.store(wasm_type::i32, ptr.offset);
+                    wasm_builder::store(code_block.instructions, wasm_type::i32, ptr.offset);
                 }
             }
         }
@@ -621,20 +621,20 @@ void lir_based_emitter::emit(const lir::while_statement& while_stmt)
 {
     wasm_block* prev_block = cur_block;
 
-    wasm_block& while_exit = cur_block->block(wasm_type::none);
-    wasm_block& while_block = while_exit.loop(wasm_type::none);
+    wasm_block& while_exit = wasm_builder::block(cur_block->instructions, cur_block, wasm_type::none);
+    wasm_block& while_block = wasm_builder::loop(while_exit.instructions, &while_exit, wasm_type::none);
     cur_block = &while_block;
 
     emit(*while_stmt.condition);
 
-    cur_block->eqz(wasm_type::i32);
-    cur_block->br_if(while_exit.label());
+    wasm_builder::eqz(cur_block->instructions, wasm_type::i32);
+    wasm_builder::br_if(cur_block->instructions, while_exit.label());
 
     for (const auto& expression : while_stmt.while_code)
     {
         emit(*expression);
     }
-    cur_block->br(while_block.label());
+    wasm_builder::br(cur_block->instructions, while_block.label());
 
     cur_block = prev_block;
 }
@@ -659,18 +659,18 @@ void lir_based_emitter::emit(const lir::store_string_statement& store)
     const auto& target_sym = parse_context.symbol_at(store.target.base.symbol_ref);
 
     uint32_t ptr = parse_context.string_literals[store.string_table_index].start_address;
-    cur_block->const_val(wasm_type::i32, ptr);
-    cur_block->const_val(wasm_type::i32, store.string_size);
+    wasm_builder::const_val(cur_block->instructions, wasm_type::i32, ptr);
+    wasm_builder::const_val(cur_block->instructions, wasm_type::i32, store.string_size);
 
     if (target_sym.kind == symbol_kind::global_var)
     {
-        cur_block->global_set((target_sym.name + "_1").c_str());
-        cur_block->global_set((target_sym.name + "_0").c_str());
+        wasm_builder::global_set(cur_block->instructions, (target_sym.name + "_1").c_str());
+        wasm_builder::global_set(cur_block->instructions, (target_sym.name + "_0").c_str());
     }
     else if (target_sym.kind == symbol_kind::local_var)
     {
-        cur_block->local_set((target_sym.name + "_1").c_str());
-        cur_block->local_set((target_sym.name + "_0").c_str());
+        wasm_builder::local_set(cur_block->instructions, (target_sym.name + "_1").c_str());
+        wasm_builder::local_set(cur_block->instructions, (target_sym.name + "_0").c_str());
     }
 }
 
@@ -684,7 +684,7 @@ void lir_based_emitter::emit(const lir::expression_statement& stmt)
     emit(*stmt.expression);
     if (stmt.is_dropped && !parse_context.is_primitive_type(lir_assigned_node_type(*stmt.expression, parse_context), primitive_type::Void))
     {
-        cur_block->drop();
+        wasm_builder::drop(cur_block->instructions);
     }
 }
 
@@ -704,7 +704,7 @@ void lir_based_emitter::emit(const lir::break_statement& root)
         // loop. This however may not always be the case in the future and we
         // should instead make sure, we really target the right block for
         // branch instead of heuristically guessing it.
-        cur_block->br(b->enclosing_block->label());
+        wasm_builder::br(cur_block->instructions, b->enclosing_block->label());
     }
     else
     {
@@ -720,7 +720,7 @@ void lir_based_emitter::emit(const lir::return_statement& root)
     }
     if (root.is_explicit)
     {
-        cur_block->ret();
+        wasm_builder::ret(cur_block->instructions);
     }
 }
 
@@ -731,58 +731,58 @@ void lir_based_emitter::emit(const lir::binary_expression& root)
     switch (root.op)
     {
         case lir::binary_op_t::Minus:
-            cur_block->sub(wasm_type::i32);
+            wasm_builder::sub(cur_block->instructions, wasm_type::i32);
             break;
         case lir::binary_op_t::Plus:
-            cur_block->add(wasm_type::i32);
+            wasm_builder::add(cur_block->instructions, wasm_type::i32);
             break;
         case lir::binary_op_t::Multiply:
-            cur_block->mul(wasm_type::i32);
+            wasm_builder::mul(cur_block->instructions, wasm_type::i32);
             break;
         case lir::binary_op_t::Division:
-            cur_block->div(wasm_type::i32);
+            wasm_builder::div(cur_block->instructions, wasm_type::i32);
             break;
         case lir::binary_op_t::Modulus:
-            cur_block->mod(wasm_type::i32);
+            wasm_builder::mod(cur_block->instructions, wasm_type::i32);
             break;
         case lir::binary_op_t::AndOp:
-            cur_block->and_instr(wasm_type::i32);
+            wasm_builder::and_instr(cur_block->instructions, wasm_type::i32);
             break;
         case lir::binary_op_t::OrOp:
-            cur_block->or_instr(wasm_type::i32);
+            wasm_builder::or_instr(cur_block->instructions, wasm_type::i32);
             break;
         case lir::binary_op_t::Shl:
-            cur_block->shl(wasm_type::i32);
+            wasm_builder::shl(cur_block->instructions, wasm_type::i32);
             break;
         case lir::binary_op_t::Shr:
-            cur_block->shr(wasm_type::i32);
+            wasm_builder::shr(cur_block->instructions, wasm_type::i32);
             break;
         case lir::binary_op_t::Equals:
-            cur_block->eq(wasm_type::i32);
+            wasm_builder::eq(cur_block->instructions, wasm_type::i32);
             break;
         case lir::binary_op_t::NotEquals:
-            cur_block->ne(wasm_type::i32);
+            wasm_builder::ne(cur_block->instructions, wasm_type::i32);
             break;
         case lir::binary_op_t::LessThan:
-            cur_block->lt(wasm_type::i32);
+            wasm_builder::lt(cur_block->instructions, wasm_type::i32);
             break;
         case lir::binary_op_t::LessThanEqual:
-            cur_block->lte(wasm_type::i32);
+            wasm_builder::lte(cur_block->instructions, wasm_type::i32);
             break;
         case lir::binary_op_t::GreaterThan:
-            cur_block->gt(wasm_type::i32);
+            wasm_builder::gt(cur_block->instructions, wasm_type::i32);
             break;
         case lir::binary_op_t::GreaterThanEqual:
-            cur_block->gte(wasm_type::i32);
+            wasm_builder::gte(cur_block->instructions, wasm_type::i32);
             break;
     }
 }
 
 void lir_based_emitter::emit(const lir::unary_expression& root)
 {
-    cur_block->const_val(wasm_type::i32, 0);
+    wasm_builder::const_val(cur_block->instructions, wasm_type::i32, 0);
     emit(*root.expr);
-    cur_block->sub(wasm_type::i32);
+    wasm_builder::sub(cur_block->instructions, wasm_type::i32);
 }
 
 void lir_based_emitter::emit(const lir::cast_expression& root)
@@ -791,7 +791,7 @@ void lir_based_emitter::emit(const lir::cast_expression& root)
     if ((parse_context.is_primitive_type(root.cast_type, primitive_type::Void)) &&
         (!parse_context.is_primitive_type(lir_assigned_node_type(*root.expression, parse_context), primitive_type::Void)))
     {
-        cur_block->drop();
+        wasm_builder::drop(cur_block->instructions);
     }
 }
 
@@ -808,19 +808,19 @@ void lir_based_emitter::emit(const lir::function_call& func_call)
     {
         if (func_symbol.name == "memory_size")
         {
-            cur_block->memory_size();
+            wasm_builder::memory_size(cur_block->instructions);
         }
         else if (func_symbol.name == "memory_grow")
         {
-            cur_block->memory_grow();
+            wasm_builder::memory_grow(cur_block->instructions);
         }
         else if (func_symbol.name == "memory_fill")
         {
-            cur_block->memory_fill();
+            wasm_builder::memory_fill(cur_block->instructions);
         }
         else if (func_symbol.name == "unreachable")
         {
-            cur_block->unreachable();
+            wasm_builder::unreachable(cur_block->instructions);
         }
         else
         {
@@ -829,14 +829,18 @@ void lir_based_emitter::emit(const lir::function_call& func_call)
     }
     else
     {
-        cur_block->call(func_call.function_name.c_str());
+        wasm_builder::call(cur_block->instructions, func_call.function_name.c_str());
     }
 }
 
 void lir_based_emitter::emit(const lir::if_expression& if_expr)
 {
     emit(*if_expr.condition);
-    auto [then_block, else_block] = cur_block->if_block(lowering->lower_return_type(if_expr.assigned_type));
+    auto [then_block, else_block] = wasm_builder::if_block(
+        cur_block->instructions,
+        cur_block,
+        lowering->lower_return_type(if_expr.assigned_type)
+    );
 
     auto* prev_block = cur_block;
     cur_block = &then_block;
@@ -874,11 +878,11 @@ void lir_based_emitter::emit(const lir::allocate_record_expression& expr)
 
     size_t record_size = lir_type_size(parse_context, type_spec.value());
 
-    cur_block->const_val(wasm_type::i32, 0);
-    cur_block->const_val(wasm_type::i32, 0);
-    cur_block->const_val(wasm_type::i32, 4);
-    cur_block->const_val(wasm_type::i32, lir_type_size(parse_context, r_type));
-    cur_block->call("cabi_realloc");
+    wasm_builder::const_val(cur_block->instructions, wasm_type::i32, 0);
+    wasm_builder::const_val(cur_block->instructions, wasm_type::i32, 0);
+    wasm_builder::const_val(cur_block->instructions, wasm_type::i32, 4);
+    wasm_builder::const_val(cur_block->instructions, wasm_type::i32, lir_type_size(parse_context, r_type));
+    wasm_builder::call(cur_block->instructions, "cabi_realloc");
 }
 
 void lir_based_emitter::emit(const lir::string_literal& literal)
@@ -886,23 +890,23 @@ void lir_based_emitter::emit(const lir::string_literal& literal)
     // TODO: here we just lower to pointer + length blindly, but we might have to
     // move this part into the lowering strategies
     uint32_t ptr = parse_context.string_literals[literal.table_index].start_address;
-    cur_block->const_val(wasm_type::i32, ptr);
-    cur_block->const_val(wasm_type::i32, literal.size);
+    wasm_builder::const_val(cur_block->instructions, wasm_type::i32, ptr);
+    wasm_builder::const_val(cur_block->instructions, wasm_type::i32, literal.size);
 }
 
 void lir_based_emitter::emit(const lir::bool_literal& bool_const)
 {
-    cur_block->const_val(wasm_type::i32, bool_const.value ? 1 : 0);
+    wasm_builder::const_val(cur_block->instructions, wasm_type::i32, bool_const.value ? 1 : 0);
 }
 
 void lir_based_emitter::emit(const lir::char_literal& literal)
 {
-    cur_block->const_val(wasm_type::i32, literal.ch);
+    wasm_builder::const_val(cur_block->instructions, wasm_type::i32, literal.ch);
 }
 
 void lir_based_emitter::emit(const lir::number& number)
 {
-    cur_block->const_val(wasm_type::i32, number.value);
+    wasm_builder::const_val(cur_block->instructions, wasm_type::i32, number.value);
 }
 
 uint32_t lir_based_emitter::allocate_data(const std::string& data)
