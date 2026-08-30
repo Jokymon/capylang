@@ -98,7 +98,7 @@ public:
     explicit wasm_branch_label();
     std::string repr() const;
 
-    bool operator==(const wasm_branch_label& other);
+    bool operator==(const wasm_branch_label& other) const;
 
 private:
     static int label_index;
@@ -202,21 +202,30 @@ struct wasm_op_func : public wasm_op_base
     wasm_function_ref function;
 };
 
-struct wasm_if_block
+struct wasm_control_block
 {
-    explicit wasm_if_block(wasm_type return_type, wasm_block* enclosing_block);
-    std::pair<wasm_block&, wasm_block&> blocks();
+    explicit wasm_control_block(wasm_type return_type, wasm_control_block* enclosing_block);
+
+    wasm_branch_label label() const;
 
     wasm_type return_type;
-    std::unique_ptr<wasm_block> then_block;
-    std::unique_ptr<wasm_block> else_block;
+    wasm_branch_label block_label;
+    wasm_control_block* enclosing_block;
+};
+
+struct wasm_if_block : public wasm_control_block
+{
+    explicit wasm_if_block(wasm_type return_type, wasm_control_block* enclosing_block);
+
+    wasm_expr then_block;
+    wasm_expr else_block;
 };
 
 namespace wasm_builder
 {
-    wasm_block& block(wasm_expr& expr, wasm_block* parent, wasm_type return_type);
-    wasm_block& loop(wasm_expr& expr, wasm_block* parent, wasm_type return_type);
-    std::pair<wasm_block&, wasm_block&> if_block(wasm_expr& expr, wasm_block* parent, wasm_type return_type);
+    wasm_block& block(wasm_expr& expr, wasm_control_block* parent, wasm_type return_type);
+    wasm_block& loop(wasm_expr& expr, wasm_control_block* parent, wasm_type return_type);
+    wasm_if_block& if_block(wasm_expr& expr, wasm_control_block* parent, wasm_type return_type);
 
     void local_get(wasm_expr& expr, const char* variable_name);
     void local_set(wasm_expr& expr, const char* variable_name);
@@ -252,25 +261,21 @@ namespace wasm_builder
     void unreachable(wasm_expr& expr);
 }
 
-struct wasm_block
+struct wasm_block : public wasm_control_block
 {
 public:
     enum wasm_block_type
     {
-        t_plain, // used for function bodies and then/else-blocks
         t_block, // used for typed non-loop blocks
         t_loop   // used for typed loop-blocks
     };
 
 public:
+    explicit wasm_block(wasm_block_type block_type, wasm_type return_type, wasm_control_block* enclosing_block);
+
     size_t inst_count() const;
-    wasm_branch_label label() const;
 
     wasm_block_type block_type;
-    wasm_type return_type;
-
-    wasm_branch_label block_label;
-    wasm_block* enclosing_block = nullptr;
 
     wasm_expr instructions;
 };

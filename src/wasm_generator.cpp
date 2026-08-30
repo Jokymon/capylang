@@ -206,7 +206,7 @@ wasm_size_e wasm_type_size(wasm_type typ)
     }
 }
 
-uint32_t resolve_block_label(const wasm_block* block, const wasm_branch_label& label, uint32_t nesting_level)
+uint32_t resolve_block_label(const wasm_control_block* block, const wasm_branch_label& label, uint32_t nesting_level)
 {
     if (block == nullptr)
     {
@@ -216,10 +216,6 @@ uint32_t resolve_block_label(const wasm_block* block, const wasm_branch_label& l
     if (label == block->label())
     {
         return nesting_level;
-    }
-    if (block->enclosing_block == nullptr)
-    {
-        return std::numeric_limits<uint32_t>::max();
     }
     return resolve_block_label(block->enclosing_block, label, nesting_level + 1);
 }
@@ -810,13 +806,16 @@ void wasm_generator::generate_expr(const wasm_module& module, const wasm_functio
                                output.put(0x40); // block type 'void'
                            }
 
-                           generate_block(module, function, *(t.then_block), output);
+                           const wasm_control_block* previous_block = current_block;
+                           current_block = &t;
+                           generate_expr(module, function, t.then_block, output);
 
-                           if (t.else_block)
+                           if (!t.else_block.empty())
                            {
                                output.put(INST_ELSE);
-                               generate_block(module, function, *(t.else_block), output);
+                               generate_expr(module, function, t.else_block, output);
                            }
+                           current_block = previous_block;
 
                            output.put(INST_TERMINATOR);
                        }
@@ -830,13 +829,11 @@ void wasm_generator::generate_expr(const wasm_module& module, const wasm_functio
 
 void wasm_generator::generate_block(const wasm_module& module, const wasm_function& function, const wasm_block& block, std::ostream& output)
 {
-    const wasm_block* previous_block = current_block;
+    const wasm_control_block* previous_block = current_block;
     current_block = &block;
 
     switch (block.block_type)
     {
-        case wasm_block::t_plain:
-            break;
         case wasm_block::t_block:
             output.put(INST_BLOCK);
             output.put(0x40);
@@ -849,15 +846,7 @@ void wasm_generator::generate_block(const wasm_module& module, const wasm_functi
 
     generate_expr(module, function, block.instructions, output);
 
-    switch (block.block_type)
-    {
-        case wasm_block::t_plain:
-            break;
-        case wasm_block::t_block:
-        case wasm_block::t_loop:
-            output.put(INST_TERMINATOR);
-            break;
-    }
+    output.put(INST_TERMINATOR);
 
     current_block = previous_block;
 }

@@ -475,7 +475,8 @@ lir_based_emitter::lir_based_emitter(compile_options options, context& ctx)
 : options(options)
 , parse_context(ctx)
 , lowering(new lower_cabi(ctx))
-, cur_block(nullptr)
+, cur_loop_block(nullptr)
+, cur_control_block(nullptr)
 , cur_expr(nullptr)
 {
     cur_data = new wasm_data_section(100);
@@ -622,13 +623,15 @@ void lir_based_emitter::emit(const lir::function_definition& func_def)
 
 void lir_based_emitter::emit(const lir::while_statement& while_stmt)
 {
-    wasm_block* prev_block = cur_block;
+    wasm_block* prev_loop_block = cur_loop_block;
+    wasm_control_block* prev_control_block = cur_control_block;
     wasm_expr* prev_expr = cur_expr;
 
-    wasm_block& while_exit = wasm_builder::block(*cur_expr, cur_block, wasm_type::none);
+    wasm_block& while_exit = wasm_builder::block(*cur_expr, cur_control_block, wasm_type::none);
     wasm_block& while_block = wasm_builder::loop(while_exit.instructions, &while_exit, wasm_type::none);
-    cur_block = &while_block;
-    cur_expr = &cur_block->instructions;
+    cur_loop_block = &while_block;
+    cur_control_block = &while_block;
+    cur_expr = &while_block.instructions;
 
     emit(*while_stmt.condition);
 
@@ -641,7 +644,8 @@ void lir_based_emitter::emit(const lir::while_statement& while_stmt)
     }
     wasm_builder::br(*cur_expr, while_block.label());
 
-    cur_block = prev_block;
+    cur_loop_block = prev_loop_block;
+    cur_control_block = prev_control_block;
     cur_expr = prev_expr;
 }
 
@@ -696,21 +700,16 @@ void lir_based_emitter::emit(const lir::expression_statement& stmt)
 
 void lir_based_emitter::emit(const lir::break_statement& root)
 {
-    // find the nearest loop block (currently just assuming that this will be
-    // a proper loop like a 'while') and use that block as branch target
-    wasm_block* b = cur_block;
-    while (b->block_type != wasm_block::t_loop && b->enclosing_block != nullptr)
-    {
-        b = b->enclosing_block;
-    }
-    if (b->block_type == wasm_block::t_loop)
+    // cur_loop_block tracks the innermost loop independently from the complete
+    // control-block chain, which may also contain if blocks.
+    if (cur_loop_block != nullptr && cur_loop_block->block_type == wasm_block::t_loop)
     {
         // TODO: This feels a little hacky; we assume that a loop is always
         // enclosed in a plain 'block' because it is constructed from a while
         // loop. This however may not always be the case in the future and we
         // should instead make sure, we really target the right block for
         // branch instead of heuristically guessing it.
-        wasm_builder::br(*cur_expr, b->enclosing_block->label());
+        wasm_builder::br(*cur_expr, cur_loop_block->enclosing_block->label());
     }
     else
     {
@@ -842,30 +841,29 @@ void lir_based_emitter::emit(const lir::function_call& func_call)
 void lir_based_emitter::emit(const lir::if_expression& if_expr)
 {
     wasm_expr* prev_expr = cur_expr;
+    wasm_control_block* prev_control_block = cur_control_block;
     emit(*if_expr.condition);
-    auto [then_block, else_block] = wasm_builder::if_block(
+    auto& if_block = wasm_builder::if_block(
         *cur_expr,
-        cur_block,
+        cur_control_block,
         lowering->lower_return_type(if_expr.assigned_type)
     );
 
-    auto* prev_block = cur_block;
-    cur_block = &then_block;
-    cur_expr = &cur_block->instructions;
+    cur_control_block = &if_block;
+    cur_expr = &if_block.then_block;
     for (const auto& expression : if_expr.then_code)
     {
         emit(*expression);
     }
     if (!if_expr.then_code.empty())
     {
-        cur_block = &else_block;
-        cur_expr = &cur_block->instructions;
+        cur_expr = &if_block.else_block;
         for (const auto& expression : if_expr.else_code)
         {
             emit(*expression);
         }
     }
-    cur_block = prev_block;
+    cur_control_block = prev_control_block;
     cur_expr = prev_expr;
 }
 

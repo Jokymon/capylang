@@ -4,6 +4,7 @@
 #include <ostream>
 
 class wasm_block;
+class wasm_control_block;
 class wasm_data_section;
 class wasm_module;
 
@@ -54,6 +55,7 @@ private:
     wasm_data_section* cur_data;
     wasm_module* cur_mod;
 
-    wasm_block* cur_block;
+    wasm_block* cur_loop_block;
+    wasm_control_block* cur_control_block;
     wasm_expr* cur_expr;
 };

@@ -12,7 +12,7 @@ std::string wasm_branch_label::repr() const
     return label_representation;
 }
 
-bool wasm_branch_label::operator==(const wasm_branch_label& other)
+bool wasm_branch_label::operator==(const wasm_branch_label& other) const
 {
     return this->label_representation == other.label_representation;
 }
@@ -79,18 +79,21 @@ wasm_op_func::wasm_op_func(wasm_op op, wasm_function_ref function)
 {
 }
 
-wasm_if_block::wasm_if_block(wasm_type return_type, wasm_block* enclosing_block)
+wasm_control_block::wasm_control_block(wasm_type return_type, wasm_control_block* enclosing_block)
 : return_type(return_type)
-, then_block(std::make_unique<wasm_block>())
-, else_block(std::make_unique<wasm_block>())
+, block_label()
+, enclosing_block(enclosing_block)
 {
-    then_block->enclosing_block = enclosing_block;
-    else_block->enclosing_block = enclosing_block;
 }
 
-std::pair<wasm_block&, wasm_block&> wasm_if_block::blocks()
+wasm_branch_label wasm_control_block::label() const
 {
-    return std::pair<wasm_block&, wasm_block&>(*then_block, *else_block);
+    return block_label;
+}
+
+wasm_if_block::wasm_if_block(wasm_type return_type, wasm_control_block* enclosing_block)
+: wasm_control_block(return_type, enclosing_block)
+{
 }
 
 size_t wasm_block::inst_count() const
@@ -98,18 +101,19 @@ size_t wasm_block::inst_count() const
     return instructions.size();
 }
 
-wasm_branch_label wasm_block::label() const
+wasm_block::wasm_block(wasm_block_type block_type, wasm_type return_type, wasm_control_block* enclosing_block)
+: wasm_control_block(return_type, enclosing_block)
+, block_type(block_type)
 {
-    return block_label;
 }
 
 namespace wasm_builder
 {
-    wasm_block& block(wasm_expr& expr, wasm_block* parent, wasm_type return_type)
+    wasm_block& block(wasm_expr& expr, wasm_control_block* parent, wasm_type return_type)
     {
         auto block = std::make_unique<wasm_instruction>(
             wasm_block{
-                wasm_block::t_block, return_type, wasm_branch_label(), parent
+                wasm_block::t_block, return_type, parent
             }
         );
         wasm_block& new_block = std::get<wasm_block>(*block);
@@ -117,11 +121,11 @@ namespace wasm_builder
         return new_block;
     }
 
-    wasm_block& loop(wasm_expr& expr, wasm_block* parent, wasm_type return_type)
+    wasm_block& loop(wasm_expr& expr, wasm_control_block* parent, wasm_type return_type)
     {
         auto block = std::make_unique<wasm_instruction>(
             wasm_block{
-                wasm_block::t_loop, return_type, wasm_branch_label(), parent
+                wasm_block::t_loop, return_type, parent
             }
         );
         wasm_block& new_block = std::get<wasm_block>(*block);
@@ -129,12 +133,12 @@ namespace wasm_builder
         return new_block;
     }
 
-    std::pair<wasm_block&, wasm_block&> if_block(wasm_expr& expr, wasm_block* parent, wasm_type return_type)
+    wasm_if_block& if_block(wasm_expr& expr, wasm_control_block* parent, wasm_type return_type)
     {
         auto if_block = std::make_unique<wasm_instruction>(wasm_if_block{return_type, parent});
-        auto blocks = std::get<wasm_if_block>(*if_block).blocks();
+        auto& new_if_block = std::get<wasm_if_block>(*if_block);
         expr.push_back(std::move(if_block));
-        return blocks;
+        return new_if_block;
     }
 
     void local_get(wasm_expr& expr, const char* variable_name)

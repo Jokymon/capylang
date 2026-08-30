@@ -29,6 +29,6 @@ private:
 
 private:
     std::vector<std::string> type_entries;
-    // keep track of the current wasm_block that is processed during WASM binary generation
-    const wasm_block* current_block;
+    // keep track of the current wasm_control_block that is processed during WASM binary generation
+    const wasm_control_block* current_block;
 };

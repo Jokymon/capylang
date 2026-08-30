@@ -253,8 +253,6 @@ void wat_generator::generate(const wasm_block& block, std::ostream& output, size
     std::string ind(indent, ' ');
     switch (block.block_type)
     {
-        case wasm_block::t_plain:
-            break;
         case wasm_block::t_block:
             output << ind << "block $" << block.block_label.repr() << "\n";
             break;
@@ -268,27 +266,19 @@ void wat_generator::generate(const wasm_block& block, std::ostream& output, size
         std::visit(
             [&, this](const auto& n)
             {
-                this->generate(n, output, indent + (block.block_type != wasm_block::t_plain ? 2 : 0));
+                this->generate(n, output, indent + 2);
             },
             *inst
         );
     }
 
-    switch (block.block_type)
-    {
-        case wasm_block::t_plain:
-            break;
-        case wasm_block::t_block:
-        case wasm_block::t_loop:
-            output << ind << "end\n";
-            break;
-    }
+    output << ind << "end\n";
 }
 
 void wat_generator::generate(const wasm_if_block& block, std::ostream& output, size_t indent)
 {
     std::string ind(indent, ' ');
-    output << ind << "if";
+    output << ind << "if $" << block.block_label.repr();
     if (block.return_type != wasm_type::none)
     {
         output << " (result " << repr_wasm_type(block.return_type) << ")\n";
@@ -297,11 +287,11 @@ void wat_generator::generate(const wasm_if_block& block, std::ostream& output, s
     {
         output << "\n";
     }
-    generate(*block.then_block, output, indent + 2);
-    if (block.else_block->inst_count() > 0)
+    generate(block.then_block, output, indent + 2);
+    if (!block.else_block.empty())
     {
         output << ind << "else\n";
-        generate(*block.else_block, output, indent + 2);
+        generate(block.else_block, output, indent + 2);
     }
     output << ind << "end\n";
 }
