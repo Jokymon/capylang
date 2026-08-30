@@ -273,10 +273,6 @@ public:
     wasm_block* enclosing_block = nullptr;
 
     wasm_expr instructions;
-
-public:
-    // Create a very simple block usable for the initialiser expression of globals
-    static wasm_block create_init_block();
 };
 
 struct exportable

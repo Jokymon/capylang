@@ -298,16 +298,6 @@ namespace wasm_builder
     }
 }
 
-wasm_block wasm_block::create_init_block()
-{
-    return wasm_block{
-        wasm_block_type::t_plain,
-        wasm_type::none,
-        wasm_branch_label(),
-        nullptr
-    };
-}
-
 exportable::exportable(index_type index, wasm_extern_index export_type)
 : name()
 , index(index)
