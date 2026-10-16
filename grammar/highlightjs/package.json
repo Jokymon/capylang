@@ -1,0 +1,44 @@
+{
+  "name": "highlightjs-capylang",
+  "version": "0.1.0",
+  "description": "Capylang syntax highlighting for Highlight.js",
+  "main": "src/capylang.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "require": "./src/capylang.js",
+      "default": "./src/capylang.js"
+    }
+  },
+  "files": [
+    "src/capylang.js",
+    "index.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [
+    "capylang",
+    "highlight.js",
+    "highlightjs",
+    "syntax-highlighting"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Jokymon/capylang.git",
+    "directory": "grammar/highlightjs"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "peerDependencies": {
+    "highlight.js": "^11.0.0"
+  },
+  "devDependencies": {
+    "highlight.js": "11.12.0"
+  }
+}

@@ -1,0 +1,63 @@
+name: Package Highlight.js language
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "grammar/highlightjs/**"
+      - ".github/workflows/highlightjs-package.yml"
+  pull_request:
+    paths:
+      - "grammar/highlightjs/**"
+      - ".github/workflows/highlightjs-package.yml"
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build and test npm package
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: grammar/highlightjs
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: grammar/highlightjs/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run language-definition tests
+        run: npm test
+
+      - name: Build npm package
+        run: |
+          mkdir -p "${GITHUB_WORKSPACE}/dist/highlightjs"
+          npm pack --pack-destination "${GITHUB_WORKSPACE}/dist/highlightjs"
+
+      - name: Verify packed package
+        shell: bash
+        run: |
+          package_check="${RUNNER_TEMP}/highlightjs-package-check"
+          mkdir -p "${package_check}"
+          cd "${package_check}"
+          npm init --yes
+          npm install highlight.js@11.12.0 "${GITHUB_WORKSPACE}"/dist/highlightjs/*.tgz
+          node -e "const h=require('highlight.js/lib/core'); h.registerLanguage('capylang',require('highlightjs-capylang')); if(h.getLanguage('capy').name!=='Capylang') process.exit(1)"
+
+      - name: Store npm package as workflow artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: highlightjs-capylang-${{ github.sha }}
+          path: dist/highlightjs/*.tgz
+          if-no-files-found: error
