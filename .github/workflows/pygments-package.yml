@@ -1,0 +1,58 @@
+name: Package Pygments plugin
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "grammar/pygments/**"
+      - ".github/workflows/pygments-package.yml"
+  pull_request:
+    paths:
+      - "grammar/pygments/**"
+      - ".github/workflows/pygments-package.yml"
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build and test Python package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: grammar/pygments/pyproject.toml
+
+      - name: Install build and test dependencies
+        run: |
+          python -m pip install --upgrade build
+          python -m pip install --editable "./grammar/pygments[test]"
+
+      - name: Run lexer tests
+        run: python -m pytest grammar/pygments/tests
+
+      - name: Build wheel and source distribution
+        run: python -m build grammar/pygments --outdir dist/pygments
+
+      - name: Verify built wheel
+        shell: bash
+        run: |
+          python -m venv "${RUNNER_TEMP}/pygments-package-check"
+          "${RUNNER_TEMP}/pygments-package-check/bin/python" -m pip install dist/pygments/*.whl
+          "${RUNNER_TEMP}/pygments-package-check/bin/python" -c \
+            "from pygments.lexers import get_lexer_by_name; assert get_lexer_by_name('capylang').name == 'Capylang'"
+
+      - name: Store Python packages as workflow artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: pygments-capylang-${{ github.sha }}
+          path: dist/pygments/*
+          if-no-files-found: error
