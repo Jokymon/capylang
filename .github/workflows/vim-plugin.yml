@@ -1,0 +1,65 @@
+name: Package Vim plugin
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "grammar/vim/**"
+      - ".github/workflows/vim-plugin.yml"
+  pull_request:
+    paths:
+      - "grammar/vim/**"
+      - ".github/workflows/vim-plugin.yml"
+  release:
+    types:
+      - published
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate with Vim
+        run: |
+          vim -Nu NONE -i NONE -n -es \
+            --cmd "set runtimepath^=${PWD}/grammar/vim" \
+            --cmd "filetype plugin on" \
+            --cmd "syntax enable" \
+            -c "edit examples/example.capy" \
+            -c "call assert_equal('capy', &filetype) | call assert_equal('capy', &syntax) | call assert_equal('// %s', &commentstring)" \
+            -c "call assert_equal('capyComment', synIDattr(synID(1, 1, 1), 'name')) | call assert_equal('capyFunctionKeyword', synIDattr(synID(5, 1, 1), 'name')) | call assert_equal('capyFunctionDecl', synIDattr(synID(5, 4, 1), 'name'))" \
+            -c "if len(v:errors) | echoerr join(v:errors, '\n') | cquit | endif" \
+            -c "quitall!"
+
+      - name: Build native package archives
+        run: |
+          mkdir -p dist/vim-package/capylang dist/artifacts
+          cp -R grammar/vim/. dist/vim-package/capylang/
+          (cd dist/vim-package && zip -r ../artifacts/capylang-vim.zip capylang)
+          tar -czf dist/artifacts/capylang-vim.tar.gz -C dist/vim-package capylang
+
+      - name: Inspect package contents
+        run: |
+          unzip -l dist/artifacts/capylang-vim.zip
+          tar -tzf dist/artifacts/capylang-vim.tar.gz
+
+      - name: Upload Vim packages as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: capylang-vim-${{ github.sha }}
+          path: dist/artifacts/capylang-vim.*
+          if-no-files-found: error
+
+      - name: Attach Vim packages to GitHub release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/artifacts/capylang-vim.*
