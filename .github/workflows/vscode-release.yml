@@ -1,0 +1,82 @@
+name: Release VS Code extension
+
+on:
+  push:
+    tags:
+      - "vscode-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Package and release extension
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: capylang
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            capylang/package-lock.json
+            capylang/client/package-lock.json
+
+      - name: Set up WASI toolchain and build tools
+        uses: ./.github/actions/setup-wasm-toolchain
+        with:
+          wasi-version: "29"
+
+      - name: Verify tag matches extension version
+        shell: bash
+        run: |
+          extension_version="$(node --print "require('./package.json').version")"
+          expected_tag="vscode-v${extension_version}"
+          if [[ "${GITHUB_REF_NAME}" != "${expected_tag}" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match package version ${extension_version}."
+            echo "Expected tag: ${expected_tag}"
+            exit 1
+          fi
+
+      - name: Install extension dependencies
+        shell: bash
+        run: |
+          npm ci --ignore-scripts
+          npm ci --prefix client
+
+      - name: Package extension
+        shell: bash
+        run: |
+          mkdir -p "${GITHUB_WORKSPACE}/dist"
+          npx --yes @vscode/vsce@3.9.2 package \
+            --out "${GITHUB_WORKSPACE}/dist/capylang-${GITHUB_REF_NAME#vscode-v}.vsix"
+
+      - name: Store workflow artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: capylang-vscode-extension
+          path: dist/*.vsix
+          if-no-files-found: error
+
+      - name: Create GitHub release
+        working-directory: ${{ github.workspace }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          extension_version="${GITHUB_REF_NAME#vscode-v}"
+          gh release create "${GITHUB_REF_NAME}" \
+            "dist/capylang-${extension_version}.vsix" \
+            --verify-tag \
+            --title "Capylang VS Code extension ${extension_version}" \
+            --notes "Capylang VS Code extension ${extension_version}." \
+            --latest=false
