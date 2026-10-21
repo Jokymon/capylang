@@ -1,0 +1,71 @@
+include "/lib/wasi.capy"
+
+// Writes all bytes of the buffer to a file descriptor (1 = standard output,
+// 2 = standard error). fd_write may write fewer bytes than requested, so it is
+// called until everything is written. Stops the program on errors.
+fn write_bytes(fd: u32, buffer: *u8, size: u32) {
+    let written: *u32 = cabi_realloc(0, 0, 4, 4) as *u32;
+    let mut offset: u32 = 0;
+    while offset < size {
+        let io: *iovec = allocate iovec{
+            buf = (buffer as u32 + offset) as *u32,
+            len = size - offset,
+        };
+        if fd_write(fd, io as *u32, 1u32, written) != 0u32 {
+            proc_exit(1u32);
+        }
+        if *written == 0u32 {
+            proc_exit(1u32);
+        }
+        offset = offset + *written;
+    }
+}
+
+// Writes a string to standard output.
+fn print(s: string) {
+    write_bytes(1u32, s.ptr, s.size);
+}
+
+// Writes a message to standard error and stops the program with exit code 1.
+fn fail(message: string) {
+    write_bytes(2u32, message.ptr, message.size);
+    proc_exit(1u32);
+}
+
+// Writes an unsigned number in decimal to standard output.
+fn print_u64(value: u64) {
+    // the largest u64 value has 20 decimal digits
+    let buffer: *u8 = cabi_realloc(0, 0, 1, 20) as *u8;
+    let mut index: u32 = 20;
+    let mut remaining: u64 = value;
+    while true {
+        index = index - 1;
+        let digit: *u8 = (buffer as u32 + index) as *u8;
+        *digit = ('0' as u32 + (remaining % 10u64) as u32) as u8;
+        remaining = remaining / 10u64;
+        if remaining == 0u64 {
+            break;
+        }
+    }
+    write_bytes(1u32, (buffer as u32 + index) as *u8, 20u32 - index);
+}
+
+// Writes a signed number in decimal to standard output.
+fn print_s64(value: s64) {
+    if value < 0s64 {
+        print("-");
+        // 0 - value is also correct for the smallest s64 value: the result
+        // wraps to the same bit pattern, which read as u64 is the magnitude
+        print_u64((0s64 - value) as u64);
+    } else {
+        print_u64(value as u64);
+    }
+}
+
+fn print_u32(value: u32) {
+    print_u64(value as u64);
+}
+
+fn print_s32(value: s32) {
+    print_s64(value as s64);
+}

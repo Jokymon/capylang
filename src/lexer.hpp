@@ -1,5 +1,6 @@
 #pragma once
 #include "diagnostics.hpp"
+#include <cstdint>
 #include <istream>
 #include <optional>
 #include <string>
@@ -12,7 +13,8 @@ struct located_token
 
 struct token_integer : public located_token
 {
-    long long number;
+    // literals are always lexed without sign; a leading '-' is handled by the parser
+    std::uint64_t number;
     std::string type_suffix;
 };
 

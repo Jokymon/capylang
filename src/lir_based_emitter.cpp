@@ -37,7 +37,12 @@ size_t lir_type_size(const context& ctx, type_id idx)
                             case primitive_type::Char:
                             case primitive_type::Boolean:
                                 return 4;
+                            case primitive_type::U64:
+                            case primitive_type::S64:
+                                return 8;
                         }
+                        CAPY_FAIL("Unknown primitive type in lir_type_size");
+                        return 0;
                     } else if constexpr (std::is_same_v<K, pointer_type>) {
                         return 4;
                     } else if constexpr (std::is_same_v<K, record_type>) {
@@ -584,7 +589,8 @@ void lir_based_emitter::emit(const lir::global_definition& global_def)
 {
     const auto& global_symbol = parse_context.symbol_at(global_def.symbol_ref);
     auto mutability = global_symbol.mutab ? access_type::mut : access_type::immut;
-    auto& new_global = cur_mod->create_global(global_symbol.name.c_str(), wasm_type::i32, mutability);
+    auto global_type = lowering->lower_return_type(parse_context.resolved_type(global_symbol.symbol_type));
+    auto& new_global = cur_mod->create_global(global_symbol.name.c_str(), global_type, mutability);
 
     cur_expr = &new_global.init_expression;
     emit(*global_def.init_expression);
@@ -733,66 +739,100 @@ void lir_based_emitter::emit(const lir::binary_expression& root)
 {
     emit(*root.left);
     emit(*root.right);
+
+    // Both operands have the same type (ensured by type inference and the
+    // semantic analysis). The operand type decides about the width (i32/i64)
+    // and the signedness of the instruction; for comparisons the result is
+    // always a bool, so root.assigned_type can't be used here.
+    wasm_type operand_type = value_type_of(lir_assigned_node_type(*root.left, parse_context));
+
     switch (root.op)
     {
         case lir::binary_op_t::Minus:
-            wasm_builder::sub(*cur_expr, wasm_type::i32);
+            wasm_builder::sub(*cur_expr, operand_type);
             break;
         case lir::binary_op_t::Plus:
-            wasm_builder::add(*cur_expr, wasm_type::i32);
+            wasm_builder::add(*cur_expr, operand_type);
             break;
         case lir::binary_op_t::Multiply:
-            wasm_builder::mul(*cur_expr, wasm_type::i32);
+            wasm_builder::mul(*cur_expr, operand_type);
             break;
         case lir::binary_op_t::Division:
-            wasm_builder::div(*cur_expr, wasm_type::i32);
+            wasm_builder::div(*cur_expr, operand_type);
             break;
         case lir::binary_op_t::Modulus:
-            wasm_builder::mod(*cur_expr, wasm_type::i32);
+            wasm_builder::mod(*cur_expr, operand_type);
             break;
         case lir::binary_op_t::AndOp:
-            wasm_builder::and_instr(*cur_expr, wasm_type::i32);
+            wasm_builder::and_instr(*cur_expr, operand_type);
             break;
         case lir::binary_op_t::OrOp:
-            wasm_builder::or_instr(*cur_expr, wasm_type::i32);
+            wasm_builder::or_instr(*cur_expr, operand_type);
             break;
         case lir::binary_op_t::Shl:
-            wasm_builder::shl(*cur_expr, wasm_type::i32);
+            wasm_builder::shl(*cur_expr, operand_type);
             break;
         case lir::binary_op_t::Shr:
-            wasm_builder::shr(*cur_expr, wasm_type::i32);
+            wasm_builder::shr(*cur_expr, operand_type);
             break;
         case lir::binary_op_t::Equals:
-            wasm_builder::eq(*cur_expr, wasm_type::i32);
+            wasm_builder::eq(*cur_expr, operand_type);
             break;
         case lir::binary_op_t::NotEquals:
-            wasm_builder::ne(*cur_expr, wasm_type::i32);
+            wasm_builder::ne(*cur_expr, operand_type);
             break;
         case lir::binary_op_t::LessThan:
-            wasm_builder::lt(*cur_expr, wasm_type::i32);
+            wasm_builder::lt(*cur_expr, operand_type);
             break;
         case lir::binary_op_t::LessThanEqual:
-            wasm_builder::lte(*cur_expr, wasm_type::i32);
+            wasm_builder::lte(*cur_expr, operand_type);
             break;
         case lir::binary_op_t::GreaterThan:
-            wasm_builder::gt(*cur_expr, wasm_type::i32);
+            wasm_builder::gt(*cur_expr, operand_type);
             break;
         case lir::binary_op_t::GreaterThanEqual:
-            wasm_builder::gte(*cur_expr, wasm_type::i32);
+            wasm_builder::gte(*cur_expr, operand_type);
             break;
     }
 }
 
 void lir_based_emitter::emit(const lir::unary_expression& root)
 {
-    wasm_builder::const_val(*cur_expr, wasm_type::i32, 0);
+    // negation is emitted as '0 - expr' in the type of the expression
+    wasm_type operand_type = value_type_of(lir_assigned_node_type(*root.expr, parse_context));
+    wasm_builder::const_val(*cur_expr, operand_type, 0);
     emit(*root.expr);
-    wasm_builder::sub(*cur_expr, wasm_type::i32);
+    wasm_builder::sub(*cur_expr, operand_type);
 }
 
 void lir_based_emitter::emit(const lir::cast_expression& root)
 {
     emit(*root.expression);
+
+    // Casts between 32-bit and 64-bit integers need a conversion instruction;
+    // all types up to 32 bits are i32 values in WASM and need none.
+    auto is_64bit = [](wasm_type t)
+    { return (t == wasm_type::i64) || (t == wasm_type::u64); };
+    wasm_type source_type = value_type_of(lir_assigned_node_type(*root.expression, parse_context));
+    wasm_type target_type = value_type_of(root.cast_type);
+    if (!is_64bit(source_type) && is_64bit(target_type))
+    {
+        // the signedness of the source decides how the upper bits are filled
+        bool source_is_signed = (source_type == wasm_type::i8) || (source_type == wasm_type::i16) ||
+                                (source_type == wasm_type::i32);
+        if (source_is_signed)
+        {
+            wasm_builder::i64_extend_i32_s(*cur_expr);
+        }
+        else
+        {
+            wasm_builder::i64_extend_i32_u(*cur_expr);
+        }
+    }
+    else if (is_64bit(source_type) && !is_64bit(target_type) && (target_type != wasm_type::none))
+    {
+        wasm_builder::i32_wrap_i64(*cur_expr);
+    }
     if ((parse_context.is_primitive_type(root.cast_type, primitive_type::Void)) &&
         (!parse_context.is_primitive_type(lir_assigned_node_type(*root.expression, parse_context), primitive_type::Void)))
     {
@@ -914,7 +954,20 @@ void lir_based_emitter::emit(const lir::char_literal& literal)
 
 void lir_based_emitter::emit(const lir::number& number)
 {
-    wasm_builder::const_val(*cur_expr, wasm_type::i32, number.value);
+    // the constant gets the WASM type of the literal (e.g. i64 for u64/s64)
+    wasm_builder::const_val(*cur_expr, value_type_of(number.assigned_type), number.value);
+}
+
+wasm_type lir_based_emitter::value_type_of(type_id type) const
+{
+    type_id resolved = parse_context.resolved_type(type);
+    if (!parse_context.is_resolved(resolved))
+    {
+        // Unsuffixed literals without any typed counterpart (e.g. '5 + 3')
+        // aren't resolved by the type inference; they default to i32.
+        return wasm_type::i32;
+    }
+    return lowering->lower_return_type(resolved);
 }
 
 uint32_t lir_based_emitter::allocate_data(const std::string& data)

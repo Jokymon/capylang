@@ -324,6 +324,10 @@ std::string context::repr(type_id type_idx) const
                                     return "s16";
                                 case primitive_type::S32:
                                     return "s32";
+                                case primitive_type::U64:
+                                    return "u64";
+                                case primitive_type::S64:
+                                    return "s64";
                             }
                         }
                         else if constexpr (std::is_same_v<K, pointer_type>)

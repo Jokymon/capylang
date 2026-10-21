@@ -41,6 +41,14 @@ std::optional<type_id> type_from_id(context& ctx, const std::string& id)
     {
         return ctx.intern_primitive(primitive_type::S32);
     }
+    else if ((id == "s64"))
+    {
+        return ctx.intern_primitive(primitive_type::S64);
+    }
+    else if ((id == "u64"))
+    {
+        return ctx.intern_primitive(primitive_type::U64);
+    }
     else if (id == "s16")
     {
         return ctx.intern_primitive(primitive_type::S16);
@@ -1153,7 +1161,11 @@ ast::expr parser::parse_primary()
         auto* number = std::get_if<ast::number>(&expr);
         if (number != nullptr)
         {
-            number->number = -number->number;
+            // fold the sign into the literal; "-0" stays a plain 0
+            if (number->magnitude != 0)
+            {
+                number->negative = !number->negative;
+            }
             return expr;
         }
         else
@@ -1198,7 +1210,8 @@ ast::expr parser::parse_primary()
         return make_located<ast::number>(
             error_position,
             error_position,
-            0,
+            std::uint64_t{0},
+            false,
             parse_context.intern_primitive(primitive_type::U32)
         );
     }
@@ -1269,7 +1282,8 @@ ast::expr parser::parse_number()
         return make_located<ast::number>(
             capy_lexer->current_source_position(),
             lhs.location.end,
-            0,
+            std::uint64_t{0},
+            false,
             parse_context.intern_primitive(primitive_type::U32)
         );
     }
@@ -1278,6 +1292,7 @@ ast::expr parser::parse_number()
         lhs.location.start,
         lhs.location.end,
         lhs.number,
+        false,
         number_type.value()
     );
 }

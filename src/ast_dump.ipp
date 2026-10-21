@@ -101,9 +101,14 @@ inline void dump(
     dump_value(out, ctx, value.location);
     out.put('\n');
     dump_detail::write_indent(out, indent);
-    out << "number:";
+    out << "magnitude:";
     out.put(' ');
-    dump_value(out, ctx, value.number);
+    dump_value(out, ctx, value.magnitude);
+    out.put('\n');
+    dump_detail::write_indent(out, indent);
+    out << "negative:";
+    out.put(' ');
+    dump_value(out, ctx, value.negative);
     out.put('\n');
     dump_detail::write_indent(out, indent);
     out << "assigned_type:";
