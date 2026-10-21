@@ -108,7 +108,8 @@ const Trait& as_trait(const std::variant<Alternatives...>& value) {
 using expr_list = std::vector<std::unique_ptr<expr>>;
 
 struct number : public location {
-    long long number;
+    std::uint64_t magnitude;
+    bool negative;
     type_id assigned_type;
 };
 

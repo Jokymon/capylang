@@ -1,6 +1,9 @@
 # Helper script for the environment
 env.ps1
 
+# macOS metadata
+.DS_Store
+
 # Python-generated files
 __pycache__/
 *.py[oc]

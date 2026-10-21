@@ -322,6 +322,15 @@ void wat_generator::generate(const wasm_op_base& inst, std::ostream& output, siz
         case wasm_op::unreachable:
             output << "unreachable\n";
             break;
+        case wasm_op::i64_extend_i32_s:
+            output << "i64.extend_i32_s\n";
+            break;
+        case wasm_op::i64_extend_i32_u:
+            output << "i64.extend_i32_u\n";
+            break;
+        case wasm_op::i32_wrap_i64:
+            output << "i32.wrap_i64\n";
+            break;
         case wasm_op::drop:
             output << "drop\n";
             break;
