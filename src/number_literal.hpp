@@ -14,10 +14,6 @@ inline bool literal_fits(const ast::number& n, std::int64_t min_value, std::uint
     {
         return n.magnitude <= max_value;
     }
-    if (min_value >= 0)
-    {
-        return false;
-    }
     // magnitude of min_value; the unsigned negation also works for INT64_MIN
     const std::uint64_t min_magnitude = std::uint64_t{0} - static_cast<std::uint64_t>(min_value);
     return n.magnitude <= min_magnitude;

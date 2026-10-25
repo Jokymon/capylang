@@ -13,7 +13,7 @@ enum AssignContext
 end
 
 node Number
-    magnitude: u64
+    magnitude: magnitude
     negative: boolean
     assigned_type: type
 end

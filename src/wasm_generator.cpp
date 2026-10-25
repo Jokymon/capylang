@@ -477,9 +477,7 @@ void wasm_generator::generate_code(const wasm_module& module, std::ostream& outp
         std::vector<std::pair<uint32_t, char>> local_groups;
         for (const auto& local : func.locals)
         {
-            // locals without a value (e.g. of type void) still occupy an index
-            wasm_type local_type = (local.type == wasm_type::none) ? wasm_type::i32 : local.type;
-            char encoded_type = encode_wasm_type(local_type);
+            char encoded_type = encode_wasm_type(local.type);
             if (!local_groups.empty() && (local_groups.back().second == encoded_type))
             {
                 local_groups.back().first++;

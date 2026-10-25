@@ -396,13 +396,22 @@ void semantic_analyser::leave(ast::let_expression& n)
         return;
     }
 
-    const auto& symbol = parse_context.symbol_at(n.symbol_ref);
-    if (parse_context.resolved_type(symbol.symbol_type) !=
-        assigned_node_type(*n.init_expression, parse_context))
+    auto init_type = assigned_node_type(*n.init_expression, parse_context);
+    if (parse_context.is_primitive_type(init_type, primitive_type::Void))
     {
         append_error_at(
             n.location.start,
-            "Type mismatch in let statement. Variable is of type '" + parse_context.repr(symbol.symbol_type) + "' but expression has type '" + parse_context.repr(assigned_node_type(*n.init_expression, parse_context)) + "'"
+            "Cannot initialize a variable with an expression that returns no value"
+        );
+        return;
+    }
+
+    const auto& symbol = parse_context.symbol_at(n.symbol_ref);
+    if (parse_context.resolved_type(symbol.symbol_type) != init_type)
+    {
+        append_error_at(
+            n.location.start,
+            "Type mismatch in let statement. Variable is of type '" + parse_context.repr(symbol.symbol_type) + "' but expression has type '" + parse_context.repr(init_type) + "'"
         );
     }
 }

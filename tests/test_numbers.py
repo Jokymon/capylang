@@ -64,6 +64,21 @@ fn _start() {
 
 
 @pytest.mark.good
+def test_two_unary_minuses_make_a_positive_literal():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let a: s32 = --23;
+    proc_exit(a as u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 23
+
+
+@pytest.mark.good
 def test_variable_type_is_deduced_from_numeric_literal():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;

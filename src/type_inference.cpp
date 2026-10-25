@@ -20,6 +20,8 @@ void type_inference::unify()
     // Repeat until no constraint resolves another type variable. Resolving one
     // variable can make further constraints resolvable (e.g. chains like
     // 'let a = 5; let b = a; b == 7u64').
+    // TODO: Ensure all types are resolved after inference and report any
+    // remaining unresolved types.
     bool progress = true;
     while (progress)
     {
@@ -74,8 +76,7 @@ void type_inference::leave(ast::binary_expression& n)
         // the shift amount must have the same width as the shifted value
         case operator_type::op_shl:
         case operator_type::op_shr:
-        // both sides of comparisons must have the same type, so an unsuffixed
-        // literal gets the type of the other operand (e.g. 'x == 5' for x: u64)
+        // both sides of comparisons must have the same type
         case operator_type::op_equals:
         case operator_type::op_notequals:
         case operator_type::op_lessthan:
