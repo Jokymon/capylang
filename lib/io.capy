@@ -1,4 +1,5 @@
 include "/lib/wasi.capy"
+import wasi_snapshot_preview1::fd_close(fd: u32) -> u32 as fd_close;
 
 // Writes all bytes of the buffer to a file descriptor (1 = standard output,
 // 2 = standard error). fd_write may write fewer bytes than requested, so it is

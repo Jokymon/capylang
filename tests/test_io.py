@@ -46,7 +46,6 @@ fn _start() {
 def test_print_functions_return_errors_when_stdout_is_closed():
     """
 include "/lib/io.capy"
-import wasi_snapshot_preview1::fd_close(fd: u32) -> u32 as fd_close;
 
 @export
 fn _start() {
