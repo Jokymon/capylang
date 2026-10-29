@@ -7,7 +7,12 @@ compiler internals.
 
 - Add 64-bit integer types.
 - Add floating-point types.
+- Define the numerical model for integers and floats
+  - automatic and non-automatic coercions
+  - explicit wrap/saturate/... conversions
+  - automatic promotion or not
 - Add `\0` shorthand for inserting a zero-byte into a string
+- add support for capital hex-digits
 - Check type inference when accessing ptr/size of a string whose type was only inferred
 - Design and add vector numeric types.
 - Add structured component model types such as variants, enums, lists, and
@@ -19,6 +24,8 @@ compiler internals.
 - The type inference doesn't properly pick up on the return type when only
   `return` statements are used.
 - Add compile time constants, for starters, at least the numeric ones.
+- Consider tighter model for const-ness (usage of 'mut') and think about
+  shallow/deep const-ness, const field members, const pointer to const element etc.
 
 ## Memory and Data Model
 
@@ -40,6 +47,14 @@ compiler internals.
 - Improve lexer-side error handling and diagnostics.
 - Decide whether `let` expressions without a trailing semicolon should stay
   valid.
+- Add some form of linter tooling with opinionated syntax cleanup. This should
+  be a standalone executable (and/or a library) or easier integration into other
+  IDEs or an LSP.
+
+## Backend and code generation
+
+- Add optimizations to WASM code generation for example:
+  - Remove imports that aren't used by the rest of the code
 
 ## Modules, ABI, and Runtime Surface
 
@@ -63,25 +78,6 @@ compiler internals.
 - Add memory-related intrinsics such as `size`, `grow`, `copy`, and `fill`.
 - Decide whether compiler intrinsics should be declared through something like
   an `@intrinsic` attribute.
-
-## AST Refactoring
-
-The long-term direction is to move toward dedicated AST node types wherever that
-is practical. The motivation is to reduce variant checks and make the compiler
-internals easier to follow.
-
-Current status:
-
-1. Parsing errors were converted to support multi-error handling.
-2. Non-expression nodes have already moved away from the generic `ast_node`
-   representation.
-
-Remaining work:
-
-1. Continue replacing generic AST returns with more specific node types where
-   possible.
-2. Remove the remaining `located`-style wrapping from AST nodes, similar to what
-   was already done for tokens.
 
 ## Design Constraints Learned Elsewhere
 
