@@ -79,6 +79,12 @@ struct pointer_type
 
 struct record_type
 {
+    struct indexed_field
+    {
+        size_t index;
+        type_id type;
+    };
+
     using field_type = std::pair<std::string, type_id>;
     std::vector<field_type> fields;
 };
@@ -321,7 +327,7 @@ struct context
     // given type. If pointer_type_idx is a type variable, it will try to get to
     // the resolved type first.
     std::optional<type_id> derefed_type(type_id pointer_type_idx) const;
-    std::optional<type_id> record_field_type(type_id record_type_idx, const std::string& field_name);
+    std::optional<record_type::indexed_field> record_field_entry(type_id record_type_idx, const std::string& field_name);
     std::optional<type_id> function_return_type(type_id function_type_idx);
     std::optional<primitive_type> primitive_type_of(type_id type_idx) const;
 

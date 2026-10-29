@@ -114,10 +114,10 @@ type_id assigned_node_type(const ast::expr& node, context& ctx)
                 CAPY_ASSERT(rec_type.has_value(), "Base types for field derefs must either be records or pointers");
                 type_id obj_type = rec_type.value();
 
-                auto field_type = ctx.record_field_type(obj_type, n.fieldname);
-                if (field_type.has_value())
+                auto field_entry = ctx.record_field_entry(obj_type, n.fieldname);
+                if (field_entry.has_value())
                 {
-                    return field_type.value();
+                    return field_entry.value().type;
                 }
                 return ILLEGAL_TYPE;
             }
@@ -292,9 +292,9 @@ void semantic_analyser::leave(ast::field_deref& n)
     }
 
     type_id obj_typ = rec_type.value();
-    auto field_type = parse_context.record_field_type(obj_typ, n.fieldname);
+    auto field_entry = parse_context.record_field_entry(obj_typ, n.fieldname);
 
-    if (!field_type.has_value())
+    if (!field_entry.has_value())
     {
         append_error_at(
             n.location.start,
@@ -503,13 +503,14 @@ void semantic_analyser::leave(ast::binary_expression& n)
     {
         n.assigned_type = parse_context.intern_primitive(primitive_type::Void);
         if (std::holds_alternative<ast::pointer_deref>(*n.left) ||
-            std::holds_alternative<ast::var_reference>(*n.left))
+            std::holds_alternative<ast::var_reference>(*n.left) ||
+            std::holds_alternative<ast::field_deref>(*n.left))
         {
             auto* var_node = std::get_if<ast::var_reference>(&*n.left);
             if (var_node != nullptr)
             {
                 const auto& symbol = parse_context.symbol_at(var_node->symbol_ref);
-                // TODO: What about mutable pointers?
+                // TODO: What about mutable pointers and records?
                 if (!symbol.mutab)
                 {
                     append_error_at(

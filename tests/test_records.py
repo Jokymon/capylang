@@ -25,6 +25,54 @@ fn _start() {
 
 
 @pytest.mark.good
+def test_simple_u32_field_writing():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+record s {
+    field1: u32,
+};
+
+@export
+fn _start() {
+    let v: *s = allocate s{
+        field1=18u32,
+    };
+    v.field1 = 21;
+    proc_exit(v.field1)
+}
+"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 21
+
+
+@pytest.mark.good
+def test_writing_second_u32_field():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+record s {
+    field1: u32,
+    field2: u32,
+};
+
+@export
+fn _start() {
+    let v: *s = allocate s{
+        field1=18u32,
+        field2=19u32,
+    };
+    v.field2 = 21;
+    proc_exit(v.field2)
+}
+"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 21
+
+
+@pytest.mark.good
 def test_multiple_fields_are_correctly_initialised():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
