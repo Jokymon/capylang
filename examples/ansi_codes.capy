@@ -1,13 +1,7 @@
 // An example source file to play around and demonstrate how capy lang can already create nice shell output
 // using ANSI escape sequences
 
-import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
-import wasi_snapshot_preview1::fd_write(fd: u32, io: *u32, count: u32, res: *u32) -> u32 as fd_write;
-
-record iovec {
-    buf: *u32,
-    len: u32,
-};
+include "/lib/wasi.capy"
 
 fn print_s(s: string)
 {
