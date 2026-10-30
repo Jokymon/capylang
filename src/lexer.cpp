@@ -1,5 +1,7 @@
 #include "lexer.hpp"
 #include "tools.hpp"
+#include <charconv>
+#include <system_error>
 
 const uint32_t MAX_ONE_B = 0x80;
 const uint32_t MAX_TWO_B = 0x800;
@@ -703,8 +705,22 @@ token lexer::parse_number()
         suffix += get_char();
     }
 
+    // The literal is read as unsigned 64-bit magnitude. Whether it fits into
+    // the actual type of the literal is checked later in the semantic analysis.
+    std::uint64_t number = 0;
+    auto [ptr, ec] = std::from_chars(num.data(), num.data() + num.size(), number, base);
+    if (ec == std::errc::result_out_of_range)
+    {
+        std::string literal_text = (base == 16) ? ("0x" + num) : num;
+        append_error_at(
+            start_position,
+            "Numeric literal '" + literal_text + "' exceeds the maximum value of 64-bit integers"
+        );
+        number = 0;
+    }
+
     return token_integer{
-        start_position, look_ahead_position, std::stoll(num, nullptr, base), suffix
+        start_position, look_ahead_position, number, suffix
     };
 }
 

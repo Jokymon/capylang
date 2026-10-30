@@ -3,6 +3,21 @@ import pytest
 
 
 @pytest.mark.parse_error
+def test_variable_cannot_be_initialized_with_a_void_function_call():
+    """
+fn do_nothing() { }
+
+@export
+fn _start() {
+    let a = do_nothing();
+}"""
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
+
+    assert exit_code == 1
+    assert "Cannot initialize a variable with an expression that returns no value" in stderr
+
+
+@pytest.mark.parse_error
 def test_mismatching_types_in_binary_op():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;

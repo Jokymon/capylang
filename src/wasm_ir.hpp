@@ -83,6 +83,11 @@ enum class wasm_op
     memory_grow,
     memory_fill,
 
+    // conversions between 32-bit and 64-bit integers
+    i64_extend_i32_s,
+    i64_extend_i32_u,
+    i32_wrap_i64,
+
     typ_const
 };
 
@@ -259,6 +264,9 @@ namespace wasm_builder
     void memory_grow(wasm_expr& expr);
     void memory_fill(wasm_expr& expr);
     void unreachable(wasm_expr& expr);
+    void i64_extend_i32_s(wasm_expr& expr);
+    void i64_extend_i32_u(wasm_expr& expr);
+    void i32_wrap_i64(wasm_expr& expr);
 }
 
 struct wasm_block : public wasm_control_block

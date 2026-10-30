@@ -17,12 +17,15 @@ void type_inference::infer_types(ast::module& module)
 
 void type_inference::unify()
 {
-    size_t new_unresolved = parse_context.constraints.size();
-    size_t previous_unresolved;
-
-    do
+    // Repeat until no constraint resolves another type variable. Resolving one
+    // variable can make further constraints resolvable (e.g. chains like
+    // 'let a = 5; let b = a; b == 7u64').
+    // TODO: Ensure all types are resolved after inference and report any
+    // remaining unresolved types.
+    bool progress = true;
+    while (progress)
     {
-        new_unresolved = previous_unresolved;
+        progress = false;
         for (const auto& constraint : parse_context.constraints)
         {
             std::visit(
@@ -34,14 +37,14 @@ void type_inference::unify()
                     {
                         if (parse_context.resolve(constr.a, constr.b))
                         {
-                            previous_unresolved--;
+                            progress = true;
                         }
                     }
                 },
                 constraint
             );
         }
-    } while (new_unresolved != previous_unresolved);
+    }
 }
 
 void type_inference::leave(ast::function_call& n)
@@ -70,6 +73,18 @@ void type_inference::leave(ast::binary_expression& n)
         case operator_type::op_division:
         case operator_type::op_multiply:
         case operator_type::op_modulus:
+        // the shift amount must have the same width as the shifted value
+        case operator_type::op_shl:
+        case operator_type::op_shr:
+        // both sides of comparisons must have the same type
+        case operator_type::op_equals:
+        case operator_type::op_notequals:
+        case operator_type::op_lessthan:
+        case operator_type::op_lessthan_equal:
+        case operator_type::op_greaterthan:
+        case operator_type::op_greaterthan_equal:
+        // the assigned value gets the type of the target (e.g. 'x = 5')
+        case operator_type::op_assignment:
             parse_context.constraints.emplace_back(
                 equal_constraint{
                     assigned_node_type(*n.left, parse_context),

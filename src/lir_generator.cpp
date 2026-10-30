@@ -1,4 +1,5 @@
 #include "lir_generator.hpp"
+#include "number_literal.hpp"
 #include "semantics.hpp"
 #include "tools.hpp"
 
@@ -145,7 +146,8 @@ lir::module lir_generator::generate(const ast::module& module_def)
 lir::expr_list lir_generator::generate_exprs(const ast::number& node)
 {
     lir::number stmt{
-        .value = node.number,
+        // the LIR stores the two's complement bit pattern of the literal
+        .value = literal_bits(node),
         .assigned_type = parse_context.resolved_type(node.assigned_type)
     };
     lir::expr_list result;

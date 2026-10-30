@@ -64,6 +64,21 @@ fn _start() {
 
 
 @pytest.mark.good
+def test_two_unary_minuses_make_a_positive_literal():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let a: s32 = --23;
+    proc_exit(a as u32)
+}"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 23
+
+
+@pytest.mark.good
 def test_variable_type_is_deduced_from_numeric_literal():
     """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
@@ -289,3 +304,45 @@ fn _start() {
 
     assert exit_code == 1
     assert "Numeric literal '2147483648' exceeds valid range for s32 (-2147483648..2147483647)" in normalized
+
+
+@pytest.mark.parse_error
+def test_64bit_bounds_are_checked():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let u_max: u64 = 18446744073709551615u64;
+    let s_min: s64 = -9223372036854775808s64;
+    let s_max: s64 = 9223372036854775807s64;
+    let u_neg: u64 = -1u64;
+    let s_over: s64 = 9223372036854775808s64;
+    let s_under: s64 = -9223372036854775809s64;
+    proc_exit(0u32)
+}"""
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
+    normalized = tools.normalize_filename_from_output(stderr)
+
+    assert exit_code == 1
+    # the boundary values are accepted, only the three literals outside are reported
+    assert normalized.count("Numeric literal") == 3
+    assert "Numeric literal '-1' exceeds valid range for u64 (0..18446744073709551615)" in normalized
+    assert "Numeric literal '9223372036854775808' exceeds valid range for s64 (-9223372036854775808..9223372036854775807)" in normalized
+    assert "Numeric literal '-9223372036854775809' exceeds valid range for s64 (-9223372036854775808..9223372036854775807)" in normalized
+
+@pytest.mark.parse_error
+def test_literal_exceeding_64_bits_is_reported():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let v: u64 = 18446744073709551616u64;
+    proc_exit(0u32)
+}"""
+    exit_code, stderr = tools.compile_test_code(tools.get_doc_str())
+    normalized = tools.normalize_filename_from_output(stderr)
+
+    assert exit_code == 1
+    assert "Numeric literal '18446744073709551616' exceeds the maximum value of 64-bit integers" in normalized

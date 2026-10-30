@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <iomanip>
 #include <sstream>
+#include <utility>
 #include <variant>
 
 const char* MAGIC = "\0asm";
@@ -103,6 +104,12 @@ char encode_wasm_type(wasm_type type)
 {
     switch (type)
     {
+        // the small integer types only exist for memory access; as values
+        // they are represented as i32
+        case wasm_type::i8:
+        case wasm_type::u8:
+        case wasm_type::i16:
+        case wasm_type::u16:
         case wasm_type::i32:
         case wasm_type::u32:
             return '\x7F';
@@ -204,6 +211,29 @@ wasm_size_e wasm_type_size(wasm_type typ)
         case wasm_type::u16:
             return wasm_size_e::Size16;
     }
+}
+
+/// @brief True for value types that are represented as 64-bit integers in WASM
+bool is_wasm_type_64bit(wasm_type typ)
+{
+    return (typ == wasm_type::i64) || (typ == wasm_type::u64);
+}
+
+/// @brief Selects the i32 or the i64 variant of an instruction based on the value type
+char select_inst(wasm_type typ, char inst_i32, char inst_i64)
+{
+    return is_wasm_type_64bit(typ) ? inst_i64 : inst_i32;
+}
+
+/// @brief Selects the signed/unsigned and i32/i64 variant of an instruction
+char select_inst(wasm_type typ, char i32_s, char i32_u, char i64_s, char i64_u)
+{
+    const bool is_signed = is_wasm_type_signed(typ);
+    if (is_wasm_type_64bit(typ))
+    {
+        return is_signed ? i64_s : i64_u;
+    }
+    return is_signed ? i32_s : i32_u;
 }
 
 uint32_t resolve_block_label(const wasm_control_block* block, const wasm_branch_label& label, uint32_t nesting_level)
@@ -442,11 +472,27 @@ void wasm_generator::generate_code(const wasm_module& module, std::ostream& outp
 
         std::ostringstream function_code(std::ios::binary);
 
-        // Let's start with a simple assumption of only
-        // having one 'locals' entry of only i32
-        encode_leb128(function_code, 1);
-        encode_leb128(function_code, func.locals.size());
-        function_code.put(encode_wasm_type(wasm_type::i32));
+        // Locals are declared as a vector of (count, type) entries. Consecutive
+        // locals of the same value type are grouped into one entry.
+        std::vector<std::pair<uint32_t, char>> local_groups;
+        for (const auto& local : func.locals)
+        {
+            char encoded_type = encode_wasm_type(local.type);
+            if (!local_groups.empty() && (local_groups.back().second == encoded_type))
+            {
+                local_groups.back().first++;
+            }
+            else
+            {
+                local_groups.emplace_back(1, encoded_type);
+            }
+        }
+        encode_leb128(function_code, local_groups.size());
+        for (const auto& [count, encoded_type] : local_groups)
+        {
+            encode_leb128(function_code, count);
+            function_code.put(encoded_type);
+        }
 
         generate_expr(module, func, func.function_body, function_code);
         function_code.put(INST_TERMINATOR);
@@ -579,6 +625,15 @@ void wasm_generator::generate_expr(const wasm_module& module, const wasm_functio
                                case wasm_op::unreachable:
                                    output.put(INST_UNREACHABLE);
                                    break;
+                               case wasm_op::i64_extend_i32_s:
+                                   output.put(INST_I64_EXTEND_I32_S);
+                                   break;
+                               case wasm_op::i64_extend_i32_u:
+                                   output.put(INST_I64_EXTEND_I32_U);
+                                   break;
+                               case wasm_op::i32_wrap_i64:
+                                   output.put(INST_I32_WRAP_I64);
+                                   break;
                                default:
                                    break;
                            }
@@ -587,33 +642,32 @@ void wasm_generator::generate_expr(const wasm_module& module, const wasm_functio
                        {
                            switch (t.op)
                            {
-                               // TODO: differentiate based on type
                                case wasm_op::iadd:
-                                   output.put(INST_I32_ADD);
+                                   output.put(select_inst(t.value_type, INST_I32_ADD, INST_I64_ADD));
                                    break;
                                case wasm_op::isub:
-                                   output.put(INST_I32_SUB);
+                                   output.put(select_inst(t.value_type, INST_I32_SUB, INST_I64_SUB));
                                    break;
                                case wasm_op::imul:
-                                   output.put(INST_I32_MUL);
+                                   output.put(select_inst(t.value_type, INST_I32_MUL, INST_I64_MUL));
                                    break;
                                case wasm_op::iand:
-                                   output.put(INST_I32_AND);
+                                   output.put(select_inst(t.value_type, INST_I32_AND, INST_I64_AND));
                                    break;
                                case wasm_op::ior:
-                                   output.put(INST_I32_OR);
+                                   output.put(select_inst(t.value_type, INST_I32_OR, INST_I64_OR));
                                    break;
                                case wasm_op::ishl:
-                                   output.put(INST_I32_SHL);
+                                   output.put(select_inst(t.value_type, INST_I32_SHL, INST_I64_SHL));
                                    break;
                                case wasm_op::eq:
-                                   output.put(INST_I32_EQ);
+                                   output.put(select_inst(t.value_type, INST_I32_EQ, INST_I64_EQ));
                                    break;
                                case wasm_op::ne:
-                                   output.put(INST_I32_NE);
+                                   output.put(select_inst(t.value_type, INST_I32_NE, INST_I64_NE));
                                    break;
                                case wasm_op::eqz:
-                                   output.put(INST_I32_EQZ);
+                                   output.put(select_inst(t.value_type, INST_I32_EQZ, INST_I64_EQZ));
                                    break;
                                default:
                                    break;
@@ -663,46 +717,25 @@ void wasm_generator::generate_expr(const wasm_module& module, const wasm_functio
                            switch (t.op)
                            {
                                case wasm_op::idiv:
-                                   if (is_wasm_type_signed(t.value_type))
-                                       output.put(INST_I32_DIV_S);
-                                   else
-                                       output.put(INST_I32_DIV_U);
+                                   output.put(select_inst(t.value_type, INST_I32_DIV_S, INST_I32_DIV_U, INST_I64_DIV_S, INST_I64_DIV_U));
                                    break;
                                case wasm_op::irem:
-                                   if (is_wasm_type_signed(t.value_type))
-                                       output.put(INST_I32_REM_S);
-                                   else
-                                       output.put(INST_I32_REM_U);
+                                   output.put(select_inst(t.value_type, INST_I32_REM_S, INST_I32_REM_U, INST_I64_REM_S, INST_I64_REM_U));
                                    break;
                                case wasm_op::ishr:
-                                   if (is_wasm_type_signed(t.value_type))
-                                       output.put(INST_I32_SHR_S);
-                                   else
-                                       output.put(INST_I32_SHR_U);
+                                   output.put(select_inst(t.value_type, INST_I32_SHR_S, INST_I32_SHR_U, INST_I64_SHR_S, INST_I64_SHR_U));
                                    break;
                                case wasm_op::ilt:
-                                   if (is_wasm_type_signed(t.value_type))
-                                       output.put(INST_I32_LT_S);
-                                   else
-                                       output.put(INST_I32_LT_U);
+                                   output.put(select_inst(t.value_type, INST_I32_LT_S, INST_I32_LT_U, INST_I64_LT_S, INST_I64_LT_U));
                                    break;
                                case wasm_op::ilte:
-                                   if (is_wasm_type_signed(t.value_type))
-                                       output.put(INST_I32_LE_S);
-                                   else
-                                       output.put(INST_I32_LE_U);
+                                   output.put(select_inst(t.value_type, INST_I32_LE_S, INST_I32_LE_U, INST_I64_LE_S, INST_I64_LE_U));
                                    break;
                                case wasm_op::igt:
-                                   if (is_wasm_type_signed(t.value_type))
-                                       output.put(INST_I32_GT_S);
-                                   else
-                                       output.put(INST_I32_GT_U);
+                                   output.put(select_inst(t.value_type, INST_I32_GT_S, INST_I32_GT_U, INST_I64_GT_S, INST_I64_GT_U));
                                    break;
                                case wasm_op::igte:
-                                   if (is_wasm_type_signed(t.value_type))
-                                       output.put(INST_I32_GE_S);
-                                   else
-                                       output.put(INST_I32_GE_U);
+                                   output.put(select_inst(t.value_type, INST_I32_GE_S, INST_I32_GE_U, INST_I64_GE_S, INST_I64_GE_U));
                                    break;
                                default:
                                    break;
@@ -710,9 +743,17 @@ void wasm_generator::generate_expr(const wasm_module& module, const wasm_functio
                        }
                        else if constexpr (std::is_same_v<T, wasm_op_type_value>)
                        {
-                           // TODO: differentiate by type of the operation
-                           output.put(INST_I32_CONST);
-                           encode_i32_const_immediate(output, t.value);
+                           if (is_wasm_type_64bit(t.value_type))
+                           {
+                               // the value already holds the 64-bit two's complement pattern
+                               output.put(INST_I64_CONST);
+                               encode_leb128_signed(output, t.value);
+                           }
+                           else
+                           {
+                               output.put(INST_I32_CONST);
+                               encode_i32_const_immediate(output, t.value);
+                           }
                        }
                        else if constexpr (std::is_same_v<T, wasm_op_align_offset>)
                        {
@@ -742,6 +783,9 @@ void wasm_generator::generate_expr(const wasm_module& module, const wasm_functio
                                                output.put(INST_I32_LOAD16_U);
                                            }
                                            break;
+                                       case wasm_size_e::Size64:
+                                           output.put(INST_I64_LOAD);
+                                           break;
                                        default:
                                            output.put(INST_I32_LOAD);
                                            break;
@@ -757,6 +801,9 @@ void wasm_generator::generate_expr(const wasm_module& module, const wasm_functio
                                            break;
                                        case wasm_size_e::Size16:
                                            output.put(INST_I32_STORE16);
+                                           break;
+                                       case wasm_size_e::Size64:
+                                           output.put(INST_I64_STORE);
                                            break;
                                        default:
                                            output.put(INST_I32_STORE);

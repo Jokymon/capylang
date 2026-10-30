@@ -292,3 +292,35 @@ The following aspects were decided:
    the wasmtime runtime under `/` to allow access to paths like
    `/lib/wasi.capy`. The idea is, to get started with some kind of absolute
    paths giving access to library functions and definitions
+
+## Integer literals
+
+With the introduction of 64-bit integers, we also need to represent the full
+range of `s64` and `u64` literals. The lexer reads the minus sign separately
+from the digits, which introduces a problem for `-9223372036854775808s64`.
+Although the complete value is valid, its magnitude is one greater than the
+largest signed 64-bit value. Reading this magnitude with `std::stoll` fails
+before the parser can apply the minus sign.
+
+### Decision
+
+We decided to read the magnitude as `std::uint64_t` using `std::from_chars`
+and keep the sign separately in the AST. The parser updates the sign when
+applying a minus to a number literal. Once the type is known, the semantic
+analysis checks whether the magnitude and sign fit its range.
+
+The main motivation was to keep the representation simple while covering all
+supported integer values. An unsigned 64-bit value can hold both the magnitude
+of the smallest `s64` value and the largest `u64` value. Keeping the sign
+separate also fits the existing lexer and parser structure.
+
+A 128-bit integer would provide enough room as well, but the additional range
+is not needed for the supported types. Arbitrary-precision integers would
+allow even larger magnitudes, but introduce more complexity than we currently
+need. Neither alternative provides a necessary benefit over `std::uint64_t`
+for this purpose.
+
+Another option would be a special rule which allows the magnitude of the
+smallest `s64` value only when it is negated. We chose the separate magnitude
+and sign instead, so that this boundary value can use the same representation
+and range check as the other integer literals.

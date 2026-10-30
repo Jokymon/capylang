@@ -45,6 +45,7 @@ public:
 
 private:
     uint32_t allocate_data(const std::string& data);
+    wasm_type value_type_of(type_id type) const;
 
     compile_options options;
     context& parse_context;

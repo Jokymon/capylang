@@ -52,6 +52,9 @@ void lower_cabi::lower_function_argument(const type_kind& ty, const std::string&
                     case primitive_type::S32:
                         args.push_back({basename, wasm_type::i32});
                         break;
+                    case primitive_type::S64:
+                        args.push_back({basename, wasm_type::i64});
+                        break;
                     case primitive_type::U8:
                         args.push_back({basename, wasm_type::u8});
                         break;
@@ -60,6 +63,9 @@ void lower_cabi::lower_function_argument(const type_kind& ty, const std::string&
                         break;
                     case primitive_type::U32:
                         args.push_back({basename, wasm_type::u32});
+                        break;
+                    case primitive_type::U64:
+                        args.push_back({basename, wasm_type::u64});
                         break;
                     case primitive_type::Boolean:
                         args.push_back({basename, wasm_type::i32});
@@ -130,6 +136,9 @@ void lower_cabi::lower_local_variable(const symbol& sym, wasm_function& func)
                             case primitive_type::S32:
                                 func.allocate_local(sym.name.c_str(), wasm_type::i32);
                                 break;
+                            case primitive_type::S64:
+                                func.allocate_local(sym.name.c_str(), wasm_type::i64);
+                                break;
                             case primitive_type::U8:
                                 func.allocate_local(sym.name.c_str(), wasm_type::u8);
                                 break;
@@ -138,6 +147,9 @@ void lower_cabi::lower_local_variable(const symbol& sym, wasm_function& func)
                                 break;
                             case primitive_type::U32:
                                 func.allocate_local(sym.name.c_str(), wasm_type::u32);
+                                break;
+                            case primitive_type::U64:
+                                func.allocate_local(sym.name.c_str(), wasm_type::u64);
                                 break;
                             case primitive_type::Boolean:
                                 func.allocate_local(sym.name.c_str(), wasm_type::i32);
@@ -195,12 +207,16 @@ wasm_type lower_cabi::lower_return_type(type_id return_type)
                                 return wasm_type::i16;
                             case primitive_type::S32:
                                 return wasm_type::i32;
+                            case primitive_type::S64:
+                                return wasm_type::i64;
                             case primitive_type::U8:
                                 return wasm_type::u8;
                             case primitive_type::U16:
                                 return wasm_type::u16;
                             case primitive_type::U32:
                                 return wasm_type::u32;
+                            case primitive_type::U64:
+                                return wasm_type::u64;
                             case primitive_type::Boolean:
                                 return wasm_type::i32;
                             default:
