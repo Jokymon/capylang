@@ -25,7 +25,10 @@ add_executable(${PROJECT_NAME}
     src/type_inference.cpp
     src/wasm_generator.cpp
     src/wat_generator.cpp
+    src/wasm_dump.cpp
     src/wasm_ir.cpp
+    src/wasm_transformer.cpp
+    src/wasm_visitor.cpp
 )
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 26)

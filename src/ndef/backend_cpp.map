@@ -17,3 +17,7 @@ character: std::uint32_t
 index: std::size_t
 source_range: source_range
 scope: std::unique_ptr<scope>
+blob: std::string
+wasm_value: int64_t
+wasm_u32: uint32_t
+wasm_u64: uint64_t

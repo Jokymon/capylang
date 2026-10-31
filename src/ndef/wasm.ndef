@@ -1,0 +1,167 @@
+module wasm
+
+enum Type
+    None |
+    U8 | U16 | U32 | U64 |
+    I8 | I16 | I32 | I64 |
+    F32 | F64
+end
+
+enum ExternIndex
+    FuncIdx |
+    TableIdx |
+    MemIdx |
+    GlobalIdx |
+    TagIdx
+end
+
+node Argument
+    name: identifier
+    type: Type
+end
+
+enum Operation
+    Nop | Unreachable | Drop |
+    LocalGet | LocalSet | LocalTee | GlobalGet | GlobalSet |
+    Load | Store |
+    IAdd | ISub | IMul | IDiv | IRem | IShl | IShr | IAnd | IOr |
+    Eq | Ne | Eqz | ILt | ILte | IGt | IGte |
+    Br | BrIf | Call | Ret |
+    MemorySize | MemoryGrow | MemoryFill |
+    I64ExtendI32S | I64ExtendI32U | I32WrapI64 |
+    Const
+end
+
+enum Access
+    Mut | Immut
+end
+
+node BranchLabel
+    name: identifier
+end
+
+// TODO: FunctionRef? Or should we add a new silwright concept?
+
+node OpNoArg
+    op: Operation
+end
+
+node OpIndex
+    op: Operation
+    name: identifier
+end
+
+node OpType
+    op: Operation
+    value_type: Type
+end
+
+node OpTypeSign
+    op: Operation
+    value_type: Type
+end
+
+node OpTypeValue
+    op: Operation
+    value_type: Type
+    value: wasm_value
+end
+
+node OpAlignOffset
+    op: Operation
+    value_type: Type
+    alignment: wasm_u32
+    offset: wasm_u64
+end
+
+node OpLabel
+    op: Operation
+    label: value BranchLabel
+end
+
+node OpFunc
+    // TODO function: FuncRef
+end
+
+choice Instruction
+    OpNoArg |
+    OpIndex |
+    OpType |
+    OpTypeSign |
+    OpTypeValue |
+    OpAlignOffset |
+    OpLabel |
+    Block | IfBlock
+end
+
+trait ControlBlock
+    return_type: Type
+    block_label: BranchLabel
+    // TODO: enclosing_block: ref ControlBlock
+end
+
+node IfBlock with ControlBlock
+    then_block: *Instruction
+    else_block: *Instruction
+end
+
+enum BlockType
+    Block |
+    Loop
+end
+
+node Block with ControlBlock
+    block_type: BlockType
+    instructions: *Instruction
+end
+
+trait Exportable
+    name: identifier
+    index: index
+    export_type: ExternIndex
+end
+
+trait Importable
+    import_name: identifier
+    ns: identifier
+end
+
+node ExportItem
+    export_name: identifier
+    name: identifier
+    index: index
+    export_type: ExternIndex
+end
+
+node Function with Importable, Exportable
+    return_type: Type
+    arguments: *value Argument
+    locals: *value Argument
+    function_body: *Instruction
+end
+
+node DataSection
+    init_offset: index
+    offset: transient index
+    data_buffer: transient blob
+end
+
+node Memory with Importable, Exportable
+    initial_block_count: index
+    max_block_count: index
+end
+
+node Global
+    name: identifier
+    access: Access
+    typ: Type
+    init_expression: *Instruction
+end
+
+node Module
+    memories: *Memory
+    data_sections: *DataSection
+    globals: *Global
+    exports: *ExportItem
+    functions: *Function
+end
