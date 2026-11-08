@@ -809,8 +809,10 @@ void lir_based_emitter::emit(const lir::cast_expression& root)
 {
     emit(*root.expression);
 
-    // Casts between 32-bit and 64-bit integers need a conversion instruction;
-    // all types up to 32 bits are i32 values in WASM and need none.
+    // Integer types up to 32 bits use i32 in WASM, but casts may still
+    // require sign extension even when the WASM value type stays the same.
+    // TODO: Implement the missing s8/s16 conversion handling, including
+    // sign extension when widening to s32 (i32.extend8_s / i32.extend16_s).
     auto is_64bit = [](wasm_type t)
     { return (t == wasm_type::i64) || (t == wasm_type::u64); };
     wasm_type source_type = value_type_of(lir_assigned_node_type(*root.expression, parse_context));
