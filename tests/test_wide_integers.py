@@ -96,6 +96,23 @@ fn _start() {
     assert exit_code == 15
 
 
+@pytest.mark.good
+def test_assignment_accepts_explicit_integer_conversion():
+    """
+import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;
+
+@export
+fn _start() {
+    let mut value: u64 = 1u64;
+    value = 42u32 as u64;
+    proc_exit(value as u32)
+}
+"""
+    exit_code, _ = tools.run_test_code(tools.get_doc_str())
+
+    assert exit_code == 42
+
+
 @pytest.mark.parse_error
 def test_comparison_of_32bit_and_64bit_is_rejected():
     """

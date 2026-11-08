@@ -316,7 +316,7 @@ def test_u8_deref_on_lhs():
     *addr2 = 40u8;
     // the following assignment shouldn't change addr2 because
     // it is only changing a u8
-    *addr1 = 11u32 as *u8;
+    *addr1 = 11u8;
 proc_exit(*addr2 as u32)"""
     code = tools.expression_to_full_program(code)
     exit_code, _ = tools.run_test_code(code)

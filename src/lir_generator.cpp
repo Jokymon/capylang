@@ -391,12 +391,22 @@ lir::statement_list lir_generator::generate_to_stmts(const ast::expr& expression
 
 lir::statement_list lir_generator::generate_stmts(const ast::return_expression& node)
 {
-    lir::expr_list expressions = generate_to_exprs(*node.expression);
+    std::unique_ptr<lir::expr> expression;
+    if (node.expression)
+    {
+        auto expressions = generate_to_exprs(*node.expression);
+        CAPY_ASSERT(expressions.size() <= 1, "Return value should produce at most one LIR expression");
+        if (!expressions.empty())
+            expression = std::move(expressions[0]);
+    }
     lir::return_statement stmt{
-        .expression = std::move(expressions[0]),
+        .expression = std::move(expression),
         .is_explicit = node.is_explicit
     };
     lir::statement_list result;
+    // Writes produced while evaluating the return expression must execute
+    // before control leaves the function, including for a void expression.
+    result.swap(assignments);
     result.push_back(std::make_unique<lir::statement>(std::move(stmt)));
     return result;
 }

@@ -3,6 +3,55 @@ import pytest
 
 
 @pytest.mark.parse_error
+@pytest.mark.no_compile_matrix
+@pytest.mark.parametrize(
+    "prefix, body, target_type, value_type",
+    [
+        pytest.param("", "let mut a: u64 = 1u64; a = 2u32;", "u64", "u32", id="width"),
+        pytest.param("", "let mut a: s32 = 1s32; a = 2u32;", "s32", "u32", id="signedness"),
+        pytest.param(
+            "", "let mut a: u64 = 1u64; let b: u32 = 2u32; a = b;",
+            "u64", "u32", id="variable-value",
+        ),
+        pytest.param("", "let mut a: u64; a = 2u32;", "u64", "u32", id="uninitialised-target"),
+        pytest.param("global mut a: u64 = 1u64;", "a = 2u32;", "u64", "u32", id="global"),
+        pytest.param(
+            "", "let p: *u64 = 512u32 as *u64; *p = 2u32;",
+            "u64", "u32", id="pointer-dereference",
+        ),
+        pytest.param(
+            "", "let mut p: *u32 = 512u32 as *u32; p = 512u32 as *u64;",
+            "u32*", "u64*", id="pointer-value",
+        ),
+        pytest.param(
+            "", "let p: *u8 = 512u32 as *u8; *p = 11u32 as *u8;",
+            "u8", "u8*", id="pointer-to-integer",
+        ),
+        pytest.param("", "let mut a: bool = false; a = 1u32;", "bool", "u32", id="bool"),
+        pytest.param(
+            "fn nothing() { }", "let mut a: u64 = 1u64; a = nothing();",
+            "u64", "void", id="void-value",
+        ),
+    ],
+)
+def test_incompatible_assignment_types_are_rejected(prefix, body, target_type, value_type):
+    source = f"""
+{prefix}
+
+@export
+fn _start() {{
+    {body}
+}}
+"""
+    exit_code, stderr = tools.compile_test_code(source)
+
+    assert exit_code == 1, stderr
+    assert (
+        f"Cannot assign value of type '{value_type}' to target of type '{target_type}'"
+    ) in stderr
+
+
+@pytest.mark.parse_error
 def test_variable_cannot_be_initialized_with_a_void_function_call():
     """
 fn do_nothing() { }

@@ -13,6 +13,23 @@ void type_inference::infer_types(ast::module& module)
     visit(module);
 
     unify();
+    default_unresolved_integer_types();
+    unify();
+}
+
+void type_inference::default_unresolved_integer_types()
+{
+    const auto default_type = parse_context.intern_primitive(primitive_type::S32);
+    for (const auto& constraint : parse_context.constraints)
+    {
+        // Only integer literals without a contextual type receive a default.
+        // Other unresolved types must still be inferred or diagnosed.
+        if (const auto* numeric = std::get_if<numeric_constraint>(&constraint);
+            numeric != nullptr && !parse_context.is_resolved(numeric->n))
+        {
+            parse_context.resolve(numeric->n, default_type);
+        }
+    }
 }
 
 void type_inference::unify()
@@ -76,6 +93,15 @@ void type_inference::leave(ast::binary_expression& n)
         // the shift amount must have the same width as the shifted value
         case operator_type::op_shl:
         case operator_type::op_shr:
+            // Arithmetic results share the operand type. This also lets a
+            // typed result propagate its type back to both operands.
+            parse_context.constraints.emplace_back(
+                equal_constraint{
+                    n.assigned_type,
+                    assigned_node_type(*n.left, parse_context)
+                }
+            );
+            [[fallthrough]];
         // both sides of comparisons must have the same type
         case operator_type::op_equals:
         case operator_type::op_notequals:
@@ -105,4 +131,44 @@ void type_inference::leave(ast::let_expression& n)
     }
 
     parse_context.constraints.emplace_back(equal_constraint{parse_context.symbol_at(n.symbol_ref).symbol_type, assigned_node_type(*n.init_expression, parse_context)});
+}
+
+void type_inference::enter(ast::function_definition& n)
+{
+    current_return_type = parse_context.function_return_type(n.function_head.signature.function_type);
+}
+
+void type_inference::leave(ast::function_definition& n)
+{
+    // Normalization turns a trailing value expression into an implicit return
+    // after inference, so collect its type constraint here already.
+    if (current_return_type.has_value() &&
+        !parse_context.is_primitive_type(current_return_type.value(), primitive_type::Void) &&
+        !n.code.empty() &&
+        !std::holds_alternative<ast::return_expression>(*n.code.back()) &&
+        !std::holds_alternative<ast::discard_expression>(*n.code.back()))
+    {
+        parse_context.constraints.emplace_back(
+            equal_constraint{
+                current_return_type.value(),
+                assigned_node_type(*n.code.back(), parse_context)
+            }
+        );
+    }
+
+    current_return_type.reset();
+}
+
+void type_inference::leave(ast::return_expression& n)
+{
+    if (n.expression && current_return_type.has_value() &&
+        !parse_context.is_primitive_type(current_return_type.value(), primitive_type::Void))
+    {
+        parse_context.constraints.emplace_back(
+            equal_constraint{
+                current_return_type.value(),
+                assigned_node_type(*n.expression, parse_context)
+            }
+        );
+    }
 }

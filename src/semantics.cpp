@@ -6,6 +6,139 @@
 #include <limits>
 #include <unordered_set>
 
+namespace
+{
+    class resolved_type_validator : public ast::visitor, private diagnostic_emitter
+    {
+    public:
+        resolved_type_validator(diagnostic_bag& diagnostics, context& ctx)
+        : diagnostic_emitter(diagnostics, diagnostic_phase::semantics)
+        , parse_context(ctx)
+        {
+        }
+
+    private:
+        bool is_concrete(type_id type, std::unordered_set<size_t>& visited) const
+        {
+            if (type == ILLEGAL_TYPE || to_index(type) >= parse_context.types.size())
+                return false;
+
+            type = parse_context.resolved_type(type);
+            if (!parse_context.is_resolved(type))
+                return false;
+
+            // Pointer and record types can refer back to an already checked type.
+            if (!visited.insert(to_index(type)).second)
+                return true;
+
+            const auto& kind = std::get<type_kind>(parse_context.types[to_index(type)]);
+            return std::visit(
+                [&](const auto& concrete) -> bool
+                {
+                    using T = std::decay_t<decltype(concrete)>;
+                    if constexpr (std::is_same_v<T, pointer_type>)
+                    {
+                        return is_concrete(concrete.to, visited);
+                    }
+                    else if constexpr (std::is_same_v<T, record_type>)
+                    {
+                        for (const auto& field : concrete.fields)
+                            if (!is_concrete(field.second, visited))
+                                return false;
+                    }
+                    else if constexpr (std::is_same_v<T, function_type>)
+                    {
+                        for (auto parameter : concrete.parameter_types)
+                            if (!is_concrete(parameter, visited))
+                                return false;
+                        return is_concrete(concrete.return_type, visited);
+                    }
+                    return true;
+                },
+                kind
+            );
+        }
+
+        void check(type_id type, source_position location, const std::string& description)
+        {
+            std::unordered_set<size_t> visited;
+            if (!is_concrete(type, visited))
+            {
+                append_error_at(location, "Cannot determine type of " + description + "; add an explicit type annotation");
+            }
+        }
+
+        template <class Node>
+        void check_expression(const Node& n)
+        {
+            check(n.assigned_type, n.location.start, "expression");
+        }
+
+        void leave(ast::number& n) override { check_expression(n); }
+        void leave(ast::pointer_deref& n) override { check_expression(n); }
+        void leave(ast::unary_expression& n) override { check_expression(n); }
+        void leave(ast::binary_expression& n) override { check_expression(n); }
+        void leave(ast::if_expression& n) override { check_expression(n); }
+
+        void leave(ast::let_expression& n) override
+        {
+            check(parse_context.symbol_at(n.symbol_ref).symbol_type, n.location.start, "variable '" + n.name + "'");
+        }
+
+        void leave(ast::var_reference& n) override
+        {
+            check(parse_context.symbol_at(n.symbol_ref).symbol_type, n.location.start, "variable '" + n.name + "'");
+        }
+
+        void leave(ast::cast_expression& n) override
+        {
+            check(n.cast_type, n.op_range.start, "cast target");
+        }
+
+        void leave(ast::field_deref& n) override
+        {
+            check(n.object_type, n.location.start, "field access");
+        }
+
+        void leave(ast::record_initialisation& n) override
+        {
+            check(n.type_spec, n.location.start, "record initialisation");
+        }
+
+        void leave(ast::record_definition& n) override
+        {
+            for (const auto& field : n.fields)
+                check(field.second, n.location.start, "field '" + field.first + "'");
+        }
+
+        void leave(ast::global_definition& n) override
+        {
+            check(parse_context.symbol_at(n.symbol_ref).symbol_type, n.location.start, "global '" + n.name + "'");
+        }
+
+        void check_function(const ast::function_head& head)
+        {
+            check(head.signature.function_type, head.location.start, "function '" + head.name + "'");
+        }
+
+        void leave(ast::function_definition& n) override { check_function(n.function_head); }
+        void leave(ast::import_definition& n) override { check_function(n.function_head); }
+
+        void leave(ast::function_call& n) override
+        {
+            check(parse_context.symbol_at(n.symbol_ref).symbol_type, n.location.start, "function '" + n.function_name + "'");
+        }
+
+        context& parse_context;
+    };
+}
+
+void validate_resolved_types(diagnostic_bag& diagnostics, context& ctx, ast::module& module)
+{
+    resolved_type_validator validator{diagnostics, ctx};
+    validator.visit(module);
+}
+
 std::string repr_field_deref_object(const ast::expr& object)
 {
     return std::visit(
@@ -172,7 +305,8 @@ void semantic_analyser::semantic_analysis(ast::module& module)
 
 void semantic_analyser::leave(ast::number& n)
 {
-    auto primitive = parse_context.primitive_type_of(n.assigned_type);
+    auto resolved = parse_context.resolved_type(n.assigned_type);
+    auto primitive = parse_context.primitive_type_of(resolved);
     if (primitive.has_value())
     {
         for (const auto& rule : NUMBER_RANGE_RULES)
@@ -188,8 +322,16 @@ void semantic_analyser::leave(ast::number& n)
                     std::format("Numeric literal '{}' exceeds valid range for {} ({}..{})", literal_repr(n), rule.label, rule.min_value, rule.max_value)
                 );
             }
-            break;
+            return;
         }
+    }
+
+    if (parse_context.is_resolved(resolved))
+    {
+        append_error_at(
+            n.location.start,
+            std::format("Numeric literal '{}' requires an integer type, but has type '{}'", literal_repr(n), parse_context.repr(resolved))
+        );
     }
 }
 
@@ -440,6 +582,18 @@ void semantic_analyser::leave(ast::function_definition& n)
     source_range error_location;
     if (!n.code.empty())
     {
+        // An explicit return is checked by leave(return_expression). Its own
+        // type is void, including when a semicolon wraps it in a discard.
+        const ast::expr* tail = n.code.back().get();
+        if (const auto* discard = std::get_if<ast::discard_expression>(tail))
+        {
+            tail = discard->expression.get();
+        }
+        if (tail != nullptr && std::holds_alternative<ast::return_expression>(*tail))
+        {
+            return;
+        }
+
         actual_return_type = assigned_node_type(*n.code.back(), parse_context);
         error_location = ast::as_trait<ast::location>(*n.code.back()).location;
     }
@@ -531,6 +685,19 @@ void semantic_analyser::leave(ast::binary_expression& n)
                         "Can't assign to immutable variable '" + symbol.name + "'"
                     );
                 }
+            }
+
+            // Inference propagates unknown types, but two concrete types can
+            // still conflict. Reject that conflict before generating a store.
+            auto resolved_lhs = parse_context.resolved_type(lhs_type);
+            auto resolved_rhs = parse_context.resolved_type(rhs_type);
+            if (parse_context.is_resolved(resolved_lhs) && parse_context.is_resolved(resolved_rhs) &&
+                resolved_lhs != resolved_rhs)
+            {
+                append_error_at(
+                    n.op_range.start,
+                    std::format("Cannot assign value of type '{}' to target of type '{}'", parse_context.repr(resolved_rhs), parse_context.repr(resolved_lhs))
+                );
             }
         }
         else

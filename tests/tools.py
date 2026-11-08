@@ -125,6 +125,25 @@ def compile_to_wat(source_code) -> str:
     return wat
 
 
+def compile_to_lir(source_code) -> str:
+    """Dump the LIR before emission, so emitter fallbacks cannot hide unknown types."""
+    with tempfile.TemporaryDirectory() as directory:
+        source_path = pathlib.Path(directory) / "test.capy"
+        source_path.write_text(source_code, encoding="utf-8")
+        res = subprocess.run(
+            [
+                "wasmtime", "run", "--dir", directory,
+                "./build/capylang.wasm", "-i", source_path.as_posix(),
+                "--dump-lir",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert res.returncode == 0, "LIR generation failed:\n" + res.stderr
+        return res.stdout
+
+
 def expression_to_full_program(code):
     procedure_wrapper = """
 import wasi_snapshot_preview1::proc_exit(exit_code: u32) as proc_exit;

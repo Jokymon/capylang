@@ -809,8 +809,10 @@ void lir_based_emitter::emit(const lir::cast_expression& root)
 {
     emit(*root.expression);
 
-    // Casts between 32-bit and 64-bit integers need a conversion instruction;
-    // all types up to 32 bits are i32 values in WASM and need none.
+    // Integer types up to 32 bits use i32 in WASM, but casts may still
+    // require sign extension even when the WASM value type stays the same.
+    // TODO: Implement the missing s8/s16 conversion handling, including
+    // sign extension when widening to s32 (i32.extend8_s / i32.extend16_s).
     auto is_64bit = [](wasm_type t)
     { return (t == wasm_type::i64) || (t == wasm_type::u64); };
     wasm_type source_type = value_type_of(lir_assigned_node_type(*root.expression, parse_context));
@@ -961,12 +963,7 @@ void lir_based_emitter::emit(const lir::number& number)
 wasm_type lir_based_emitter::value_type_of(type_id type) const
 {
     type_id resolved = parse_context.resolved_type(type);
-    if (!parse_context.is_resolved(resolved))
-    {
-        // Unsuffixed literals without any typed counterpart (e.g. '5 + 3')
-        // aren't resolved by the type inference; they default to i32.
-        return wasm_type::i32;
-    }
+    CAPY_ASSERT(parse_context.is_resolved(resolved), "Emitter expects a resolved type");
     return lowering->lower_return_type(resolved);
 }
 

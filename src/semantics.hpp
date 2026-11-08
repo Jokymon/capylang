@@ -6,6 +6,7 @@
 #include <optional>
 
 type_id assigned_node_type(const ast::expr& node, context& ctx);
+void validate_resolved_types(diagnostic_bag& diagnostics, context& ctx, ast::module& module);
 
 class semantic_analyser : public ast::visitor, private diagnostic_emitter
 {
