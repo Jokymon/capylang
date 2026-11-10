@@ -300,6 +300,21 @@ namespace wasm_builder
     {
         expr.push_back(std::make_unique<wasm_instruction>(wasm_op_base(wasm_op::unreachable)));
     }
+
+    void i64_extend_i32_s(wasm_expr& expr)
+    {
+        expr.push_back(std::make_unique<wasm_instruction>(wasm_op_base(wasm_op::i64_extend_i32_s)));
+    }
+
+    void i64_extend_i32_u(wasm_expr& expr)
+    {
+        expr.push_back(std::make_unique<wasm_instruction>(wasm_op_base(wasm_op::i64_extend_i32_u)));
+    }
+
+    void i32_wrap_i64(wasm_expr& expr)
+    {
+        expr.push_back(std::make_unique<wasm_instruction>(wasm_op_base(wasm_op::i32_wrap_i64)));
+    }
 }
 
 exportable::exportable(index_type index, wasm_extern_index export_type)

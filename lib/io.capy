@@ -1,0 +1,82 @@
+include "/lib/wasi.capy"
+import wasi_snapshot_preview1::fd_close(fd: u32) -> u32 as fd_close;
+
+// Writes all bytes of the buffer to a file descriptor (1 = standard output,
+// 2 = standard error). fd_write may write fewer bytes than requested, so it is
+// called until everything is written. Returns 0 on success or the unchanged
+// WASI error code on failure.
+// Some bytes may already have been written when an error is returned.
+fn write_bytes(fd: u32, buffer: *u8, size: u32) -> u32 {
+    let written: *u32 = cabi_realloc(0, 0, 4, 4) as *u32;
+    let io: *iovec = allocate iovec{
+        buf = buffer as *u32,
+        len = size,
+    };
+    // Reuse the descriptor. Field assignments are not supported yet, so update
+    // its two 32-bit fields through pointers (buf at offset 0, len at offset 4).
+    let io_buf: *u32 = io as *u32;
+    let io_len: *u32 = (io as u32 + 4u32) as *u32;
+    let mut offset: u32 = 0;
+    while offset < size {
+        *io_buf = buffer as u32 + offset;
+        *io_len = size - offset;
+        let error: u32 = fd_write(fd, io as *u32, 1u32, written);
+        if error != 0u32 {
+            return error;
+        }
+        offset = offset + *written;
+    }
+    0u32
+}
+
+// Writes a string to standard output; returns the write_bytes status code.
+fn print(s: string) -> u32 {
+    write_bytes(1u32, s.ptr, s.size)
+}
+
+// Tries to write a message to standard error, then traps even if writing fails.
+fn fail(message: string) {
+    write_bytes(2u32, message.ptr, message.size);
+    unreachable();
+}
+
+// Writes an unsigned number in decimal; returns the write_bytes status code.
+fn print_u64(value: u64) -> u32 {
+    // the largest u64 value has 20 decimal digits
+    let buffer: *u8 = cabi_realloc(0, 0, 1, 20) as *u8;
+    let mut index: u32 = 20;
+    let mut remaining: u64 = value;
+    while true {
+        index = index - 1;
+        let digit: *u8 = (buffer as u32 + index) as *u8;
+        *digit = ('0' as u32 + (remaining % 10u64) as u32) as u8;
+        remaining = remaining / 10u64;
+        if remaining == 0u64 {
+            break;
+        }
+    }
+    write_bytes(1u32, (buffer as u32 + index) as *u8, 20u32 - index)
+}
+
+// Writes a signed number in decimal; returns the first write error or 0.
+fn print_s64(value: s64) -> u32 {
+    if value < 0s64 {
+        let error: u32 = print("-");
+        if error != 0u32 {
+            return error;
+        }
+        // 0 - value is also correct for the smallest s64 value: the result
+        // wraps to the same bit pattern, which read as u64 is the magnitude
+        print_u64((0s64 - value) as u64)
+    } else {
+        print_u64(value as u64)
+    }
+}
+
+fn print_u32(value: u32) -> u32 {
+    print_u64(value as u64)
+}
+
+fn print_s32(value: s32) -> u32 {
+    print_s64(value as s64)
+}

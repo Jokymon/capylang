@@ -1,0 +1,123 @@
+// wasmtime run --dir . --dir lib::/lib build/capylang.wasm -i examples/u64_demo.capy -o examples/u64_demo.wasm
+// wasmtime run examples/u64_demo.wasm
+
+
+include "/lib/io.capy"
+
+// 20! is the largest factorial that fits into u64
+fn factorial(n: u64) -> u64
+{
+    let mut result: u64 = 1u64;
+    let mut i: u64 = 2u64;
+    while i <= n
+    {
+        result = result * i;
+        i = i + 1u64;
+    }
+    result
+}
+
+fn fibonacci(n: u64) -> u64
+{
+    let mut a: u64 = 0u64;
+    let mut b: u64 = 1u64;
+    let mut i: u64 = 0u64;
+    while i < n
+    {
+        let next: u64 = a + b;
+        a = b;
+        b = next;
+        i = i + 1u64;
+    }
+    a
+}
+
+global max_u64: u64 = 18446744073709551615u64;
+global min_s64: s64 = -9223372036854775808s64;
+
+@export
+fn _start() {
+    print("20! = ");
+    print_u64(factorial(20u64));
+    print("\n");
+
+    print("fib(90) = ");
+    print_u64(fibonacci(90u64));
+    print("\n");
+
+    print("largest u64 = ");
+    print_u64(max_u64);
+    print("\n");
+
+    print("largest u64 / 3 = ");
+    print_u64(max_u64 / 3u64);
+    print("\n");
+
+    print("largest u64 + 1 = ");
+    print_u64(max_u64 + 1u64);
+    print("   (wraps around)\n");
+
+    print("smallest s64 = ");
+    print_s64(min_s64);
+    print("\n");
+
+    print("-7 / 2 = ");
+    print_s64(-7s64 / 2s64);
+    print("\n");
+
+    // casts between 32 and 64 bits
+    let small: u32 = 4000000000u32;
+    print("4000000000u32 as u64 * 5 = ");
+    print_u64((small as u64) * 5u64);
+    print("\n");
+
+    let negative: s32 = -12s32;
+    print("-12s32 as s64 = ");
+    print_s64(negative as s64);
+    print("\n");
+
+    let big: u64 = 5000000042u64;
+    print("5000000042u64 as u32 = ");
+    print_u64((big as u32) as u64);
+    print("   (upper 32 bits cut off)\n");
+
+
+    print("\n------------------------------------------------------\n");
+
+    print("18446744073709551000 = ");
+    print_u64(18446744073709551000 as u64);
+    print("\n");
+
+    print("5000000000 = ");
+    print_u64(5000000000u64 as u64);
+    print("\n");
+
+    print("5000000000 = ");
+    print_u64(5000000000 as u64);
+    print("\n");
+
+    print("Overflow = ");
+    print_u64((10446744073709551000u64 +  10446744073709551000u64) as u64);
+    print("\n");
+    print_u64(5000005000);
+    print("\n");
+
+
+    print("test = ");
+    let b: s32 = 5000005000;
+    print_s32(b);
+
+    //let x: u64 = 5000000000 + 1; // fehler
+    print("\n");
+    //let mut a: u64 = 5u64;
+    //a = 7u32;
+    //print_u64(a);
+    //print("\n");
+
+    let a = 5000005000;
+    print_u64(a);
+
+
+    print("\n");
+    proc_exit(0u32)
+}

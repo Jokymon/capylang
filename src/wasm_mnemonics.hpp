@@ -30,6 +30,8 @@ const char INST_I32_LOAD16_U = '\x2f';
 const char INST_I32_STORE = '\x36';
 const char INST_I32_STORE8 = '\x3a';
 const char INST_I32_STORE16 = '\x3b';
+const char INST_I64_LOAD = '\x29';
+const char INST_I64_STORE = '\x37';
 
 const char INST_MEMORY_SIZE = '\x3f';
 const char INST_MEMORY_GROW = '\x40';
@@ -49,6 +51,17 @@ const char INST_I32_LE_S = '\x4c';
 const char INST_I32_LE_U = '\x4d';
 const char INST_I32_GE_S = '\x4e';
 const char INST_I32_GE_U = '\x4f';
+const char INST_I64_EQZ = '\x50';
+const char INST_I64_EQ = '\x51';
+const char INST_I64_NE = '\x52';
+const char INST_I64_LT_S = '\x53';
+const char INST_I64_LT_U = '\x54';
+const char INST_I64_GT_S = '\x55';
+const char INST_I64_GT_U = '\x56';
+const char INST_I64_LE_S = '\x57';
+const char INST_I64_LE_U = '\x58';
+const char INST_I64_GE_S = '\x59';
+const char INST_I64_GE_U = '\x5a';
 
 const char INST_I32_CLZ = '\x67';
 const char INST_I32_CTZ = '\x68';
@@ -66,6 +79,24 @@ const char INST_I32_XOR = '\x73';
 const char INST_I32_SHL = '\x74';
 const char INST_I32_SHR_S = '\x75';
 const char INST_I32_SHR_U = '\x76';
+
+const char INST_I64_ADD = '\x7c';
+const char INST_I64_SUB = '\x7d';
+const char INST_I64_MUL = '\x7e';
+const char INST_I64_DIV_S = '\x7f';
+const char INST_I64_DIV_U = '\x80';
+const char INST_I64_REM_S = '\x81';
+const char INST_I64_REM_U = '\x82';
+const char INST_I64_AND = '\x83';
+const char INST_I64_OR = '\x84';
+const char INST_I64_XOR = '\x85';
+const char INST_I64_SHL = '\x86';
+const char INST_I64_SHR_S = '\x87';
+const char INST_I64_SHR_U = '\x88';
+
+const char INST_I32_WRAP_I64 = '\xa7';
+const char INST_I64_EXTEND_I32_S = '\xac';
+const char INST_I64_EXTEND_I32_U = '\xad';
 
 // Multibyte instructions starting with FC
 const char INST_FC = '\xfc';

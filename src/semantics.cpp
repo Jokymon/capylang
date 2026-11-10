@@ -1,6 +1,9 @@
 #include "semantics.hpp"
+#include "number_literal.hpp"
 #include "tools.hpp"
 #include <array>
+#include <cstdint>
+#include <limits>
 #include <unordered_set>
 
 std::string repr_field_deref_object(const ast::expr& object)
@@ -29,18 +32,20 @@ std::string repr_field_deref_object(const ast::expr& object)
 struct number_range_rule
 {
     primitive_type primitive;
-    long long min_value;
-    long long max_value;
+    std::int64_t min_value;
+    std::uint64_t max_value;
     const char* label;
 };
 
-constexpr std::array<number_range_rule, 6> NUMBER_RANGE_RULES{{
+constexpr std::array<number_range_rule, 8> NUMBER_RANGE_RULES{{
     {primitive_type::U8, 0, std::numeric_limits<uint8_t>::max(), "u8"},
     {primitive_type::U16, 0, std::numeric_limits<uint16_t>::max(), "u16"},
     {primitive_type::U32, 0, std::numeric_limits<uint32_t>::max(), "u32"},
+    {primitive_type::U64, 0, std::numeric_limits<uint64_t>::max(), "u64"},
     {primitive_type::S8, std::numeric_limits<int8_t>::min(), std::numeric_limits<int8_t>::max(), "s8"},
     {primitive_type::S16, std::numeric_limits<int16_t>::min(), std::numeric_limits<int16_t>::max(), "s16"},
     {primitive_type::S32, std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::max(), "s32"},
+    {primitive_type::S64, std::numeric_limits<int64_t>::min(), std::numeric_limits<int64_t>::max(), "s64"},
 }};
 
 type_id assigned_node_type(const ast::expr& node, context& ctx)
@@ -176,11 +181,11 @@ void semantic_analyser::leave(ast::number& n)
             {
                 continue;
             }
-            if ((n.number < rule.min_value) || (n.number > rule.max_value))
+            if (!literal_fits(n, rule.min_value, rule.max_value))
             {
                 append_error_at(
                     n.location.start,
-                    std::format("Numeric literal '{}' exceeds valid range for {} ({}..{})", n.number, rule.label, rule.min_value, rule.max_value)
+                    std::format("Numeric literal '{}' exceeds valid range for {} ({}..{})", literal_repr(n), rule.label, rule.min_value, rule.max_value)
                 );
             }
             break;
@@ -391,13 +396,22 @@ void semantic_analyser::leave(ast::let_expression& n)
         return;
     }
 
-    const auto& symbol = parse_context.symbol_at(n.symbol_ref);
-    if (parse_context.resolved_type(symbol.symbol_type) !=
-        assigned_node_type(*n.init_expression, parse_context))
+    auto init_type = assigned_node_type(*n.init_expression, parse_context);
+    if (parse_context.is_primitive_type(init_type, primitive_type::Void))
     {
         append_error_at(
             n.location.start,
-            "Type mismatch in let statement. Variable is of type '" + parse_context.repr(symbol.symbol_type) + "' but expression has type '" + parse_context.repr(assigned_node_type(*n.init_expression, parse_context)) + "'"
+            "Cannot initialize a variable with an expression that returns no value"
+        );
+        return;
+    }
+
+    const auto& symbol = parse_context.symbol_at(n.symbol_ref);
+    if (parse_context.resolved_type(symbol.symbol_type) != init_type)
+    {
+        append_error_at(
+            n.location.start,
+            "Type mismatch in let statement. Variable is of type '" + parse_context.repr(symbol.symbol_type) + "' but expression has type '" + parse_context.repr(init_type) + "'"
         );
     }
 }
@@ -531,6 +545,19 @@ void semantic_analyser::leave(ast::binary_expression& n)
     else if ((n.operation == op_equals) || (n.operation == op_notequals) || (n.operation == op_lessthan) || (n.operation == op_lessthan_equal) || (n.operation == op_greaterthan) || (n.operation == op_greaterthan_equal))
     {
         n.assigned_type = parse_context.intern_primitive(primitive_type::Boolean);
+        // Both operands must have the same resolved type.
+        auto resolved_lhs = parse_context.resolved_type(lhs_type);
+        auto resolved_rhs = parse_context.resolved_type(rhs_type);
+        if (parse_context.is_resolved(resolved_lhs) && parse_context.is_resolved(resolved_rhs) &&
+            (resolved_lhs != resolved_rhs))
+        {
+            append_error_at(
+                n.op_range.start,
+                "Types for '" + repr_op(n.operation) +
+                    "'-operation do not match; they should be equal but are '" +
+                    parse_context.repr(resolved_lhs) + "' and '" + parse_context.repr(resolved_rhs) + "'"
+            );
+        }
     }
     else if ((lhs_type == rhs_type) && (!parse_context.is_type_var(lhs_type)))
     {
