@@ -130,10 +130,11 @@ def compile_to_lir(source_code) -> str:
     with tempfile.TemporaryDirectory() as directory:
         source_path = pathlib.Path(directory) / "test.capy"
         source_path.write_text(source_code, encoding="utf-8")
+        # Use a stable guest path instead of exposing host-specific paths to WASI.
         res = subprocess.run(
             [
-                "wasmtime", "run", "--dir", directory,
-                "./build/capylang.wasm", "-i", source_path.as_posix(),
+                "wasmtime", "run", "--dir", f"{directory}::/tests",
+                "./build/capylang.wasm", "-i", "/tests/test.capy",
                 "--dump-lir",
             ],
             capture_output=True,

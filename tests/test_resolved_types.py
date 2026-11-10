@@ -15,11 +15,14 @@ def test_unresolved_variable_is_reported_before_lir(tmp_path, declaration, mode)
         "@export\nfn _start() {\n    " + declaration + "\n}\n", encoding="utf-8"
     )
     output_path = tmp_path / ("output." + mode)
-    options = ["--dump-" + mode] if mode in ("ast", "lir") else ["-o", str(output_path)]
+    options = (
+        ["--dump-" + mode] if mode in ("ast", "lir")
+        else ["-o", f"/tests/{output_path.name}"]
+    )
     result = subprocess.run(
         [
-            "wasmtime", "run", "--dir", str(tmp_path),
-            "./build/capylang.wasm", "-i", str(source_path),
+            "wasmtime", "run", "--dir", f"{tmp_path}::/tests",
+            "./build/capylang.wasm", "-i", "/tests/unresolved.capy",
         ] + options,
         capture_output=True,
         text=True,
