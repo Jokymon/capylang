@@ -40,7 +40,7 @@ def run_wasmfile(wasm_path) -> tuple[int, str]:
         ["wasmtime", "run", wasm_path.as_posix()],
         capture_output=True,
     )
-    return res.returncode, res.stdout.decode()
+    return res.returncode, res.stdout.decode(encoding="utf-8").replace("\r\n", "\n")
 
 
 def run_test_code(source_code, options={}) -> tuple[int, str]:
