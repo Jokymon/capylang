@@ -44,9 +44,9 @@ lir::binary_op_t from_op_type(operator_type op)
     }
 }
 
-lir::place get_place(const ast::expr& expr);
+lir::place get_place(context& ctx, const ast::expr& expr);
 
-lir::place get_place(const ast::var_reference& node)
+lir::place get_place(context& ctx, const ast::var_reference& node)
 {
     return lir::place{
         .base = {
@@ -57,7 +57,7 @@ lir::place get_place(const ast::var_reference& node)
     };
 }
 
-lir::place get_place(const ast::let_expression& node)
+lir::place get_place(context& ctx, const ast::let_expression& node)
 {
     return lir::place{
         .base = {
@@ -68,15 +68,28 @@ lir::place get_place(const ast::let_expression& node)
     };
 }
 
-lir::place get_place(const ast::pointer_deref& node)
+lir::place get_place(context& ctx, const ast::pointer_deref& node)
 {
-    auto place = get_place(*node.pointer_expression);
+    auto place = get_place(ctx, *node.pointer_expression);
     place.projection.push_back(lir::place_elem{lir::deref{}});
 
     return place;
 }
 
-lir::place get_place(const ast::expr& expr)
+lir::place get_place(context& ctx, const ast::field_deref& node)
+{
+    auto place = get_place(ctx, *node.object);
+    auto field_entry = ctx.record_field_entry(node.object_type, node.fieldname);
+    if (!field_entry.has_value())
+    {
+        CAPY_FAIL("While getting the place for field_deref, the fieldname is supposed to be correct and exist");
+    }
+    place.projection.push_back(lir::place_elem{lir::field{field_entry.value().index}});
+
+    return place;
+}
+
+lir::place get_place(context& ctx, const ast::expr& expr)
 {
     return std::visit(
         [&](auto& arg)
@@ -85,11 +98,15 @@ lir::place get_place(const ast::expr& expr)
 
             if constexpr (std::is_same_v<T, ast::var_reference>)
             {
-                return get_place(arg);
+                return get_place(ctx, arg);
             }
             else if constexpr (std::is_same_v<T, ast::pointer_deref>)
             {
-                return get_place(arg);
+                return get_place(ctx, arg);
+            }
+            else if constexpr (std::is_same_v<T, ast::field_deref>)
+            {
+                return get_place(ctx, arg);
             }
             else
             {
@@ -176,7 +193,7 @@ lir::expr_list lir_generator::generate_exprs(const ast::var_reference& node)
     // be handled by let-expressions and the assignment operator.
     auto& sym = parse_context.symbol_at(node.symbol_ref);
     lir::load_expression stmt{
-        .source = get_place(node),
+        .source = get_place(parse_context, node),
         .assigned_type = parse_context.resolved_type(sym.symbol_type)
     };
     lir::expr_list result;
@@ -450,7 +467,7 @@ lir::statement_list lir_generator::generate_stmts(const ast::discard_expression&
 
 lir::statement_list lir_generator::generate_stmts(const ast::let_expression& node)
 {
-    auto target = get_place(node);
+    auto target = get_place(parse_context, node);
     lir::statement_list result;
 
     if (node.init_expression)
@@ -589,7 +606,7 @@ lir::expr_list lir_generator::generate_exprs(const ast::binary_expression& node)
     }
     else
     {
-        lir::place target = get_place(*node.left);
+        lir::place target = get_place(parse_context, *node.left);
 
         node.right->visit(
             [&](const auto& rhs) -> void

@@ -5,14 +5,40 @@ source text to WebAssembly output.
 
 ## Overview
 
-1. Parser, supported by the lexer
-2. Type inference
-3. Semantic analysis
-4. Normalization
-5. Transformation to LIR
-6. LIR Lowering
-7. LIR-based WASM IR emission
-8. WAT and WASM generation
+```mermaid
+flowchart LR
+    %% Pipeline row
+    parser[[Parser/Lexer]] --> typ_inf[[Type inference]]
+    typ_inf --> sem_ana[[Semantic analysis]]
+    sem_ana --> norm[[Normalization]]
+    norm --> lir_xform[[Transformation\nto LIR]]
+    lir_xform --> lir_lower[[LIR\nlowering]]
+    lir_lower --> wat_gen[[WAT generation]]
+    lir_lower --> wasm_gen[[WASM generation]]
+    
+    %% Align them horizontally
+    parser ~~~ typ_inf ~~~ sem_ana ~~~ norm ~~~ lir_xform ~~~ lir_lower ~~~ wat_gen
+
+    %% artifacts placed "below"
+    AST@{ shape: document, label: "AST" }
+    LIR@{ shape: document, label: "LIR" }
+    WAT@{ shape: document, label: "WAT" }
+    WASM@{ shape: document, label: "WASM" }
+
+    %% Connections
+    parser -.->|generate| AST
+    typ_inf -.->|update| AST
+    norm -.->|update| AST
+
+    lir_xform -.->|create| LIR
+    lir_xform <-.-|read| AST
+    lir_lower -.->|update| LIR
+
+    wat_gen -.->|create| WAT
+    wat_gen <-.-|read| LIR
+    wasm_gen -.->|create| WASM
+    wasm_gen <-.-|read| LIR
+```
 
 This is the current logical pipeline. Individual implementation details may
 still move while the compiler grows, but these stages describe the existing
