@@ -25,6 +25,7 @@ add_executable(${PROJECT_NAME}
     src/symbol.cpp
     src/type_inference.cpp
     src/wasm_generator.cpp
+    src/wasm_generator_v2.cpp
     src/wasm_builder_v2.cpp
     src/wat_generator.cpp
     src/wasm_dump.cpp
