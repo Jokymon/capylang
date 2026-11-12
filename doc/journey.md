@@ -14,6 +14,7 @@
  * **13.07.2026** Big move to LIR
  * **21.08.2026** Complete migration of AST to NDEF/Silwright
  * **24.08.2026** Introduction of a simple include file concept
+ * **10.11.2026** Support for 64-bit integers; first student contribution
 
 ## Handcrafting the lexer and parser
 
