@@ -4,88 +4,91 @@
 #include <sstream>
 #include <variant>
 
-std::string repr_wasm_type(wasm_type typ)
+namespace
 {
-    switch (typ)
+    std::string repr_wasm_type(wasm_type typ)
     {
-        case wasm_type::none:
-            return "";
-        case wasm_type::u8:
-        case wasm_type::u16:
-        case wasm_type::u32:
-        case wasm_type::i8:
-        case wasm_type::i16:
-        case wasm_type::i32:
-            return "i32";
-        case wasm_type::u64:
-        case wasm_type::i64:
-            return "i64";
-        case wasm_type::f32:
-            return "f32";
-        case wasm_type::f64:
-            return "f64";
-        default:
-            CAPY_FAIL("Unexpected wasm_type in repr_wasm_type");
-            return "";
+        switch (typ)
+        {
+            case wasm_type::none:
+                return "";
+            case wasm_type::u8:
+            case wasm_type::u16:
+            case wasm_type::u32:
+            case wasm_type::i8:
+            case wasm_type::i16:
+            case wasm_type::i32:
+                return "i32";
+            case wasm_type::u64:
+            case wasm_type::i64:
+                return "i64";
+            case wasm_type::f32:
+                return "f32";
+            case wasm_type::f64:
+                return "f64";
+            default:
+                CAPY_FAIL("Unexpected wasm_type in repr_wasm_type");
+                return "";
+        }
     }
-}
 
-std::string repr_wasm_extern_type(wasm_extern_index index)
-{
-    switch (index)
+    std::string repr_wasm_extern_type(wasm_extern_index index)
     {
-        case wasm_extern_index::funcidx:
-            return "func";
-        case wasm_extern_index::tableidx:
-            return "table";
-        case wasm_extern_index::memidx:
-            return "memory";
-        case wasm_extern_index::globalidx:
-            return "global";
-        case wasm_extern_index::tagidx:
-            return "tag";
+        switch (index)
+        {
+            case wasm_extern_index::funcidx:
+                return "func";
+            case wasm_extern_index::tableidx:
+                return "table";
+            case wasm_extern_index::memidx:
+                return "memory";
+            case wasm_extern_index::globalidx:
+                return "global";
+            case wasm_extern_index::tagidx:
+                return "tag";
+        }
     }
-}
 
-std::string sign_wasm_type(wasm_type typ)
-{
-    switch (typ)
+    std::string sign_wasm_type(wasm_type typ)
     {
-        case wasm_type::none:
-            return "";
-        case wasm_type::i8:
-        case wasm_type::i16:
-        case wasm_type::i32:
-        case wasm_type::i64:
-        case wasm_type::f32:
-        case wasm_type::f64:
-            return "s";
-        case wasm_type::u8:
-        case wasm_type::u16:
-        case wasm_type::u32:
-        case wasm_type::u64:
-            return "u";
+        switch (typ)
+        {
+            case wasm_type::none:
+                return "";
+            case wasm_type::i8:
+            case wasm_type::i16:
+            case wasm_type::i32:
+            case wasm_type::i64:
+            case wasm_type::f32:
+            case wasm_type::f64:
+                return "s";
+            case wasm_type::u8:
+            case wasm_type::u16:
+            case wasm_type::u32:
+            case wasm_type::u64:
+                return "u";
+        }
     }
-}
 
-std::string size_wasm_type(wasm_type typ)
-{
-    switch (typ)
+    std::string size_wasm_type(wasm_type typ)
     {
-        case wasm_type::none:
-        case wasm_type::u32:
-        case wasm_type::i32:
-        case wasm_type::f32:
-        case wasm_type::u64:
-        case wasm_type::i64:
-        case wasm_type::f64:
-            return "";
-        case wasm_type::i8:
-        case wasm_type::u8:
-            return "8";
-        case wasm_type::i16:
-        case wasm_type::u16:
-            return "16";
+        switch (typ)
+        {
+            case wasm_type::none:
+            case wasm_type::u32:
+            case wasm_type::i32:
+            case wasm_type::f32:
+            case wasm_type::u64:
+            case wasm_type::i64:
+            case wasm_type::f64:
+                return "";
+            case wasm_type::i8:
+            case wasm_type::u8:
+                return "8";
+            case wasm_type::i16:
+            case wasm_type::u16:
+                return "16";
+        }
     }
 }
 

@@ -39,6 +39,9 @@ namespace
                                     case primitive_type::Char:
                                     case primitive_type::Boolean:
                                         return 4;
+                                    case primitive_type::U64:
+                                    case primitive_type::S64:
+                                        return 8;
                                 }
                             }
                             else if constexpr (std::is_same_v<K, pointer_type>)

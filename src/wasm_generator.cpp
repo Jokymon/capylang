@@ -8,246 +8,249 @@
 #include <utility>
 #include <variant>
 
-const char* MAGIC = "\0asm";
-const char* VERSION = "\x01\0\0\0";
-
-const char SECTION_CUSTOM = '\x00';
-const char SECTION_TYPE = '\x01';
-const char SECTION_IMPORT = '\x02';
-const char SECTION_FUNCTION = '\x03';
-const char SECTION_TABLE = '\x04';
-const char SECTION_MEMORY = '\x05';
-const char SECTION_GLOBAL = '\x06';
-const char SECTION_EXPORT = '\x07';
-const char SECTION_START = '\x08';
-const char SECTION_ELEMENT = '\x09';
-const char SECTION_CODE = '\x0A';
-const char SECTION_DATA = '\x0B';
-const char SECTION_DATA_COUNT = '\x0C';
-const char SECTION_TAG = '\x0D';
-
-const char NAME_SUBSECTION_MODULE_NAME = '\x00';
-const char NAME_SUBSECTION_FUNCTION_NAMES = '\x01';
-const char NAME_SUBSECTION_LOCAL_NAMES = '\x02';
-const char NAME_SUBSECTION_TYPE_NAMES = '\x04';
-const char NAME_SUBSECTION_GLOBAL_NAMES = '\x07'; // extended name section proposal
-const char NAME_SUBSECTION_FIELD_NAMES = '\x0a';
-const char NAME_SUBSECTION_TAG_NAMES = '\x0b';
-
-const char COMP_TYPE_FUNC = '\x60';
-
-const char EXTERNAL_TYPE_FUNC = '\x00';
-const char EXTERNAL_TYPE_TABLE = '\x01';
-const char EXTERNAL_TYPE_MEM = '\x02';
-const char EXTERNAL_TYPE_GLOBAL = '\x03';
-const char EXTERNAL_TYPE_TAG = '\x04';
-
-const char LIMITS_I32_N = '\x00';
-const char LIMITS_I32_NM = '\x01';
-const char LIMITS_I64_N = '\x04';
-const char LIMITS_I64_NM = '\x05';
-
-const char MUTABILITY_IMMUT = '\x00';
-const char MUTABILITY_MUT = '\x01';
-
-void encode_leb128(std::ostream& out, uint64_t value)
+namespace
 {
-    do
+    const char* MAGIC = "\0asm";
+    const char* VERSION = "\x01\0\0\0";
+
+    const char SECTION_CUSTOM = '\x00';
+    const char SECTION_TYPE = '\x01';
+    const char SECTION_IMPORT = '\x02';
+    const char SECTION_FUNCTION = '\x03';
+    const char SECTION_TABLE = '\x04';
+    const char SECTION_MEMORY = '\x05';
+    const char SECTION_GLOBAL = '\x06';
+    const char SECTION_EXPORT = '\x07';
+    const char SECTION_START = '\x08';
+    const char SECTION_ELEMENT = '\x09';
+    const char SECTION_CODE = '\x0A';
+    const char SECTION_DATA = '\x0B';
+    const char SECTION_DATA_COUNT = '\x0C';
+    const char SECTION_TAG = '\x0D';
+
+    const char NAME_SUBSECTION_MODULE_NAME = '\x00';
+    const char NAME_SUBSECTION_FUNCTION_NAMES = '\x01';
+    const char NAME_SUBSECTION_LOCAL_NAMES = '\x02';
+    const char NAME_SUBSECTION_TYPE_NAMES = '\x04';
+    const char NAME_SUBSECTION_GLOBAL_NAMES = '\x07'; // extended name section proposal
+    const char NAME_SUBSECTION_FIELD_NAMES = '\x0a';
+    const char NAME_SUBSECTION_TAG_NAMES = '\x0b';
+
+    const char COMP_TYPE_FUNC = '\x60';
+
+    const char EXTERNAL_TYPE_FUNC = '\x00';
+    const char EXTERNAL_TYPE_TABLE = '\x01';
+    const char EXTERNAL_TYPE_MEM = '\x02';
+    const char EXTERNAL_TYPE_GLOBAL = '\x03';
+    const char EXTERNAL_TYPE_TAG = '\x04';
+
+    const char LIMITS_I32_N = '\x00';
+    const char LIMITS_I32_NM = '\x01';
+    const char LIMITS_I64_N = '\x04';
+    const char LIMITS_I64_NM = '\x05';
+
+    const char MUTABILITY_IMMUT = '\x00';
+    const char MUTABILITY_MUT = '\x01';
+
+    void encode_leb128(std::ostream& out, uint64_t value)
     {
-        uint8_t b = value & 0x7f;
-        value >>= 7;
-        if (value)
-            b |= 0x80;
-        out.put(b);
-    } while (value != 0);
-}
+        do
+        {
+            uint8_t b = value & 0x7f;
+            value >>= 7;
+            if (value)
+                b |= 0x80;
+            out.put(b);
+        } while (value != 0);
+    }
 
-void encode_leb128_signed(std::ostream& out, int64_t value)
-{
-    bool more = true;
-
-    while (more)
+    void encode_leb128_signed(std::ostream& out, int64_t value)
     {
-        uint8_t b = value & 0x7f; /* low-order 7 bits of value */
-        value >>= 7;
+        bool more = true;
 
-        /* sign bit of byte is second high-order bit (0x40) */
-        uint8_t sign_bit = b & 0x40;
-        if ((value == 0 && sign_bit == 0) || (value == -1 && sign_bit != 0))
-            more = false;
+        while (more)
+        {
+            uint8_t b = value & 0x7f; /* low-order 7 bits of value */
+            value >>= 7;
+
+            /* sign bit of byte is second high-order bit (0x40) */
+            uint8_t sign_bit = b & 0x40;
+            if ((value == 0 && sign_bit == 0) || (value == -1 && sign_bit != 0))
+                more = false;
+            else
+                b |= 0x80; /* set high-order bit of byte */
+
+            out.put(b);
+        }
+    }
+
+    int64_t normalize_i32_immediate(int64_t value)
+    {
+        // WASM i32.const uses signed LEB128, but the payload represents 32-bit bits.
+        // Normalize through uint32_t first so values like 4294967295 become -1.
+        return static_cast<int32_t>(static_cast<uint32_t>(value));
+    }
+
+    void encode_i32_const_immediate(std::ostream& out, int64_t value)
+    {
+        encode_leb128_signed(out, normalize_i32_immediate(value));
+    }
+
+    void encode_string(std::ostream& out, const std::string s)
+    {
+        encode_leb128(out, s.size());
+        out << s;
+    }
+
+    char encode_wasm_type(wasm_type type)
+    {
+        switch (type)
+        {
+            // the small integer types only exist for memory access; as values
+            // they are represented as i32
+            case wasm_type::i8:
+            case wasm_type::u8:
+            case wasm_type::i16:
+            case wasm_type::u16:
+            case wasm_type::i32:
+            case wasm_type::u32:
+                return '\x7F';
+            case wasm_type::i64:
+            case wasm_type::u64:
+                return '\x7E';
+            case wasm_type::f32:
+                return '\x7D';
+            case wasm_type::f64:
+                return '\x7C';
+            default:
+                CAPY_FAIL("Trying to encode an unknown WASM type");
+        }
+    }
+
+    char encode_extern_index(wasm_extern_index index)
+    {
+        switch (index)
+        {
+            case wasm_extern_index::funcidx:
+                return EXTERNAL_TYPE_FUNC;
+            case wasm_extern_index::tableidx:
+                return EXTERNAL_TYPE_TABLE;
+            case wasm_extern_index::memidx:
+                return EXTERNAL_TYPE_MEM;
+            case wasm_extern_index::globalidx:
+                return EXTERNAL_TYPE_GLOBAL;
+            case wasm_extern_index::tagidx:
+                return EXTERNAL_TYPE_TAG;
+        }
+    }
+
+    void encode_func_type(std::ostream& output, const wasm_function& function)
+    {
+        output.put(COMP_TYPE_FUNC);
+        encode_leb128(output, function.arguments.size());
+        for (const auto& arg : function.arguments)
+        {
+            output.put(encode_wasm_type(arg.type));
+        }
+
+        if (function.return_type != wasm_type::none)
+        {
+            output.put(1);
+            output.put(encode_wasm_type(function.return_type));
+        }
         else
-            b |= 0x80; /* set high-order bit of byte */
-
-        out.put(b);
+        {
+            output.put(0);
+        }
     }
-}
 
-int64_t normalize_i32_immediate(int64_t value)
-{
-    // WASM i32.const uses signed LEB128, but the payload represents 32-bit bits.
-    // Normalize through uint32_t first so values like 4294967295 become -1.
-    return static_cast<int32_t>(static_cast<uint32_t>(value));
-}
-
-void encode_i32_const_immediate(std::ostream& out, int64_t value)
-{
-    encode_leb128_signed(out, normalize_i32_immediate(value));
-}
-
-void encode_string(std::ostream& out, const std::string s)
-{
-    encode_leb128(out, s.size());
-    out << s;
-}
-
-char encode_wasm_type(wasm_type type)
-{
-    switch (type)
+    bool is_wasm_type_signed(wasm_type typ)
     {
-        // the small integer types only exist for memory access; as values
-        // they are represented as i32
-        case wasm_type::i8:
-        case wasm_type::u8:
-        case wasm_type::i16:
-        case wasm_type::u16:
-        case wasm_type::i32:
-        case wasm_type::u32:
-            return '\x7F';
-        case wasm_type::i64:
-        case wasm_type::u64:
-            return '\x7E';
-        case wasm_type::f32:
-            return '\x7D';
-        case wasm_type::f64:
-            return '\x7C';
-        default:
-            CAPY_FAIL("Trying to encode an unknown WASM type");
+        switch (typ)
+        {
+            case wasm_type::none:
+                return false;
+            case wasm_type::i8:
+            case wasm_type::i16:
+            case wasm_type::i32:
+            case wasm_type::i64:
+            case wasm_type::f32:
+            case wasm_type::f64:
+                return true;
+            case wasm_type::u8:
+            case wasm_type::u16:
+            case wasm_type::u32:
+            case wasm_type::u64:
+                return false;
+        }
     }
-}
 
-char encode_extern_index(wasm_extern_index index)
-{
-    switch (index)
+    enum wasm_size_e
     {
-        case wasm_extern_index::funcidx:
-            return EXTERNAL_TYPE_FUNC;
-        case wasm_extern_index::tableidx:
-            return EXTERNAL_TYPE_TABLE;
-        case wasm_extern_index::memidx:
-            return EXTERNAL_TYPE_MEM;
-        case wasm_extern_index::globalidx:
-            return EXTERNAL_TYPE_GLOBAL;
-        case wasm_extern_index::tagidx:
-            return EXTERNAL_TYPE_TAG;
-    }
-}
+        Size8,
+        Size16,
+        Size32,
+        Size64
+    };
 
-void encode_func_type(std::ostream& output, const wasm_function& function)
-{
-    output.put(COMP_TYPE_FUNC);
-    encode_leb128(output, function.arguments.size());
-    for (const auto& arg : function.arguments)
+    wasm_size_e wasm_type_size(wasm_type typ)
     {
-        output.put(encode_wasm_type(arg.type));
+        switch (typ)
+        {
+            case wasm_type::none:
+            case wasm_type::u32:
+            case wasm_type::i32:
+            case wasm_type::f32:
+                return wasm_size_e::Size32;
+            case wasm_type::u64:
+            case wasm_type::i64:
+            case wasm_type::f64:
+                return wasm_size_e::Size64;
+            case wasm_type::i8:
+            case wasm_type::u8:
+                return wasm_size_e::Size8;
+            case wasm_type::i16:
+            case wasm_type::u16:
+                return wasm_size_e::Size16;
+        }
     }
 
-    if (function.return_type != wasm_type::none)
+    /// @brief True for value types that are represented as 64-bit integers in WASM
+    bool is_wasm_type_64bit(wasm_type typ)
     {
-        output.put(1);
-        output.put(encode_wasm_type(function.return_type));
+        return (typ == wasm_type::i64) || (typ == wasm_type::u64);
     }
-    else
+
+    /// @brief Selects the i32 or the i64 variant of an instruction based on the value type
+    char select_inst(wasm_type typ, char inst_i32, char inst_i64)
     {
-        output.put(0);
+        return is_wasm_type_64bit(typ) ? inst_i64 : inst_i32;
     }
-}
 
-bool is_wasm_type_signed(wasm_type typ)
-{
-    switch (typ)
+    /// @brief Selects the signed/unsigned and i32/i64 variant of an instruction
+    char select_inst(wasm_type typ, char i32_s, char i32_u, char i64_s, char i64_u)
     {
-        case wasm_type::none:
-            return false;
-        case wasm_type::i8:
-        case wasm_type::i16:
-        case wasm_type::i32:
-        case wasm_type::i64:
-        case wasm_type::f32:
-        case wasm_type::f64:
-            return true;
-        case wasm_type::u8:
-        case wasm_type::u16:
-        case wasm_type::u32:
-        case wasm_type::u64:
-            return false;
+        const bool is_signed = is_wasm_type_signed(typ);
+        if (is_wasm_type_64bit(typ))
+        {
+            return is_signed ? i64_s : i64_u;
+        }
+        return is_signed ? i32_s : i32_u;
     }
-}
 
-enum wasm_size_e
-{
-    Size8,
-    Size16,
-    Size32,
-    Size64
-};
-
-wasm_size_e wasm_type_size(wasm_type typ)
-{
-    switch (typ)
+    uint32_t resolve_block_label(const wasm_control_block* block, const wasm_branch_label& label, uint32_t nesting_level)
     {
-        case wasm_type::none:
-        case wasm_type::u32:
-        case wasm_type::i32:
-        case wasm_type::f32:
-            return wasm_size_e::Size32;
-        case wasm_type::u64:
-        case wasm_type::i64:
-        case wasm_type::f64:
-            return wasm_size_e::Size64;
-        case wasm_type::i8:
-        case wasm_type::u8:
-            return wasm_size_e::Size8;
-        case wasm_type::i16:
-        case wasm_type::u16:
-            return wasm_size_e::Size16;
+        if (block == nullptr)
+        {
+            return std::numeric_limits<uint32_t>::max();
+        }
+
+        if (label == block->label())
+        {
+            return nesting_level;
+        }
+        return resolve_block_label(block->enclosing_block, label, nesting_level + 1);
     }
-}
-
-/// @brief True for value types that are represented as 64-bit integers in WASM
-bool is_wasm_type_64bit(wasm_type typ)
-{
-    return (typ == wasm_type::i64) || (typ == wasm_type::u64);
-}
-
-/// @brief Selects the i32 or the i64 variant of an instruction based on the value type
-char select_inst(wasm_type typ, char inst_i32, char inst_i64)
-{
-    return is_wasm_type_64bit(typ) ? inst_i64 : inst_i32;
-}
-
-/// @brief Selects the signed/unsigned and i32/i64 variant of an instruction
-char select_inst(wasm_type typ, char i32_s, char i32_u, char i64_s, char i64_u)
-{
-    const bool is_signed = is_wasm_type_signed(typ);
-    if (is_wasm_type_64bit(typ))
-    {
-        return is_signed ? i64_s : i64_u;
-    }
-    return is_signed ? i32_s : i32_u;
-}
-
-uint32_t resolve_block_label(const wasm_control_block* block, const wasm_branch_label& label, uint32_t nesting_level)
-{
-    if (block == nullptr)
-    {
-        return std::numeric_limits<uint32_t>::max();
-    }
-
-    if (label == block->label())
-    {
-        return nesting_level;
-    }
-    return resolve_block_label(block->enclosing_block, label, nesting_level + 1);
 }
 
 wasm_generator::wasm_generator()
