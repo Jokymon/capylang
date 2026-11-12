@@ -14,6 +14,7 @@ add_executable(${PROJECT_NAME}
     src/lexer.cpp
     src/lir.cpp
     src/lir_based_emitter.cpp
+    src/lir_based_emitter_v2.cpp
     src/lir_dump.cpp
     src/lir_generator.cpp
     src/lir_lowering.cpp
@@ -24,6 +25,7 @@ add_executable(${PROJECT_NAME}
     src/symbol.cpp
     src/type_inference.cpp
     src/wasm_generator.cpp
+    src/wasm_builder_v2.cpp
     src/wat_generator.cpp
     src/wasm_dump.cpp
     src/wasm_ir.cpp
