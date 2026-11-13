@@ -963,12 +963,7 @@ void lir_based_emitter::emit(const lir::number& number)
 wasm_type lir_based_emitter::value_type_of(type_id type) const
 {
     type_id resolved = parse_context.resolved_type(type);
-    if (!parse_context.is_resolved(resolved))
-    {
-        // Unsuffixed literals without any typed counterpart (e.g. '5 + 3')
-        // aren't resolved by the type inference; they default to i32.
-        return wasm_type::i32;
-    }
+    CAPY_ASSERT(parse_context.is_resolved(resolved), "Emitter expects a resolved type");
     return lowering->lower_return_type(resolved);
 }
 

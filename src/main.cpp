@@ -141,6 +141,13 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    validate_resolved_types(diagnostics, parse_context, root_node);
+    if (diagnostics.has_errors())
+    {
+        print_diagnostics(std::cerr, diagnostics);
+        return 1;
+    }
+
     if (args.dump_ast)
     {
         ast::dump(std::cout, parse_context, root_node);
