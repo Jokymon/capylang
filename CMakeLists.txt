@@ -28,6 +28,7 @@ add_executable(${PROJECT_NAME}
     src/wasm_generator_v2.cpp
     src/wasm_builder_v2.cpp
     src/wat_generator.cpp
+    src/wat_generator_v2.cpp
     src/wasm_dump.cpp
     src/wasm_ir.cpp
     src/wasm_transformer.cpp
