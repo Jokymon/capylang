@@ -4,11 +4,11 @@
 #include "lir.hpp"
 #include "wasm.hpp"
 
-class lir_based_emitter_v2
+class lir_based_emitter
 {
 public:
-    explicit lir_based_emitter_v2(compile_options options, context& ctx);
-    ~lir_based_emitter_v2();
+    explicit lir_based_emitter(compile_options options, context& ctx);
+    ~lir_based_emitter();
 
     wasm::module generate(lir::module& module_def);
 

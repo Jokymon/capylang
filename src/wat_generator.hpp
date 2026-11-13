@@ -2,7 +2,7 @@
 #include "wasm.hpp"
 #include <ostream>
 
-class wat_generator_v2
+class wat_generator
 {
 public:
     void generate(const wasm::module& module, std::ostream& output);

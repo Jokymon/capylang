@@ -270,7 +270,7 @@ namespace
     }
 }
 
-wasm_generator_v2::wasm_generator_v2()
+wasm_generator::wasm_generator()
 : type_entries()
 , function_indices()
 , global_indices()
@@ -278,7 +278,7 @@ wasm_generator_v2::wasm_generator_v2()
 {
 }
 
-void wasm_generator_v2::generate(const wasm::module& module, std::ostream& output)
+void wasm_generator::generate(const wasm::module& module, std::ostream& output)
 {
     type_entries.clear();
     control_labels.clear();
@@ -298,7 +298,7 @@ void wasm_generator_v2::generate(const wasm::module& module, std::ostream& outpu
     generate_names(module, output);
 }
 
-void wasm_generator_v2::generate_types(const wasm::module& module, std::ostream& output)
+void wasm_generator::generate_types(const wasm::module& module, std::ostream& output)
 {
     for (const auto& function : module.functions)
     {
@@ -318,7 +318,7 @@ void wasm_generator_v2::generate_types(const wasm::module& module, std::ostream&
     write_section(output, SECTION_TYPE, content);
 }
 
-void wasm_generator_v2::generate_imports(const wasm::module& module, std::ostream& output)
+void wasm_generator::generate_imports(const wasm::module& module, std::ostream& output)
 {
     size_t import_count = std::count_if(
         module.memories.begin(), module.memories.end(), [](const auto& memory)
@@ -355,7 +355,7 @@ void wasm_generator_v2::generate_imports(const wasm::module& module, std::ostrea
     write_section(output, SECTION_IMPORT, content);
 }
 
-void wasm_generator_v2::generate_functions(const wasm::module& module, std::ostream& output)
+void wasm_generator::generate_functions(const wasm::module& module, std::ostream& output)
 {
     size_t internal_count = std::count_if(
         module.functions.begin(), module.functions.end(), [](const auto& function)
@@ -373,7 +373,7 @@ void wasm_generator_v2::generate_functions(const wasm::module& module, std::ostr
     write_section(output, SECTION_FUNCTION, content);
 }
 
-void wasm_generator_v2::generate_memories(const wasm::module& module, std::ostream& output)
+void wasm_generator::generate_memories(const wasm::module& module, std::ostream& output)
 {
     size_t internal_count = std::count_if(
         module.memories.begin(), module.memories.end(), [](const auto& memory)
@@ -391,7 +391,7 @@ void wasm_generator_v2::generate_memories(const wasm::module& module, std::ostre
     write_section(output, SECTION_MEMORY, content);
 }
 
-void wasm_generator_v2::generate_globals(const wasm::module& module, std::ostream& output)
+void wasm_generator::generate_globals(const wasm::module& module, std::ostream& output)
 {
     std::ostringstream content(std::ios::binary);
     encode_leb128(content, module.globals.size());
@@ -405,7 +405,7 @@ void wasm_generator_v2::generate_globals(const wasm::module& module, std::ostrea
     write_section(output, SECTION_GLOBAL, content);
 }
 
-void wasm_generator_v2::generate_exports(const wasm::module& module, std::ostream& output)
+void wasm_generator::generate_exports(const wasm::module& module, std::ostream& output)
 {
     std::ostringstream content(std::ios::binary);
     encode_leb128(content, module.exports.size());
@@ -418,7 +418,7 @@ void wasm_generator_v2::generate_exports(const wasm::module& module, std::ostrea
     write_section(output, SECTION_EXPORT, content);
 }
 
-void wasm_generator_v2::generate_code(const wasm::module& module, std::ostream& output)
+void wasm_generator::generate_code(const wasm::module& module, std::ostream& output)
 {
     size_t internal_count = std::count_if(
         module.functions.begin(), module.functions.end(), [](const auto& function)
@@ -474,7 +474,7 @@ void wasm_generator_v2::generate_code(const wasm::module& module, std::ostream& 
     write_section(output, SECTION_CODE, content);
 }
 
-void wasm_generator_v2::generate_data(const wasm::module& module, std::ostream& output)
+void wasm_generator::generate_data(const wasm::module& module, std::ostream& output)
 {
     std::ostringstream content(std::ios::binary);
     encode_leb128(content, module.data_sections.size());
@@ -490,7 +490,7 @@ void wasm_generator_v2::generate_data(const wasm::module& module, std::ostream& 
     write_section(output, SECTION_DATA, content);
 }
 
-void wasm_generator_v2::generate_names(const wasm::module& module, std::ostream& output)
+void wasm_generator::generate_names(const wasm::module& module, std::ostream& output)
 {
     std::ostringstream content(std::ios::binary);
     encode_string(content, "name");
@@ -562,7 +562,7 @@ void wasm_generator_v2::generate_names(const wasm::module& module, std::ostream&
     write_section(output, SECTION_CUSTOM, content);
 }
 
-void wasm_generator_v2::generate_expr(
+void wasm_generator::generate_expr(
     const wasm::module& module,
     const wasm::function* function,
     const wasm::instruction_list& expr,
@@ -838,7 +838,7 @@ void wasm_generator_v2::generate_expr(
     }
 }
 
-void wasm_generator_v2::generate_block(
+void wasm_generator::generate_block(
     const wasm::module& module,
     const wasm::function* function,
     const wasm::block& block,
@@ -855,7 +855,7 @@ void wasm_generator_v2::generate_block(
     output.put(INST_TERMINATOR);
 }
 
-size_t wasm_generator_v2::intern_func_type(const wasm::function& function)
+size_t wasm_generator::intern_func_type(const wasm::function& function)
 {
     std::ostringstream entry(std::ios::binary);
     encode_func_type(entry, function);
@@ -868,7 +868,7 @@ size_t wasm_generator_v2::intern_func_type(const wasm::function& function)
     return type_entries.size() - 1;
 }
 
-void wasm_generator_v2::index_module(const wasm::module& module)
+void wasm_generator::index_module(const wasm::module& module)
 {
     function_indices.clear();
     global_indices.clear();
@@ -891,7 +891,7 @@ void wasm_generator_v2::index_module(const wasm::module& module)
     }
 }
 
-size_t wasm_generator_v2::local_index(const wasm::function& function, const std::string& name) const
+size_t wasm_generator::local_index(const wasm::function& function, const std::string& name) const
 {
     for (size_t index = 0; index < function.arguments.size(); index++)
     {
@@ -908,7 +908,7 @@ size_t wasm_generator_v2::local_index(const wasm::function& function, const std:
     return 0;
 }
 
-uint32_t wasm_generator_v2::resolve_block_label(const wasm::branch_label& label) const
+uint32_t wasm_generator::resolve_block_label(const wasm::branch_label& label) const
 {
     for (size_t depth = 0; depth < control_labels.size(); depth++)
     {

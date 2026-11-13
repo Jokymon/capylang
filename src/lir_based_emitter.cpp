@@ -1,7 +1,7 @@
 #include "lir_based_emitter.hpp"
 
 #include "tools.hpp"
-#include "wasm_builder_v2.hpp"
+#include "wasm_builder.hpp"
 
 #include <algorithm>
 #include <variant>
@@ -247,22 +247,22 @@ namespace
                         overloaded{
                             [&](const sl_argument& arg)
                             {
-                                wasm_builder_v2::local_get(instructions, arg.name);
+                                wasm_builder::local_get(instructions, arg.name);
                                 deref_type = ctx.derefed_type(arg.type).value();
                             },
                             [&](const sl_local_var& local)
                             {
-                                wasm_builder_v2::local_get(instructions, local.name);
+                                wasm_builder::local_get(instructions, local.name);
                                 deref_type = ctx.derefed_type(local.type).value();
                             },
                             [&](const sl_global_var& global)
                             {
-                                wasm_builder_v2::global_get(instructions, global.name);
+                                wasm_builder::global_get(instructions, global.name);
                                 deref_type = ctx.derefed_type(global.type).value();
                             },
                             [&](const sl_ptr& ptr)
                             {
-                                wasm_builder_v2::load(instructions, wasm::type_t::I32, ptr.offset);
+                                wasm_builder::load(instructions, wasm::type_t::I32, ptr.offset);
                                 deref_type = ctx.derefed_type(ptr.type).value();
                             }
                         },
@@ -335,11 +335,11 @@ namespace
                         auto* record = get_type_from_node<record_type>(type_spec);
                         for (size_t index = 0; index < record->fields.size(); index++)
                         {
-                            wasm_builder_v2::local_get(instructions, arg.name + "_" + std::to_string(index));
+                            wasm_builder::local_get(instructions, arg.name + "_" + std::to_string(index));
                         }
                     }
                     else
-                        wasm_builder_v2::local_get(instructions, arg.name);
+                        wasm_builder::local_get(instructions, arg.name);
                 },
                 [&](const sl_local_var& local)
                 {
@@ -349,11 +349,11 @@ namespace
                         auto* record = get_type_from_node<record_type>(type_spec);
                         for (size_t index = 0; index < record->fields.size(); index++)
                         {
-                            wasm_builder_v2::local_get(instructions, local.name + "_" + std::to_string(index));
+                            wasm_builder::local_get(instructions, local.name + "_" + std::to_string(index));
                         }
                     }
                     else
-                        wasm_builder_v2::local_get(instructions, local.name);
+                        wasm_builder::local_get(instructions, local.name);
                 },
                 [&](const sl_global_var& global)
                 {
@@ -363,15 +363,15 @@ namespace
                         auto* record = get_type_from_node<record_type>(type_spec);
                         for (size_t index = 0; index < record->fields.size(); index++)
                         {
-                            wasm_builder_v2::global_get(instructions, global.name + "_" + std::to_string(index));
+                            wasm_builder::global_get(instructions, global.name + "_" + std::to_string(index));
                         }
                     }
                     else
-                        wasm_builder_v2::global_get(instructions, global.name);
+                        wasm_builder::global_get(instructions, global.name);
                 },
                 [&](const sl_ptr& ptr)
                 {
-                    wasm_builder_v2::load(instructions, lower_memory_type(ctx, ptr.type), ptr.offset);
+                    wasm_builder::load(instructions, lower_memory_type(ctx, ptr.type), ptr.offset);
                 }
             },
             storage
@@ -390,11 +390,11 @@ namespace
                         auto* record = get_type_from_node<record_type>(type_spec);
                         for (size_t index = 0; index < record->fields.size(); index++)
                         {
-                            wasm_builder_v2::local_set(instructions, arg.name + "_" + std::to_string(index));
+                            wasm_builder::local_set(instructions, arg.name + "_" + std::to_string(index));
                         }
                     }
                     else
-                        wasm_builder_v2::local_set(instructions, arg.name);
+                        wasm_builder::local_set(instructions, arg.name);
                 },
                 [&](const sl_local_var& local)
                 {
@@ -404,11 +404,11 @@ namespace
                         auto* record = get_type_from_node<record_type>(type_spec);
                         for (size_t index = 0; index < record->fields.size(); index++)
                         {
-                            wasm_builder_v2::local_set(instructions, local.name + "_" + std::to_string(index));
+                            wasm_builder::local_set(instructions, local.name + "_" + std::to_string(index));
                         }
                     }
                     else
-                        wasm_builder_v2::local_set(instructions, local.name);
+                        wasm_builder::local_set(instructions, local.name);
                 },
                 [&](const sl_global_var& global)
                 {
@@ -418,15 +418,15 @@ namespace
                         auto* record = get_type_from_node<record_type>(type_spec);
                         for (size_t index = 0; index < record->fields.size(); index++)
                         {
-                            wasm_builder_v2::global_set(instructions, global.name + "_" + std::to_string(index));
+                            wasm_builder::global_set(instructions, global.name + "_" + std::to_string(index));
                         }
                     }
                     else
-                        wasm_builder_v2::global_set(instructions, global.name);
+                        wasm_builder::global_set(instructions, global.name);
                 },
                 [&](const sl_ptr& ptr)
                 {
-                    wasm_builder_v2::store(instructions, lower_memory_type(ctx, ptr.type), ptr.offset);
+                    wasm_builder::store(instructions, lower_memory_type(ctx, ptr.type), ptr.offset);
                 }
             },
             storage
@@ -434,7 +434,7 @@ namespace
     }
 }
 
-lir_based_emitter_v2::lir_based_emitter_v2(compile_options options, context& ctx)
+lir_based_emitter::lir_based_emitter(compile_options options, context& ctx)
 : options(options)
 , parse_context(ctx)
 , cur_data(std::make_unique<wasm::data_section>())
@@ -444,9 +444,9 @@ lir_based_emitter_v2::lir_based_emitter_v2(compile_options options, context& ctx
     allocate_data(std::string("\x42\x00\x00\x00\x10\x00\x00\x00\x10\x20\x30\x40Test", 16));
 }
 
-lir_based_emitter_v2::~lir_based_emitter_v2() = default;
+lir_based_emitter::~lir_based_emitter() = default;
 
-wasm::module lir_based_emitter_v2::generate(lir::module& module_def)
+wasm::module lir_based_emitter::generate(lir::module& module_def)
 {
     wasm::module ir_module;
     cur_mod = &ir_module;
@@ -483,21 +483,21 @@ wasm::module lir_based_emitter_v2::generate(lir::module& module_def)
     return ir_module;
 }
 
-void lir_based_emitter_v2::emit(lir::expr& node)
+void lir_based_emitter::emit(lir::expr& node)
 {
     std::visit([this](auto& value)
                { emit(value); },
                node);
 }
 
-void lir_based_emitter_v2::emit(lir::statement& node)
+void lir_based_emitter::emit(lir::statement& node)
 {
     std::visit([this](auto& value)
                { emit(value); },
                node);
 }
 
-void lir_based_emitter_v2::emit(const lir::import_definition& import_def)
+void lir_based_emitter::emit(const lir::import_definition& import_def)
 {
     std::vector<wasm::argument> arguments;
     lower_function_arguments(import_def.function_head, arguments);
@@ -513,7 +513,7 @@ void lir_based_emitter_v2::emit(const lir::import_definition& import_def)
     cur_mod->functions.push_back(std::move(function));
 }
 
-void lir_based_emitter_v2::emit(const lir::global_definition& global_def)
+void lir_based_emitter::emit(const lir::global_definition& global_def)
 {
     const auto& global_symbol = parse_context.symbol_at(global_def.symbol_ref);
     auto access = global_symbol.mutab ? wasm::access_t::Mut : wasm::access_t::Immut;
@@ -527,7 +527,7 @@ void lir_based_emitter_v2::emit(const lir::global_definition& global_def)
     cur_mod->globals.push_back(std::move(global));
 }
 
-void lir_based_emitter_v2::emit(const lir::function_definition& func_def)
+void lir_based_emitter::emit(const lir::function_definition& func_def)
 {
     std::vector<wasm::argument> arguments;
     lower_function_arguments(func_def.head, arguments);
@@ -556,28 +556,28 @@ void lir_based_emitter_v2::emit(const lir::function_definition& func_def)
     cur_mod->functions.push_back(std::move(function));
 }
 
-void lir_based_emitter_v2::emit(const lir::while_statement& while_stmt)
+void lir_based_emitter::emit(const lir::while_statement& while_stmt)
 {
     auto* previous_instructions = cur_instructions;
     auto* previous_loop_exit = cur_loop_exit;
 
-    auto& exit_block = wasm_builder_v2::block(*cur_instructions, wasm::type_t::None, next_label("while_exit"));
-    auto& loop_block = wasm_builder_v2::loop(exit_block.instructions, wasm::type_t::None, next_label("while"));
+    auto& exit_block = wasm_builder::block(*cur_instructions, wasm::type_t::None, next_label("while_exit"));
+    auto& loop_block = wasm_builder::loop(exit_block.instructions, wasm::type_t::None, next_label("while"));
     cur_loop_exit = exit_block.block_label.get();
     cur_instructions = &loop_block.instructions;
 
     emit(*while_stmt.condition);
-    wasm_builder_v2::eqz(*cur_instructions, wasm::type_t::I32);
-    wasm_builder_v2::br_if(*cur_instructions, *exit_block.block_label);
+    wasm_builder::eqz(*cur_instructions, wasm::type_t::I32);
+    wasm_builder::br_if(*cur_instructions, *exit_block.block_label);
     for (const auto& statement : while_stmt.while_code)
         emit(*statement);
-    wasm_builder_v2::br(*cur_instructions, *loop_block.block_label);
+    wasm_builder::br(*cur_instructions, *loop_block.block_label);
 
     cur_instructions = previous_instructions;
     cur_loop_exit = previous_loop_exit;
 }
 
-void lir_based_emitter_v2::emit(const lir::store_statement& store)
+void lir_based_emitter::emit(const lir::store_statement& store)
 {
     const auto& target = parse_context.symbol_at(store.target.base.symbol_ref);
     storage_loc storage = transform_symbol(target);
@@ -590,55 +590,55 @@ void lir_based_emitter_v2::emit(const lir::store_statement& store)
     transform_store(parse_context, storage, *cur_instructions);
 }
 
-void lir_based_emitter_v2::emit(const lir::store_string_statement& store)
+void lir_based_emitter::emit(const lir::store_string_statement& store)
 {
     const auto& target = parse_context.symbol_at(store.target.base.symbol_ref);
     uint32_t ptr = parse_context.string_literals[store.string_table_index].start_address;
-    wasm_builder_v2::const_val(*cur_instructions, wasm::type_t::I32, ptr);
-    wasm_builder_v2::const_val(*cur_instructions, wasm::type_t::I32, store.string_size);
+    wasm_builder::const_val(*cur_instructions, wasm::type_t::I32, ptr);
+    wasm_builder::const_val(*cur_instructions, wasm::type_t::I32, store.string_size);
 
     if (target.kind == symbol_kind::global_var)
     {
-        wasm_builder_v2::global_set(*cur_instructions, target.name + "_1");
-        wasm_builder_v2::global_set(*cur_instructions, target.name + "_0");
+        wasm_builder::global_set(*cur_instructions, target.name + "_1");
+        wasm_builder::global_set(*cur_instructions, target.name + "_0");
     }
     else
     {
         CAPY_ASSERT(target.kind == symbol_kind::local_var || target.kind == symbol_kind::argument, "Unexpected string storage target");
-        wasm_builder_v2::local_set(*cur_instructions, target.name + "_1");
-        wasm_builder_v2::local_set(*cur_instructions, target.name + "_0");
+        wasm_builder::local_set(*cur_instructions, target.name + "_1");
+        wasm_builder::local_set(*cur_instructions, target.name + "_0");
     }
 }
 
-void lir_based_emitter_v2::emit(const lir::store_record_statement&)
+void lir_based_emitter::emit(const lir::store_record_statement&)
 {
     CAPY_FAIL("The LIR emitter doesn't expect store record expressions after lowering");
 }
 
-void lir_based_emitter_v2::emit(const lir::expression_statement& stmt)
+void lir_based_emitter::emit(const lir::expression_statement& stmt)
 {
     emit(*stmt.expression);
     if (stmt.is_dropped && !parse_context.is_primitive_type(assigned_node_type(*stmt.expression, parse_context), primitive_type::Void))
     {
-        wasm_builder_v2::drop(*cur_instructions);
+        wasm_builder::drop(*cur_instructions);
     }
 }
 
-void lir_based_emitter_v2::emit(const lir::break_statement&)
+void lir_based_emitter::emit(const lir::break_statement&)
 {
     CAPY_ASSERT(cur_loop_exit != nullptr, "Trying to break from outside a loop");
-    wasm_builder_v2::br(*cur_instructions, *cur_loop_exit);
+    wasm_builder::br(*cur_instructions, *cur_loop_exit);
 }
 
-void lir_based_emitter_v2::emit(const lir::return_statement& stmt)
+void lir_based_emitter::emit(const lir::return_statement& stmt)
 {
     if (stmt.expression)
         emit(*stmt.expression);
     if (stmt.is_explicit)
-        wasm_builder_v2::ret(*cur_instructions);
+        wasm_builder::ret(*cur_instructions);
 }
 
-void lir_based_emitter_v2::emit(const lir::binary_expression& expr)
+void lir_based_emitter::emit(const lir::binary_expression& expr)
 {
     emit(*expr.left);
     emit(*expr.right);
@@ -648,62 +648,62 @@ void lir_based_emitter_v2::emit(const lir::binary_expression& expr)
     switch (expr.op)
     {
         case lir::binary_op_t::Minus:
-            wasm_builder_v2::sub(*cur_instructions, operand_type);
+            wasm_builder::sub(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::Plus:
-            wasm_builder_v2::add(*cur_instructions, operand_type);
+            wasm_builder::add(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::Multiply:
-            wasm_builder_v2::mul(*cur_instructions, operand_type);
+            wasm_builder::mul(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::Division:
-            wasm_builder_v2::div(*cur_instructions, operand_type);
+            wasm_builder::div(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::Modulus:
-            wasm_builder_v2::mod(*cur_instructions, operand_type);
+            wasm_builder::mod(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::AndOp:
-            wasm_builder_v2::and_instr(*cur_instructions, operand_type);
+            wasm_builder::and_instr(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::OrOp:
-            wasm_builder_v2::or_instr(*cur_instructions, operand_type);
+            wasm_builder::or_instr(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::Shl:
-            wasm_builder_v2::shl(*cur_instructions, operand_type);
+            wasm_builder::shl(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::Shr:
-            wasm_builder_v2::shr(*cur_instructions, operand_type);
+            wasm_builder::shr(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::Equals:
-            wasm_builder_v2::eq(*cur_instructions, operand_type);
+            wasm_builder::eq(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::NotEquals:
-            wasm_builder_v2::ne(*cur_instructions, operand_type);
+            wasm_builder::ne(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::LessThan:
-            wasm_builder_v2::lt(*cur_instructions, operand_type);
+            wasm_builder::lt(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::LessThanEqual:
-            wasm_builder_v2::lte(*cur_instructions, operand_type);
+            wasm_builder::lte(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::GreaterThan:
-            wasm_builder_v2::gt(*cur_instructions, operand_type);
+            wasm_builder::gt(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::GreaterThanEqual:
-            wasm_builder_v2::gte(*cur_instructions, operand_type);
+            wasm_builder::gte(*cur_instructions, operand_type);
             break;
     }
 }
 
-void lir_based_emitter_v2::emit(const lir::unary_expression& expr)
+void lir_based_emitter::emit(const lir::unary_expression& expr)
 {
     wasm::type_t operand_type = value_type_of(assigned_node_type(*expr.expr, parse_context));
-    wasm_builder_v2::const_val(*cur_instructions, operand_type, 0);
+    wasm_builder::const_val(*cur_instructions, operand_type, 0);
     emit(*expr.expr);
-    wasm_builder_v2::sub(*cur_instructions, operand_type);
+    wasm_builder::sub(*cur_instructions, operand_type);
 }
 
-void lir_based_emitter_v2::emit(const lir::cast_expression& expr)
+void lir_based_emitter::emit(const lir::cast_expression& expr)
 {
     emit(*expr.expression);
 
@@ -720,23 +720,23 @@ void lir_based_emitter_v2::emit(const lir::cast_expression& expr)
                                 source_type == wasm::type_t::I16 ||
                                 source_type == wasm::type_t::I32;
         if (source_is_signed)
-            wasm_builder_v2::i64_extend_i32_s(*cur_instructions);
+            wasm_builder::i64_extend_i32_s(*cur_instructions);
         else
-            wasm_builder_v2::i64_extend_i32_u(*cur_instructions);
+            wasm_builder::i64_extend_i32_u(*cur_instructions);
     }
     else if (is_64bit(source_type) && !is_64bit(target_type) && target_type != wasm::type_t::None)
     {
-        wasm_builder_v2::i32_wrap_i64(*cur_instructions);
+        wasm_builder::i32_wrap_i64(*cur_instructions);
     }
 
     if (parse_context.is_primitive_type(expr.cast_type, primitive_type::Void) &&
         !parse_context.is_primitive_type(assigned_node_type(*expr.expression, parse_context), primitive_type::Void))
     {
-        wasm_builder_v2::drop(*cur_instructions);
+        wasm_builder::drop(*cur_instructions);
     }
 }
 
-void lir_based_emitter_v2::emit(const lir::function_call& func_call)
+void lir_based_emitter::emit(const lir::function_call& func_call)
 {
     for (const auto& argument : func_call.arguments)
         emit(*argument);
@@ -744,18 +744,18 @@ void lir_based_emitter_v2::emit(const lir::function_call& func_call)
     const auto& function_symbol = parse_context.symbol_at(func_call.symbol_ref);
     if (!function_symbol.is_intrinsic)
     {
-        wasm_builder_v2::call(*cur_instructions, func_call.function_name);
+        wasm_builder::call(*cur_instructions, func_call.function_name);
         return;
     }
 
     if (function_symbol.name == "memory_size")
-        wasm_builder_v2::memory_size(*cur_instructions);
+        wasm_builder::memory_size(*cur_instructions);
     else if (function_symbol.name == "memory_grow")
-        wasm_builder_v2::memory_grow(*cur_instructions);
+        wasm_builder::memory_grow(*cur_instructions);
     else if (function_symbol.name == "memory_fill")
-        wasm_builder_v2::memory_fill(*cur_instructions);
+        wasm_builder::memory_fill(*cur_instructions);
     else if (function_symbol.name == "unreachable")
-        wasm_builder_v2::unreachable(*cur_instructions);
+        wasm_builder::unreachable(*cur_instructions);
     else
     {
         CAPY_FAIL(
@@ -766,11 +766,11 @@ void lir_based_emitter_v2::emit(const lir::function_call& func_call)
     }
 }
 
-void lir_based_emitter_v2::emit(const lir::if_expression& if_expr)
+void lir_based_emitter::emit(const lir::if_expression& if_expr)
 {
     auto* previous_instructions = cur_instructions;
     emit(*if_expr.condition);
-    auto& if_block = wasm_builder_v2::if_block(*cur_instructions, lower_type(if_expr.assigned_type), next_label("if"));
+    auto& if_block = wasm_builder::if_block(*cur_instructions, lower_type(if_expr.assigned_type), next_label("if"));
 
     cur_instructions = &if_block.then_block;
     for (const auto& statement : if_expr.then_code)
@@ -783,7 +783,7 @@ void lir_based_emitter_v2::emit(const lir::if_expression& if_expr)
     cur_instructions = previous_instructions;
 }
 
-void lir_based_emitter_v2::emit(const lir::load_expression& load)
+void lir_based_emitter::emit(const lir::load_expression& load)
 {
     const auto& source = parse_context.symbol_at(load.source.base.symbol_ref);
     storage_loc storage = transform_symbol(source);
@@ -794,41 +794,41 @@ void lir_based_emitter_v2::emit(const lir::load_expression& load)
     transform_load(parse_context, storage, *cur_instructions);
 }
 
-void lir_based_emitter_v2::emit(const lir::allocate_record_expression& expr)
+void lir_based_emitter::emit(const lir::allocate_record_expression& expr)
 {
     auto record_type_id = parse_context.record_behind(expr.type);
     CAPY_ASSERT(record_type_id.has_value(), "Expected a record or pointer-to-record type");
 
-    wasm_builder_v2::const_val(*cur_instructions, wasm::type_t::I32, 0);
-    wasm_builder_v2::const_val(*cur_instructions, wasm::type_t::I32, 0);
-    wasm_builder_v2::const_val(*cur_instructions, wasm::type_t::I32, 4);
-    wasm_builder_v2::const_val(*cur_instructions, wasm::type_t::I32, type_size(parse_context, record_type_id.value()));
-    wasm_builder_v2::call(*cur_instructions, "cabi_realloc");
+    wasm_builder::const_val(*cur_instructions, wasm::type_t::I32, 0);
+    wasm_builder::const_val(*cur_instructions, wasm::type_t::I32, 0);
+    wasm_builder::const_val(*cur_instructions, wasm::type_t::I32, 4);
+    wasm_builder::const_val(*cur_instructions, wasm::type_t::I32, type_size(parse_context, record_type_id.value()));
+    wasm_builder::call(*cur_instructions, "cabi_realloc");
 }
 
-void lir_based_emitter_v2::emit(const lir::string_literal& literal)
+void lir_based_emitter::emit(const lir::string_literal& literal)
 {
     uint32_t ptr = parse_context.string_literals[literal.table_index].start_address;
-    wasm_builder_v2::const_val(*cur_instructions, wasm::type_t::I32, ptr);
-    wasm_builder_v2::const_val(*cur_instructions, wasm::type_t::I32, literal.size);
+    wasm_builder::const_val(*cur_instructions, wasm::type_t::I32, ptr);
+    wasm_builder::const_val(*cur_instructions, wasm::type_t::I32, literal.size);
 }
 
-void lir_based_emitter_v2::emit(const lir::bool_literal& literal)
+void lir_based_emitter::emit(const lir::bool_literal& literal)
 {
-    wasm_builder_v2::const_val(*cur_instructions, wasm::type_t::I32, literal.value ? 1 : 0);
+    wasm_builder::const_val(*cur_instructions, wasm::type_t::I32, literal.value ? 1 : 0);
 }
 
-void lir_based_emitter_v2::emit(const lir::char_literal& literal)
+void lir_based_emitter::emit(const lir::char_literal& literal)
 {
-    wasm_builder_v2::const_val(*cur_instructions, wasm::type_t::I32, literal.ch);
+    wasm_builder::const_val(*cur_instructions, wasm::type_t::I32, literal.ch);
 }
 
-void lir_based_emitter_v2::emit(const lir::number& number)
+void lir_based_emitter::emit(const lir::number& number)
 {
-    wasm_builder_v2::const_val(*cur_instructions, value_type_of(number.assigned_type), number.value);
+    wasm_builder::const_val(*cur_instructions, value_type_of(number.assigned_type), number.value);
 }
 
-std::unique_ptr<wasm::memory> lir_based_emitter_v2::create_memory(size_t initial_block_count)
+std::unique_ptr<wasm::memory> lir_based_emitter::create_memory(size_t initial_block_count)
 {
     auto memory = std::make_unique<wasm::memory>();
     memory->initial_block_count = initial_block_count;
@@ -838,7 +838,7 @@ std::unique_ptr<wasm::memory> lir_based_emitter_v2::create_memory(size_t initial
     return memory;
 }
 
-std::unique_ptr<wasm::function> lir_based_emitter_v2::create_function(
+std::unique_ptr<wasm::function> lir_based_emitter::create_function(
     const std::string& name,
     wasm::type_t return_type,
     std::vector<wasm::argument> arguments
@@ -853,7 +853,7 @@ std::unique_ptr<wasm::function> lir_based_emitter_v2::create_function(
     return function;
 }
 
-std::unique_ptr<wasm::global> lir_based_emitter_v2::create_global(
+std::unique_ptr<wasm::global> lir_based_emitter::create_global(
     const std::string& name,
     wasm::type_t type,
     wasm::access_t access
@@ -866,7 +866,7 @@ std::unique_ptr<wasm::global> lir_based_emitter_v2::create_global(
     return global;
 }
 
-void lir_based_emitter_v2::export_as(const std::string& export_name, const wasm::exportable& object)
+void lir_based_emitter::export_as(const std::string& export_name, const wasm::exportable& object)
 {
     auto export_item = std::make_unique<wasm::export_item>();
     export_item->export_name = export_name;
@@ -876,7 +876,7 @@ void lir_based_emitter_v2::export_as(const std::string& export_name, const wasm:
     cur_mod->exports.push_back(std::move(export_item));
 }
 
-void lir_based_emitter_v2::lower_function_arguments(
+void lir_based_emitter::lower_function_arguments(
     const lir::function_head& func_head,
     std::vector<wasm::argument>& arguments
 )
@@ -896,7 +896,7 @@ void lir_based_emitter_v2::lower_function_arguments(
     }
 }
 
-void lir_based_emitter_v2::lower_function_argument(
+void lir_based_emitter::lower_function_argument(
     const type_kind& type,
     const std::string& basename,
     std::vector<wasm::argument>& arguments
@@ -967,7 +967,7 @@ void lir_based_emitter_v2::lower_function_argument(
     );
 }
 
-void lir_based_emitter_v2::lower_local_variable(const symbol& sym, wasm::function& function)
+void lir_based_emitter::lower_local_variable(const symbol& sym, wasm::function& function)
 {
     type_id variable_type = parse_context.resolved_type(sym.symbol_type);
     const auto& type_entry = parse_context.types[to_index(variable_type)];
@@ -975,7 +975,7 @@ void lir_based_emitter_v2::lower_local_variable(const symbol& sym, wasm::functio
     lower_local_type(std::get<type_kind>(type_entry), sym.name, function);
 }
 
-void lir_based_emitter_v2::lower_local_type(
+void lir_based_emitter::lower_local_type(
     const type_kind& type,
     const std::string& basename,
     wasm::function& function
@@ -1048,12 +1048,12 @@ void lir_based_emitter_v2::lower_local_type(
     );
 }
 
-wasm::type_t lir_based_emitter_v2::lower_type(type_id type) const
+wasm::type_t lir_based_emitter::lower_type(type_id type) const
 {
     return lower_wasm_type(parse_context, type);
 }
 
-wasm::type_t lir_based_emitter_v2::value_type_of(type_id type) const
+wasm::type_t lir_based_emitter::value_type_of(type_id type) const
 {
     type_id resolved = parse_context.resolved_type(type);
     if (!parse_context.is_resolved(resolved))
@@ -1061,7 +1061,7 @@ wasm::type_t lir_based_emitter_v2::value_type_of(type_id type) const
     return lower_type(resolved);
 }
 
-uint32_t lir_based_emitter_v2::allocate_data(const std::string& data)
+uint32_t lir_based_emitter::allocate_data(const std::string& data)
 {
     auto allocation_offset = cur_data->offset;
     cur_data->offset += data.size();
@@ -1069,7 +1069,7 @@ uint32_t lir_based_emitter_v2::allocate_data(const std::string& data)
     return static_cast<uint32_t>(allocation_offset);
 }
 
-std::string lir_based_emitter_v2::next_label(const char* prefix)
+std::string lir_based_emitter::next_label(const char* prefix)
 {
     return std::string(prefix) + "_" + std::to_string(label_index++);
 }

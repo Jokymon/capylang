@@ -1,4 +1,4 @@
-#include "wasm_builder_v2.hpp"
+#include "wasm_builder.hpp"
 
 namespace
 {
@@ -32,7 +32,7 @@ namespace
     }
 }
 
-namespace wasm_builder_v2
+namespace wasm_builder
 {
     wasm::block& block(wasm::instruction_list& instructions, wasm::type_t return_type, const std::string& label)
     {

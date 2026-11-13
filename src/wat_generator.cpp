@@ -133,7 +133,7 @@ namespace
     }
 }
 
-void wat_generator_v2::generate(const wasm::module& module, std::ostream& output)
+void wat_generator::generate(const wasm::module& module, std::ostream& output)
 {
     output << "(module\n";
 
@@ -165,7 +165,7 @@ void wat_generator_v2::generate(const wasm::module& module, std::ostream& output
     output << ")\n";
 }
 
-void wat_generator_v2::generate(const wasm::function& function, std::ostream& output, size_t indentation)
+void wat_generator::generate(const wasm::function& function, std::ostream& output, size_t indentation)
 {
     const auto ind = indent(indentation);
     output << ind << "(func";
@@ -198,14 +198,14 @@ void wat_generator_v2::generate(const wasm::function& function, std::ostream& ou
     output << ind << ")\n";
 }
 
-void wat_generator_v2::generate(const wasm::data_section& section, std::ostream& output, size_t indentation)
+void wat_generator::generate(const wasm::data_section& section, std::ostream& output, size_t indentation)
 {
     output << indent(indentation) << "(data (i32.const " << section.init_offset << ") \"";
     generate_escaped_data(section.data_buffer, output);
     output << "\")\n";
 }
 
-void wat_generator_v2::generate(const wasm::memory& memory, std::ostream& output, size_t indentation)
+void wat_generator::generate(const wasm::memory& memory, std::ostream& output, size_t indentation)
 {
     const auto ind = indent(indentation);
     if (is_imported(memory))
@@ -230,7 +230,7 @@ void wat_generator_v2::generate(const wasm::memory& memory, std::ostream& output
     output << "\n";
 }
 
-void wat_generator_v2::generate(const wasm::global& global, std::ostream& output, size_t indentation)
+void wat_generator::generate(const wasm::global& global, std::ostream& output, size_t indentation)
 {
     const auto ind = indent(indentation);
     output << ind << "(global $" << global.name;
@@ -247,7 +247,7 @@ void wat_generator_v2::generate(const wasm::global& global, std::ostream& output
     output << ind << ")\n";
 }
 
-void wat_generator_v2::generate(const wasm::block& block, std::ostream& output, size_t indentation)
+void wat_generator::generate(const wasm::block& block, std::ostream& output, size_t indentation)
 {
     CAPY_ASSERT(block.block_label != nullptr, "Block is missing a branch label");
     const auto ind = indent(indentation);
@@ -263,7 +263,7 @@ void wat_generator_v2::generate(const wasm::block& block, std::ostream& output, 
     output << ind << "end\n";
 }
 
-void wat_generator_v2::generate(const wasm::if_block& block, std::ostream& output, size_t indentation)
+void wat_generator::generate(const wasm::if_block& block, std::ostream& output, size_t indentation)
 {
     CAPY_ASSERT(block.block_label != nullptr, "If block is missing a branch label");
     const auto ind = indent(indentation);
@@ -285,7 +285,7 @@ void wat_generator_v2::generate(const wasm::if_block& block, std::ostream& outpu
     output << ind << "end\n";
 }
 
-void wat_generator_v2::generate(
+void wat_generator::generate(
     const wasm::instruction_list& expr,
     std::ostream& output,
     size_t indentation
@@ -304,7 +304,7 @@ void wat_generator_v2::generate(
     }
 }
 
-void wat_generator_v2::generate(
+void wat_generator::generate(
     const wasm::op_no_arg& instruction,
     std::ostream& output,
     size_t indentation
@@ -350,7 +350,7 @@ void wat_generator_v2::generate(
     output << "\n";
 }
 
-void wat_generator_v2::generate(
+void wat_generator::generate(
     const wasm::op_index& instruction,
     std::ostream& output,
     size_t indentation
@@ -384,7 +384,7 @@ void wat_generator_v2::generate(
     output << instruction.name << "\n";
 }
 
-void wat_generator_v2::generate(
+void wat_generator::generate(
     const wasm::op_type& instruction,
     std::ostream& output,
     size_t indentation
@@ -427,7 +427,7 @@ void wat_generator_v2::generate(
     output << "\n";
 }
 
-void wat_generator_v2::generate(
+void wat_generator::generate(
     const wasm::op_type_sign& instruction,
     std::ostream& output,
     size_t indentation
@@ -464,7 +464,7 @@ void wat_generator_v2::generate(
     output << sign_wasm_type(instruction.value_type) << "\n";
 }
 
-void wat_generator_v2::generate(
+void wat_generator::generate(
     const wasm::op_type_value& instruction,
     std::ostream& output,
     size_t indentation
@@ -475,7 +475,7 @@ void wat_generator_v2::generate(
            << ".const " << instruction.value << "\n";
 }
 
-void wat_generator_v2::generate(
+void wat_generator::generate(
     const wasm::op_align_offset& instruction,
     std::ostream& output,
     size_t indentation
@@ -505,7 +505,7 @@ void wat_generator_v2::generate(
     output << " align=" << (uint64_t{1} << instruction.alignment) << "\n";
 }
 
-void wat_generator_v2::generate(
+void wat_generator::generate(
     const wasm::op_label& instruction,
     std::ostream& output,
     size_t indentation
@@ -523,7 +523,7 @@ void wat_generator_v2::generate(
     output << instruction.label.name << "\n";
 }
 
-void wat_generator_v2::generate_export(
+void wat_generator::generate_export(
     const wasm::export_item& export_item,
     std::ostream& output,
     size_t indentation

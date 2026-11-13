@@ -5,10 +5,10 @@
 #include <string>
 #include <vector>
 
-class wasm_generator_v2
+class wasm_generator
 {
 public:
-    wasm_generator_v2();
+    wasm_generator();
     void generate(const wasm::module& module, std::ostream& output);
 
 private:

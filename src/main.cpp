@@ -161,12 +161,12 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    lir_based_emitter_v2 l_emitter{options, parse_context};
+    lir_based_emitter l_emitter{options, parse_context};
     auto mod = l_emitter.generate(l_mod);
 
     if (args.output_path.ends_with(".wasm"))
     {
-        wasm_generator_v2 generator;
+        wasm_generator generator;
 
         std::ofstream outfile(args.output_path, std::ios::out | std::ios::binary);
         generator.generate(mod, outfile);
@@ -174,7 +174,7 @@ int main(int argc, char* argv[])
     }
     else
     {
-        wat_generator_v2 generator;
+        wat_generator generator;
 
         std::ofstream outfile(args.output_path);
         generator.generate(mod, outfile);

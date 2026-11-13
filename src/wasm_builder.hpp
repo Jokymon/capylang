@@ -2,7 +2,7 @@
 
 #include "wasm.hpp"
 
-namespace wasm_builder_v2
+namespace wasm_builder
 {
     wasm::block& block(wasm::instruction_list& instructions, wasm::type_t return_type, const std::string& label);
     wasm::block& loop(wasm::instruction_list& instructions, wasm::type_t return_type, const std::string& label);
