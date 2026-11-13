@@ -18,7 +18,6 @@ add_executable(${PROJECT_NAME}
     src/lir_generator.cpp
     src/lir_lowering.cpp
     src/lir_visitor.cpp
-    src/lower_cabi.cpp
     src/parser.cpp
     src/semantics.cpp
     src/symbol.cpp
@@ -27,7 +26,6 @@ add_executable(${PROJECT_NAME}
     src/wat_generator.cpp
     src/wasm_builder.cpp
     src/wasm_dump.cpp
-    src/wasm_ir.cpp
     src/wasm_transformer.cpp
     src/wasm_visitor.cpp
 )
