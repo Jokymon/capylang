@@ -1,519 +1,470 @@
 #include "lir_based_emitter.hpp"
-#include "lower_cabi.hpp"
-#include "symbol.hpp"
+
 #include "tools.hpp"
-#include <ranges>
+#include "wasm_builder_v2.hpp"
+
+#include <algorithm>
 #include <variant>
 
-size_t lir_type_size(const context& ctx, type_id idx)
+namespace
 {
-    const auto& type_entry = ctx.types[to_index(idx)];
+    size_t type_size(const context& ctx, type_id type)
+    {
+        const auto& type_entry = ctx.types[to_index(type)];
 
-    return std::visit(
-        [&](const auto& t) -> size_t
-        {
-            using T = std::decay_t<decltype(t)>;
-
-            if constexpr (std::is_same_v<T, type_kind>)
+        return std::visit(
+            [&](const auto& entry) -> size_t
             {
-                auto type_spec = t;
-
-                return std::visit([&](const auto& k) -> size_t
-                                  {
-                    using K = std::decay_t<decltype(k)>;
-
-                    if constexpr (std::is_same_v<K, primitive_type>) {
-                        switch (k) {
-                            case primitive_type::Void:
-                                return 0;
-                            case primitive_type::U8:
-                            case primitive_type::S8:
-                                return 1;
-                            case primitive_type::U16:
-                            case primitive_type::S16:
-                                return 2;
-                            case primitive_type::U32:
-                            case primitive_type::S32:
-                            case primitive_type::Char:
-                            case primitive_type::Boolean:
-                                return 4;
-                            case primitive_type::U64:
-                            case primitive_type::S64:
-                                return 8;
-                        }
-                        CAPY_FAIL("Unknown primitive type in lir_type_size");
-                        return 0;
-                    } else if constexpr (std::is_same_v<K, pointer_type>) {
-                        return 4;
-                    } else if constexpr (std::is_same_v<K, record_type>) {
-                        size_t size = 0;
-                        for (const auto& field : k.fields) {
-                            size += lir_type_size(ctx, field.second);
-                        }
-                        return size;
-                    } else {
-                        return 0;
-                    } },
-                                  type_spec);
-            }
-            else if constexpr (std::is_same_v<T, type_var>)
-            {
-                if (t.parent.has_value())
+                using T = std::decay_t<decltype(entry)>;
+                if constexpr (std::is_same_v<T, type_kind>)
                 {
-                    return lir_type_size(ctx, t.parent.value());
+                    return std::visit(
+                        [&](const auto& kind) -> size_t
+                        {
+                            using K = std::decay_t<decltype(kind)>;
+                            if constexpr (std::is_same_v<K, primitive_type>)
+                            {
+                                switch (kind)
+                                {
+                                    case primitive_type::Void:
+                                        return 0;
+                                    case primitive_type::U8:
+                                    case primitive_type::S8:
+                                        return 1;
+                                    case primitive_type::U16:
+                                    case primitive_type::S16:
+                                        return 2;
+                                    case primitive_type::U32:
+                                    case primitive_type::S32:
+                                    case primitive_type::Char:
+                                    case primitive_type::Boolean:
+                                        return 4;
+                                    case primitive_type::U64:
+                                    case primitive_type::S64:
+                                        return 8;
+                                }
+                            }
+                            else if constexpr (std::is_same_v<K, pointer_type>)
+                            {
+                                return 4;
+                            }
+                            else if constexpr (std::is_same_v<K, record_type>)
+                            {
+                                size_t size = 0;
+                                for (const auto& field : kind.fields)
+                                {
+                                    size += type_size(ctx, field.second);
+                                }
+                                return size;
+                            }
+                            return 0;
+                        },
+                        entry
+                    );
                 }
                 else
                 {
-                    CAPY_FAIL("Encountered unresolved type variable in when getting type size");
-                    return 0;
+                    CAPY_ASSERT(entry.parent.has_value(), "Encountered unresolved type variable when getting type size");
+                    return type_size(ctx, entry.parent.value());
                 }
-            }
-        },
-        type_entry
-    );
-}
+            },
+            type_entry
+        );
+    }
 
-type_id lir_assigned_node_type(const lir::expr& node, context& ctx)
-{
-    return std::visit(
-        [&](const auto& n) -> type_id
-        {
-            using T = std::decay_t<decltype(n)>;
-
-            if constexpr (std::is_same_v<T, lir::number>)
-            {
-                return n.assigned_type;
-            }
-            else if constexpr (std::is_same_v<T, lir::char_literal>)
-            {
-                return ctx.intern_primitive(primitive_type::Char);
-            }
-            else if constexpr (std::is_same_v<T, lir::bool_literal>)
-            {
-                return ctx.intern_primitive(primitive_type::Boolean);
-            }
-            else if constexpr (std::is_same_v<T, lir::string_literal>)
-            {
-                return ctx.BUILTIN_STRING;
-            }
-            else if constexpr (std::is_same_v<T, lir::load_expression>)
-            {
-                return n.assigned_type;
-            }
-            else if constexpr (std::is_same_v<T, lir::if_expression>)
-            {
-                return n.assigned_type;
-            }
-            else if constexpr (std::is_same_v<T, lir::function_call>)
-            {
-                const auto& sym = ctx.symbol_at(n.symbol_ref);
-                CAPY_ASSERT(sym.kind == symbol_kind::function, "Compiler Error: LIR function call should resolve to function symbol");
-
-                auto return_type = ctx.function_return_type(sym.signature.function_type);
-                CAPY_ASSERT(return_type.has_value(), "Compiler Error: LIR function call type should have a valid return type");
-                return return_type.value();
-            }
-            else if constexpr (std::is_same_v<T, lir::cast_expression>)
-            {
-                return n.cast_type;
-            }
-            else if constexpr (std::is_same_v<T, lir::unary_expression>)
-            {
-                return n.assigned_type;
-            }
-            else if constexpr (std::is_same_v<T, lir::binary_expression>)
-            {
-                return n.assigned_type;
-            }
-            else
-            {
-                CAPY_FAIL("Compiler error: LIR encountered unhandled type; index=%lu", node.index());
-                return ILLEGAL_TYPE;
-            }
-        },
-        node
-    );
-}
-
-// A storage_loc represents a storge location for one step in the variable plus
-// projections list of a lir_place. It is used in the process of resolving and
-// lowering a lir_place object.
-struct sl_argument;
-struct sl_local_var;
-struct sl_global_var;
-struct sl_ptr;
-using storage_loc = std::variant<sl_argument, sl_local_var, sl_global_var, sl_ptr>;
-
-// An sl_argument represents a value that is stored in one or multiple local
-// WASM variables
-struct sl_argument
-{
-    std::string name;
-    type_id type;
-};
-
-// An sl_local_var represents a value that is stored in one or multiple local
-// WASM variables. It is listed separatly from sl_argument since function
-// arguments can potentially be lowered differently than local variables
-struct sl_local_var
-{
-    std::string name;
-    type_id type;
-};
-
-// An sl_global_var represents a value that is stored in a single
-// global WASM variable.
-struct sl_global_var
-{
-    std::string name;
-    type_id type;
-};
-
-// An sl_ptr represents a combination of a pointer value that is currently on
-// the WASM data stack and an offset value that needs to be used for any load
-// or store operation in WASM.
-struct sl_ptr
-{
-    size_t offset;
-    type_id type; // The base type of the value to which this pointer points
-};
-
-storage_loc transform_symbol(const context& parse_context, const symbol& sym)
-{
-    switch (sym.kind)
+    wasm::type_t lower_wasm_type(const context& ctx, type_id type)
     {
-        case symbol_kind::argument:
-            return sl_argument{
-                .name = sym.name,
-                .type = sym.symbol_type
-            };
-        case symbol_kind::local_var:
-            return sl_local_var{
-                .name = sym.name,
-                .type = sym.symbol_type
-            };
-        case symbol_kind::global_var:
-            return sl_global_var{
-                .name = sym.name,
-                .type = sym.symbol_type
-            };
-        default:
-            CAPY_FAIL("Can't transform symbol with symbol_kind %u", static_cast<unsigned int>(sym.kind));
+        type_id resolved_type = ctx.resolved_type(type);
+        const auto& type_entry = ctx.types[to_index(resolved_type)];
+        CAPY_ASSERT(std::holds_alternative<type_kind>(type_entry), "Found unresolved type in emitter");
+
+        return std::visit(
+            [](const auto& kind) -> wasm::type_t
+            {
+                using K = std::decay_t<decltype(kind)>;
+                if constexpr (std::is_same_v<K, primitive_type>)
+                {
+                    switch (kind)
+                    {
+                        case primitive_type::Void:
+                            return wasm::type_t::None;
+                        case primitive_type::Char:
+                        case primitive_type::S8:
+                            return wasm::type_t::I8;
+                        case primitive_type::S16:
+                            return wasm::type_t::I16;
+                        case primitive_type::S32:
+                            return wasm::type_t::I32;
+                        case primitive_type::S64:
+                            return wasm::type_t::I64;
+                        case primitive_type::U8:
+                            return wasm::type_t::U8;
+                        case primitive_type::U16:
+                            return wasm::type_t::U16;
+                        case primitive_type::U32:
+                            return wasm::type_t::U32;
+                        case primitive_type::U64:
+                            return wasm::type_t::U64;
+                        case primitive_type::Boolean:
+                            return wasm::type_t::I32;
+                    }
+                }
+                else if constexpr (std::is_same_v<K, pointer_type> || std::is_same_v<K, record_type>)
+                {
+                    return wasm::type_t::I32;
+                }
+
+                CAPY_FAIL("Unknown type kind in emitter type lowering");
+                return wasm::type_t::None;
+            },
+            std::get<type_kind>(type_entry)
+        );
+    }
+
+    wasm::type_t lower_memory_type(const context& ctx, type_id type)
+    {
+        type_id resolved_type = ctx.resolved_type(type);
+        const auto& type_entry = ctx.types[to_index(resolved_type)];
+        CAPY_ASSERT(std::holds_alternative<type_kind>(type_entry), "Found unresolved memory type in emitter");
+
+        const auto* primitive = std::get_if<primitive_type>(&std::get<type_kind>(type_entry));
+        if (primitive == nullptr)
+            return wasm::type_t::I32;
+
+        switch (*primitive)
+        {
+            case primitive_type::S8:
+                return wasm::type_t::I8;
+            case primitive_type::S16:
+                return wasm::type_t::I16;
+            case primitive_type::S64:
+                return wasm::type_t::I64;
+            case primitive_type::U8:
+                return wasm::type_t::U8;
+            case primitive_type::U16:
+                return wasm::type_t::U16;
+            case primitive_type::U64:
+                return wasm::type_t::U64;
+            default:
+                return wasm::type_t::I32;
+        }
+    }
+
+    type_id assigned_node_type(const lir::expr& node, context& ctx)
+    {
+        return std::visit(
+            [&](const auto& value) -> type_id
+            {
+                using T = std::decay_t<decltype(value)>;
+                if constexpr (std::is_same_v<T, lir::number>)
+                    return value.assigned_type;
+                else if constexpr (std::is_same_v<T, lir::char_literal>)
+                    return ctx.intern_primitive(primitive_type::Char);
+                else if constexpr (std::is_same_v<T, lir::bool_literal>)
+                    return ctx.intern_primitive(primitive_type::Boolean);
+                else if constexpr (std::is_same_v<T, lir::string_literal>)
+                    return ctx.BUILTIN_STRING;
+                else if constexpr (std::is_same_v<T, lir::load_expression>)
+                    return value.assigned_type;
+                else if constexpr (std::is_same_v<T, lir::if_expression>)
+                    return value.assigned_type;
+                else if constexpr (std::is_same_v<T, lir::cast_expression>)
+                    return value.cast_type;
+                else if constexpr (std::is_same_v<T, lir::unary_expression>)
+                    return value.assigned_type;
+                else if constexpr (std::is_same_v<T, lir::binary_expression>)
+                    return value.assigned_type;
+                else if constexpr (std::is_same_v<T, lir::allocate_record_expression>)
+                    return value.type;
+                else if constexpr (std::is_same_v<T, lir::function_call>)
+                {
+                    const auto& sym = ctx.symbol_at(value.symbol_ref);
+                    CAPY_ASSERT(sym.kind == symbol_kind::function, "LIR function call should resolve to a function symbol");
+                    auto return_type = ctx.function_return_type(sym.signature.function_type);
+                    CAPY_ASSERT(return_type.has_value(), "LIR function call should have a valid return type");
+                    return return_type.value();
+                }
+                else
+                {
+                    CAPY_FAIL("Compiler error: unhandled LIR expression type; index=%lu", node.index());
+                    return ILLEGAL_TYPE;
+                }
+            },
+            node
+        );
+    }
+
+    struct sl_argument
+    {
+        std::string name;
+        type_id type;
+    };
+
+    struct sl_local_var
+    {
+        std::string name;
+        type_id type;
+    };
+
+    struct sl_global_var
+    {
+        std::string name;
+        type_id type;
+    };
+
+    struct sl_ptr
+    {
+        size_t offset;
+        type_id type;
+    };
+
+    using storage_loc = std::variant<sl_argument, sl_local_var, sl_global_var, sl_ptr>;
+
+    storage_loc transform_symbol(const symbol& sym)
+    {
+        switch (sym.kind)
+        {
+            case symbol_kind::argument:
+                return sl_argument{sym.name, sym.symbol_type};
+            case symbol_kind::local_var:
+                return sl_local_var{sym.name, sym.symbol_type};
+            case symbol_kind::global_var:
+                return sl_global_var{sym.name, sym.symbol_type};
+            default:
+                CAPY_FAIL("Can't transform symbol with symbol_kind %u", static_cast<unsigned int>(sym.kind));
+                return sl_local_var{};
+        }
+    }
+
+    storage_loc transform_place(const context& ctx, const storage_loc& storage, const lir::place_elem& place, wasm::instruction_list& instructions)
+    {
+        return std::visit(
+            overloaded{
+                [&](const lir::deref&) -> storage_loc
+                {
+                    type_id deref_type{0};
+                    std::visit(
+                        overloaded{
+                            [&](const sl_argument& arg)
+                            {
+                                wasm_builder_v2::local_get(instructions, arg.name);
+                                deref_type = ctx.derefed_type(arg.type).value();
+                            },
+                            [&](const sl_local_var& local)
+                            {
+                                wasm_builder_v2::local_get(instructions, local.name);
+                                deref_type = ctx.derefed_type(local.type).value();
+                            },
+                            [&](const sl_global_var& global)
+                            {
+                                wasm_builder_v2::global_get(instructions, global.name);
+                                deref_type = ctx.derefed_type(global.type).value();
+                            },
+                            [&](const sl_ptr& ptr)
+                            {
+                                wasm_builder_v2::load(instructions, wasm::type_t::I32, ptr.offset);
+                                deref_type = ctx.derefed_type(ptr.type).value();
+                            }
+                        },
+                        storage
+                    );
+                    return sl_ptr{0, deref_type};
+                },
+                [&](const lir::field& field) -> storage_loc
+                {
+                    return std::visit(
+                        overloaded{
+                            [&](const sl_argument& arg) -> storage_loc
+                            {
+                                const auto& type_spec = ctx.types[to_index(arg.type)];
+                                auto* record = get_type_from_node<record_type>(type_spec);
+                                CAPY_ASSERT(record != nullptr, "Trying to access a field of a non-record type");
+                                CAPY_ASSERT(field.index < record->fields.size(), "Record field index out of bounds");
+                                return sl_argument{arg.name + "_" + std::to_string(field.index), record->fields[field.index].second};
+                            },
+                            [&](const sl_local_var& local) -> storage_loc
+                            {
+                                auto record_type_id = ctx.record_behind(local.type);
+                                CAPY_ASSERT(record_type_id.has_value(), "Trying to access a field of a non-record type");
+                                const auto& type_spec = ctx.types[to_index(record_type_id.value())];
+                                auto* record = get_type_from_node<record_type>(type_spec);
+                                CAPY_ASSERT(record != nullptr, "Expected a concrete record type");
+                                CAPY_ASSERT(field.index < record->fields.size(), "Record field index out of bounds");
+                                return sl_local_var{local.name + "_" + std::to_string(field.index), record->fields[field.index].second};
+                            },
+                            [&](const sl_global_var& global) -> storage_loc
+                            {
+                                const auto& type_spec = ctx.types[to_index(global.type)];
+                                auto* record = get_type_from_node<record_type>(type_spec);
+                                CAPY_ASSERT(record != nullptr, "Trying to access a field of a non-record type");
+                                CAPY_ASSERT(field.index < record->fields.size(), "Record field index out of bounds");
+                                return sl_global_var{global.name + "_" + std::to_string(field.index), record->fields[field.index].second};
+                            },
+                            [&](const sl_ptr& ptr) -> storage_loc
+                            {
+                                const auto& type_spec = ctx.types[to_index(ptr.type)];
+                                auto* record = get_type_from_node<record_type>(type_spec);
+                                CAPY_ASSERT(record != nullptr, "Trying to access a field of a non-record type");
+                                CAPY_ASSERT(field.index < record->fields.size(), "Record field index out of bounds");
+
+                                size_t field_offset = 0;
+                                for (size_t index = 0; index < field.index; index++)
+                                {
+                                    field_offset += type_size(ctx, record->fields[index].second);
+                                }
+                                return sl_ptr{ptr.offset + field_offset, record->fields[field.index].second};
+                            }
+                        },
+                        storage
+                    );
+                }
+            },
+            place
+        );
+    }
+
+    void transform_load(const context& ctx, const storage_loc& storage, wasm::instruction_list& instructions)
+    {
+        std::visit(
+            overloaded{
+                [&](const sl_argument& arg)
+                {
+                    if (ctx.is_record_type(arg.type))
+                    {
+                        const auto& type_spec = ctx.types[to_index(arg.type)];
+                        auto* record = get_type_from_node<record_type>(type_spec);
+                        for (size_t index = 0; index < record->fields.size(); index++)
+                        {
+                            wasm_builder_v2::local_get(instructions, arg.name + "_" + std::to_string(index));
+                        }
+                    }
+                    else
+                        wasm_builder_v2::local_get(instructions, arg.name);
+                },
+                [&](const sl_local_var& local)
+                {
+                    if (ctx.is_record_type(local.type))
+                    {
+                        const auto& type_spec = ctx.types[to_index(local.type)];
+                        auto* record = get_type_from_node<record_type>(type_spec);
+                        for (size_t index = 0; index < record->fields.size(); index++)
+                        {
+                            wasm_builder_v2::local_get(instructions, local.name + "_" + std::to_string(index));
+                        }
+                    }
+                    else
+                        wasm_builder_v2::local_get(instructions, local.name);
+                },
+                [&](const sl_global_var& global)
+                {
+                    if (ctx.is_record_type(global.type))
+                    {
+                        const auto& type_spec = ctx.types[to_index(global.type)];
+                        auto* record = get_type_from_node<record_type>(type_spec);
+                        for (size_t index = 0; index < record->fields.size(); index++)
+                        {
+                            wasm_builder_v2::global_get(instructions, global.name + "_" + std::to_string(index));
+                        }
+                    }
+                    else
+                        wasm_builder_v2::global_get(instructions, global.name);
+                },
+                [&](const sl_ptr& ptr)
+                {
+                    wasm_builder_v2::load(instructions, lower_memory_type(ctx, ptr.type), ptr.offset);
+                }
+            },
+            storage
+        );
+    }
+
+    void transform_store(const context& ctx, const storage_loc& storage, wasm::instruction_list& instructions)
+    {
+        std::visit(
+            overloaded{
+                [&](const sl_argument& arg)
+                {
+                    if (ctx.is_record_type(arg.type))
+                    {
+                        const auto& type_spec = ctx.types[to_index(arg.type)];
+                        auto* record = get_type_from_node<record_type>(type_spec);
+                        for (size_t index = 0; index < record->fields.size(); index++)
+                        {
+                            wasm_builder_v2::local_set(instructions, arg.name + "_" + std::to_string(index));
+                        }
+                    }
+                    else
+                        wasm_builder_v2::local_set(instructions, arg.name);
+                },
+                [&](const sl_local_var& local)
+                {
+                    if (ctx.is_record_type(local.type))
+                    {
+                        const auto& type_spec = ctx.types[to_index(local.type)];
+                        auto* record = get_type_from_node<record_type>(type_spec);
+                        for (size_t index = 0; index < record->fields.size(); index++)
+                        {
+                            wasm_builder_v2::local_set(instructions, local.name + "_" + std::to_string(index));
+                        }
+                    }
+                    else
+                        wasm_builder_v2::local_set(instructions, local.name);
+                },
+                [&](const sl_global_var& global)
+                {
+                    if (ctx.is_record_type(global.type))
+                    {
+                        const auto& type_spec = ctx.types[to_index(global.type)];
+                        auto* record = get_type_from_node<record_type>(type_spec);
+                        for (size_t index = 0; index < record->fields.size(); index++)
+                        {
+                            wasm_builder_v2::global_set(instructions, global.name + "_" + std::to_string(index));
+                        }
+                    }
+                    else
+                        wasm_builder_v2::global_set(instructions, global.name);
+                },
+                [&](const sl_ptr& ptr)
+                {
+                    wasm_builder_v2::store(instructions, lower_memory_type(ctx, ptr.type), ptr.offset);
+                }
+            },
+            storage
+        );
     }
 }
 
-storage_loc transform_place(const context& parse_context, const storage_loc& storage, const lir::place_elem& place, wasm_expr& code_block)
-{
-    return place.visit(
-        overloaded{
-            [&](const lir::deref&) -> storage_loc
-            {
-                type_id deref_type = type_id{0};
-
-                storage.visit(
-                    overloaded{
-                        [&](const sl_argument& arg)
-                        {
-                            wasm_builder::local_get(code_block, arg.name.c_str());
-                            // TODO: These .value() are actually ugly and we should make
-                            // sure that they are really resolved
-                            deref_type = parse_context.derefed_type(arg.type).value();
-                        },
-                        [&](const sl_local_var& local)
-                        {
-                            wasm_builder::local_get(code_block, local.name.c_str());
-                            deref_type = parse_context.derefed_type(local.type).value();
-                        },
-                        [&](const sl_global_var& global)
-                        {
-                            wasm_builder::global_get(code_block, global.name.c_str());
-                            deref_type = parse_context.derefed_type(global.type).value();
-                        },
-                        [&](const sl_ptr& ptr)
-                        {
-                            // The type for loading is always fixed here, because we know
-                            // that it is a pointer; TODO: maybe introduce a ptr-type in
-                            // the WASM IR.
-                            // The offset is taken from the given sl_ptr because we need
-                            // to include this in our load here.
-                            wasm_builder::load(code_block, wasm_type::i32, ptr.offset);
-                            deref_type = parse_context.derefed_type(ptr.type).value();
-                        }
-                    }
-                );
-                return sl_ptr{0, deref_type};
-            },
-            [&](const lir::field& f) -> storage_loc
-            {
-                return storage.visit(
-                    overloaded{
-                        [&](const sl_argument& arg) -> storage_loc
-                        {
-                            const auto& rec_type_spec = parse_context.types[to_index(arg.type)];
-                            auto* rec_type = get_type_from_node<record_type>(rec_type_spec);
-                            CAPY_ASSERT(rec_type != nullptr, "Trying to access a field of an non-record type");
-
-                            return sl_argument{
-                                .name = arg.name + "_" + std::to_string(f.index),
-                                .type = rec_type->fields[f.index].second
-                            };
-                        },
-                        [&](const sl_local_var& local) -> storage_loc
-                        {
-                            // TODO: check again if the record_behind is really necessary;
-                            // with proper normalisation and intermediate lowering steps, we
-                            // should actually have a pointer to a record which is handled
-                            // straight forward and we can just assume that we are dealing
-                            // we a record here
-                            auto rec_type = parse_context.record_behind(local.type);
-                            CAPY_ASSERT(rec_type.has_value(), "Trying to access a field of an non-record type");
-                            const auto& type_spec = parse_context.types[to_index(rec_type.value())];
-                            auto* rec_type_spec = get_type_from_node<record_type>(type_spec);
-                            CAPY_ASSERT(rec_type_spec != nullptr, "Fatal error while assume that we are dealing with a record");
-
-                            return sl_local_var{
-                                .name = local.name + "_" + std::to_string(f.index),
-                                .type = rec_type_spec->fields[f.index].second
-                            };
-                        },
-                        [&](const sl_global_var& global) -> storage_loc
-                        {
-                            const auto& rec_type_spec = parse_context.types[to_index(global.type)];
-                            auto* rec_type = get_type_from_node<record_type>(rec_type_spec);
-                            CAPY_ASSERT(rec_type != nullptr, "Trying to access a field of an non-record type");
-
-                            return sl_global_var{
-                                .name = global.name + "_" + std::to_string(f.index),
-                                .type = rec_type->fields[f.index].second
-                            };
-                        },
-                        [&](const sl_ptr& ptr) -> storage_loc
-                        {
-                            const auto& rec_type_spec = parse_context.types[to_index(ptr.type)];
-                            auto* rec_type = get_type_from_node<record_type>(rec_type_spec);
-                            CAPY_ASSERT(rec_type != nullptr, "Trying to access a field of an non-record type");
-
-                            size_t field_offset = 0;
-                            size_t field_index = 0;
-                            for (const auto& field_definition : rec_type->fields)
-                            {
-                                if (field_index == f.index)
-                                    break;
-                                field_offset += lir_type_size(parse_context, field_definition.second);
-                                field_index++;
-                            }
-
-                            return sl_ptr{
-                                .offset = ptr.offset + field_offset,
-                                .type = rec_type->fields[f.index].second
-                            };
-                        }
-                    }
-                );
-            }
-        }
-    );
-}
-
-void transform_load(const context& parse_context, const storage_loc& storage, wasm_expr& code_block)
-{
-    storage.visit(
-        overloaded{
-            [&](const sl_argument& arg)
-            {
-                if (parse_context.is_record_type(arg.type))
-                {
-                    const auto& rec_type_spec = parse_context.types[to_index(arg.type)];
-                    auto* rec_type = get_type_from_node<record_type>(rec_type_spec);
-                    size_t field_index = 0;
-                    for (const auto& field_definition : rec_type->fields)
-                    {
-                        wasm_builder::local_get(code_block, (arg.name + "_" + std::to_string(field_index)).c_str());
-                        field_index++;
-                    }
-                }
-                else
-                {
-                    wasm_builder::local_get(code_block, arg.name.c_str());
-                }
-            },
-            [&](const sl_local_var& local)
-            {
-                if (parse_context.is_record_type(local.type))
-                {
-                    const auto& rec_type_spec = parse_context.types[to_index(local.type)];
-                    auto* rec_type = get_type_from_node<record_type>(rec_type_spec);
-                    size_t field_index = 0;
-                    for (const auto& field_definition : rec_type->fields)
-                    {
-                        wasm_builder::local_get(code_block, (local.name + "_" + std::to_string(field_index)).c_str());
-                        field_index++;
-                    }
-                }
-                else
-                {
-                    wasm_builder::local_get(code_block, local.name.c_str());
-                }
-            },
-            [&](const sl_global_var& global)
-            {
-                if (parse_context.is_record_type(global.type))
-                {
-                    const auto& rec_type_spec = parse_context.types[to_index(global.type)];
-                    auto* rec_type = get_type_from_node<record_type>(rec_type_spec);
-                    size_t field_index = 0;
-                    for (const auto& field_definition : rec_type->fields)
-                    {
-                        wasm_builder::global_get(code_block, (global.name + "_" + std::to_string(field_index)).c_str());
-                        field_index++;
-                    }
-                }
-                else
-                {
-                    wasm_builder::global_get(code_block, global.name.c_str());
-                }
-            },
-            [&](const sl_ptr& ptr)
-            {
-                if (parse_context.is_primitive_type(ptr.type, primitive_type::U8))
-                {
-                    // TODO: we should simplify this by using a mapping from
-                    // primitive types to wasm_types
-                    wasm_builder::load(code_block, wasm_type::u8, ptr.offset);
-                }
-                else if (parse_context.is_primitive_type(ptr.type, primitive_type::U16))
-                {
-                    wasm_builder::load(code_block, wasm_type::u16, ptr.offset);
-                }
-                else
-                {
-                    wasm_builder::load(code_block, wasm_type::i32, ptr.offset);
-                }
-            }
-        }
-    );
-}
-
-void transform_store(const context& parse_context, const storage_loc& storage, wasm_expr& code_block)
-{
-    storage.visit(
-        overloaded{
-            [&](const sl_argument& arg)
-            {
-                if (parse_context.is_record_type(arg.type))
-                {
-                    const auto& rec_type_spec = parse_context.types[to_index(arg.type)];
-                    auto* rec_type = get_type_from_node<record_type>(rec_type_spec);
-                    size_t field_index = 0;
-                    for (const auto& field_definition : rec_type->fields)
-                    {
-                        // TODO: do we need to reverse the field order here?
-                        wasm_builder::local_set(code_block, (arg.name + "_" + std::to_string(field_index)).c_str());
-                        field_index++;
-                    }
-                }
-                else
-                {
-                    wasm_builder::local_set(code_block, arg.name.c_str());
-                }
-            },
-            [&](const sl_local_var& local)
-            {
-                if (parse_context.is_record_type(local.type))
-                {
-                    const auto& rec_type_spec = parse_context.types[to_index(local.type)];
-                    auto* rec_type = get_type_from_node<record_type>(rec_type_spec);
-                    size_t field_index = 0;
-                    for (const auto& field_definition : rec_type->fields)
-                    {
-                        // TODO: do we need to reverse the field order here?
-                        wasm_builder::local_set(code_block, (local.name + "_" + std::to_string(field_index)).c_str());
-                        field_index++;
-                    }
-                }
-                else
-                {
-                    wasm_builder::local_set(code_block, local.name.c_str());
-                }
-            },
-            [&](const sl_global_var& global)
-            {
-                if (parse_context.is_record_type(global.type))
-                {
-                    const auto& rec_type_spec = parse_context.types[to_index(global.type)];
-                    auto* rec_type = get_type_from_node<record_type>(rec_type_spec);
-                    size_t field_index = 0;
-                    for (const auto& field_definition : rec_type->fields)
-                    {
-                        // TODO: do we need to reverse the field order here?
-                        wasm_builder::global_set(code_block, (global.name + "_" + std::to_string(field_index)).c_str());
-                        field_index++;
-                    }
-                }
-                else
-                {
-                    wasm_builder::global_set(code_block, global.name.c_str());
-                }
-            },
-            [&](const sl_ptr& ptr)
-            {
-                if (parse_context.is_primitive_type(ptr.type, primitive_type::U8))
-                {
-                    // TODO: we should simplify this by using a mapping from
-                    // primitive types to wasm_types
-                    wasm_builder::store(code_block, wasm_type::u8, ptr.offset);
-                }
-                else if (parse_context.is_primitive_type(ptr.type, primitive_type::U16))
-                {
-                    wasm_builder::store(code_block, wasm_type::u16, ptr.offset);
-                }
-                else
-                {
-                    wasm_builder::store(code_block, wasm_type::i32, ptr.offset);
-                }
-            }
-        }
-    );
-}
-
-lir_based_emitter::lir_based_emitter(compile_options options, context& ctx)
+lir_based_emitter_v2::lir_based_emitter_v2(compile_options options, context& ctx)
 : options(options)
 , parse_context(ctx)
-, lowering(new lower_cabi(ctx))
-, cur_loop_block(nullptr)
-, cur_control_block(nullptr)
-, cur_expr(nullptr)
+, cur_data(std::make_unique<wasm::data_section>())
 {
-    cur_data = new wasm_data_section(100);
+    cur_data->init_offset = 100;
+    cur_data->offset = 100;
     allocate_data(std::string("\x42\x00\x00\x00\x10\x00\x00\x00\x10\x20\x30\x40Test", 16));
 }
 
-lir_based_emitter::~lir_based_emitter()
-{
-    delete cur_data;
-}
+lir_based_emitter_v2::~lir_based_emitter_v2() = default;
 
-wasm_module lir_based_emitter::generate(lir::module& module_def)
+wasm::module lir_based_emitter_v2::generate(lir::module& module_def)
 {
-    wasm_module ir_module;
+    wasm::module ir_module;
     cur_mod = &ir_module;
 
-    current_module = &module_def;
-
-    auto& memory = ir_module.create_memory(options.mem_min_blocks);
+    auto memory = create_memory(options.mem_min_blocks);
     if (options.mem_max_blocks.has_value())
-    {
-        memory.max_block_count = options.mem_max_blocks.value();
-    }
-
+        memory->max_block_count = options.mem_max_blocks.value();
     if ((memory_type::exported == options.mem_type) || (memory_type::impex == options.mem_type))
     {
-        ir_module.export_as("memory", memory);
+        memory->name = "memory";
+        export_as("memory", *memory);
     }
     if ((memory_type::imported == options.mem_type) || (memory_type::impex == options.mem_type))
     {
-        memory.import_from("env", "memory");
+        memory->ns = "env";
+        memory->import_name = "memory";
     }
+    ir_module.memories.push_back(std::move(memory));
 
     for (auto& literal : parse_context.string_literals)
     {
@@ -521,458 +472,604 @@ wasm_module lir_based_emitter::generate(lir::module& module_def)
     }
 
     for (const auto& import_def : module_def.imports)
-    {
         emit(*import_def);
-    }
-
     for (const auto& global_def : module_def.globals)
-    {
         emit(*global_def);
-    }
-
     for (const auto& func_def : module_def.functions)
-    {
         emit(*func_def);
-    }
 
-    cur_mod->append_data_section(*cur_data);
-
-    current_module = nullptr;
+    ir_module.data_sections.push_back(std::move(cur_data));
     cur_mod = nullptr;
-
     return ir_module;
 }
 
-void lir_based_emitter::emit(lir::expr& node)
+void lir_based_emitter_v2::emit(lir::expr& node)
 {
-    std::visit(
-        [this](auto& n)
-        {
-            this->emit(n);
-        },
-        node
-    );
+    std::visit([this](auto& value)
+               { emit(value); },
+               node);
 }
 
-void lir_based_emitter::emit(lir::statement& node)
+void lir_based_emitter_v2::emit(lir::statement& node)
 {
-    std::visit(
-        [this](auto& n)
-        {
-            this->emit(n);
-        },
-        node
-    );
+    std::visit([this](auto& value)
+               { emit(value); },
+               node);
 }
 
-void lir_based_emitter::emit(const lir::import_definition& import_def)
+void lir_based_emitter_v2::emit(const lir::import_definition& import_def)
 {
-    arguments_type args;
-    auto function_name = import_def.function_head.name;
+    std::vector<wasm::argument> arguments;
+    lower_function_arguments(import_def.function_head, arguments);
 
-    lowering->lower_function_arguments(import_def.function_head, args);
+    const std::string& imported_name = import_def.function_head.name;
+    std::string internal_name = import_def.alias.value_or(imported_name);
+    auto return_type = parse_context.function_return_type(import_def.function_head.signature.function_type);
+    CAPY_ASSERT(return_type.has_value(), "Imported function should have a resolved return type");
 
-    std::string imported_function_name = import_def.function_head.name;
-    std::string internal_function_name = imported_function_name;
-
-    if (import_def.alias.has_value())
-    {
-        internal_function_name = import_def.alias.value();
-    }
-
-    auto return_type = parse_context.function_return_type(import_def.function_head.signature.function_type).value();
-    auto& import_func = cur_mod->create_function(internal_function_name.c_str(), lowering->lower_return_type(return_type), args);
-    import_func.import_from(import_def.ns_name.c_str(), imported_function_name.c_str());
+    auto function = create_function(internal_name, lower_type(return_type.value()), std::move(arguments));
+    function->ns = import_def.ns_name;
+    function->import_name = imported_name;
+    cur_mod->functions.push_back(std::move(function));
 }
 
-void lir_based_emitter::emit(const lir::global_definition& global_def)
+void lir_based_emitter_v2::emit(const lir::global_definition& global_def)
 {
     const auto& global_symbol = parse_context.symbol_at(global_def.symbol_ref);
-    auto mutability = global_symbol.mutab ? access_type::mut : access_type::immut;
-    auto global_type = lowering->lower_return_type(parse_context.resolved_type(global_symbol.symbol_type));
-    auto& new_global = cur_mod->create_global(global_symbol.name.c_str(), global_type, mutability);
+    auto access = global_symbol.mutab ? wasm::access_t::Mut : wasm::access_t::Immut;
+    auto global = create_global(global_symbol.name, lower_type(global_symbol.symbol_type), access);
 
-    cur_expr = &new_global.init_expression;
+    auto* previous_instructions = cur_instructions;
+    cur_instructions = &global->init_expression;
     emit(*global_def.init_expression);
-    cur_expr = nullptr;
+    cur_instructions = previous_instructions;
+
+    cur_mod->globals.push_back(std::move(global));
 }
 
-void lir_based_emitter::emit(const lir::function_definition& func_def)
+void lir_based_emitter_v2::emit(const lir::function_definition& func_def)
 {
-    arguments_type args;
-    auto function_name = func_def.head.name;
+    std::vector<wasm::argument> arguments;
+    lower_function_arguments(func_def.head, arguments);
 
-    lowering->lower_function_arguments(func_def.head, args);
+    auto return_type = parse_context.function_return_type(func_def.head.signature.function_type);
+    CAPY_ASSERT(return_type.has_value(), "Function should have a resolved return type");
+    auto function = create_function(func_def.head.name, lower_type(return_type.value()), std::move(arguments));
 
-    auto return_type = parse_context.function_return_type(func_def.head.signature.function_type).value();
-    auto& func = cur_mod->create_function(function_name.c_str(), lowering->lower_return_type(return_type), args);
     if (std::find(func_def.attributes.begin(), func_def.attributes.end(), "export") != func_def.attributes.end())
     {
-        cur_mod->export_as(function_name.c_str(), func);
+        export_as(func_def.head.name, *function);
     }
-    cur_expr = &func.function_body;
 
     for (const auto& [identifier, symbol_id] : func_def.function_scope->symbol_table)
     {
         const auto& sym = parse_context.symbol_at(symbol_id);
         if (sym.kind == symbol_kind::local_var)
-        {
-            lowering->lower_local_variable(sym, func);
-        }
+            lower_local_variable(sym, *function);
     }
 
-    for (const auto& expression : func_def.code)
-    {
-        emit(*expression);
-    }
+    cur_instructions = &function->function_body;
+    for (const auto& statement : func_def.code)
+        emit(*statement);
+    cur_instructions = nullptr;
+
+    cur_mod->functions.push_back(std::move(function));
 }
 
-void lir_based_emitter::emit(const lir::while_statement& while_stmt)
+void lir_based_emitter_v2::emit(const lir::while_statement& while_stmt)
 {
-    wasm_block* prev_loop_block = cur_loop_block;
-    wasm_control_block* prev_control_block = cur_control_block;
-    wasm_expr* prev_expr = cur_expr;
+    auto* previous_instructions = cur_instructions;
+    auto* previous_loop_exit = cur_loop_exit;
 
-    wasm_block& while_exit = wasm_builder::block(*cur_expr, cur_control_block, wasm_type::none);
-    wasm_block& while_block = wasm_builder::loop(while_exit.instructions, &while_exit, wasm_type::none);
-    cur_loop_block = &while_block;
-    cur_control_block = &while_block;
-    cur_expr = &while_block.instructions;
+    auto& exit_block = wasm_builder_v2::block(*cur_instructions, wasm::type_t::None, next_label("while_exit"));
+    auto& loop_block = wasm_builder_v2::loop(exit_block.instructions, wasm::type_t::None, next_label("while"));
+    cur_loop_exit = exit_block.block_label.get();
+    cur_instructions = &loop_block.instructions;
 
     emit(*while_stmt.condition);
+    wasm_builder_v2::eqz(*cur_instructions, wasm::type_t::I32);
+    wasm_builder_v2::br_if(*cur_instructions, *exit_block.block_label);
+    for (const auto& statement : while_stmt.while_code)
+        emit(*statement);
+    wasm_builder_v2::br(*cur_instructions, *loop_block.block_label);
 
-    wasm_builder::eqz(*cur_expr, wasm_type::i32);
-    wasm_builder::br_if(*cur_expr, while_exit.label());
-
-    for (const auto& expression : while_stmt.while_code)
-    {
-        emit(*expression);
-    }
-    wasm_builder::br(*cur_expr, while_block.label());
-
-    cur_loop_block = prev_loop_block;
-    cur_control_block = prev_control_block;
-    cur_expr = prev_expr;
+    cur_instructions = previous_instructions;
+    cur_loop_exit = previous_loop_exit;
 }
 
-void lir_based_emitter::emit(const lir::store_statement& store)
+void lir_based_emitter_v2::emit(const lir::store_statement& store)
 {
-    const auto& target_var = parse_context.symbol_at(store.target.base.symbol_ref);
-
-    storage_loc sl = transform_symbol(parse_context, target_var);
-    for (const auto& elem : store.target.projection)
+    const auto& target = parse_context.symbol_at(store.target.base.symbol_ref);
+    storage_loc storage = transform_symbol(target);
+    for (const auto& projection : store.target.projection)
     {
-        sl = transform_place(parse_context, sl, elem, *cur_expr);
+        storage = transform_place(parse_context, storage, projection, *cur_instructions);
     }
 
     emit(*store.value);
-
-    transform_store(parse_context, sl, *cur_expr);
+    transform_store(parse_context, storage, *cur_instructions);
 }
 
-void lir_based_emitter::emit(const lir::store_string_statement& store)
+void lir_based_emitter_v2::emit(const lir::store_string_statement& store)
 {
-    const auto& target_sym = parse_context.symbol_at(store.target.base.symbol_ref);
-
+    const auto& target = parse_context.symbol_at(store.target.base.symbol_ref);
     uint32_t ptr = parse_context.string_literals[store.string_table_index].start_address;
-    wasm_builder::const_val(*cur_expr, wasm_type::i32, ptr);
-    wasm_builder::const_val(*cur_expr, wasm_type::i32, store.string_size);
+    wasm_builder_v2::const_val(*cur_instructions, wasm::type_t::I32, ptr);
+    wasm_builder_v2::const_val(*cur_instructions, wasm::type_t::I32, store.string_size);
 
-    if (target_sym.kind == symbol_kind::global_var)
+    if (target.kind == symbol_kind::global_var)
     {
-        wasm_builder::global_set(*cur_expr, (target_sym.name + "_1").c_str());
-        wasm_builder::global_set(*cur_expr, (target_sym.name + "_0").c_str());
+        wasm_builder_v2::global_set(*cur_instructions, target.name + "_1");
+        wasm_builder_v2::global_set(*cur_instructions, target.name + "_0");
     }
-    else if (target_sym.kind == symbol_kind::local_var)
+    else
     {
-        wasm_builder::local_set(*cur_expr, (target_sym.name + "_1").c_str());
-        wasm_builder::local_set(*cur_expr, (target_sym.name + "_0").c_str());
+        CAPY_ASSERT(target.kind == symbol_kind::local_var || target.kind == symbol_kind::argument, "Unexpected string storage target");
+        wasm_builder_v2::local_set(*cur_instructions, target.name + "_1");
+        wasm_builder_v2::local_set(*cur_instructions, target.name + "_0");
     }
 }
 
-void lir_based_emitter::emit(const lir::store_record_statement& record_init)
+void lir_based_emitter_v2::emit(const lir::store_record_statement&)
 {
-    CAPY_FAIL("The LIR emitter doesn't expect any store record expressions anymore\n");
+    CAPY_FAIL("The LIR emitter doesn't expect store record expressions after lowering");
 }
 
-void lir_based_emitter::emit(const lir::expression_statement& stmt)
+void lir_based_emitter_v2::emit(const lir::expression_statement& stmt)
 {
     emit(*stmt.expression);
-    if (stmt.is_dropped && !parse_context.is_primitive_type(lir_assigned_node_type(*stmt.expression, parse_context), primitive_type::Void))
+    if (stmt.is_dropped && !parse_context.is_primitive_type(assigned_node_type(*stmt.expression, parse_context), primitive_type::Void))
     {
-        wasm_builder::drop(*cur_expr);
+        wasm_builder_v2::drop(*cur_instructions);
     }
 }
 
-void lir_based_emitter::emit(const lir::break_statement& root)
+void lir_based_emitter_v2::emit(const lir::break_statement&)
 {
-    // cur_loop_block tracks the innermost loop independently from the complete
-    // control-block chain, which may also contain if blocks.
-    if (cur_loop_block != nullptr && cur_loop_block->block_type == wasm_block::t_loop)
-    {
-        // TODO: This feels a little hacky; we assume that a loop is always
-        // enclosed in a plain 'block' because it is constructed from a while
-        // loop. This however may not always be the case in the future and we
-        // should instead make sure, we really target the right block for
-        // branch instead of heuristically guessing it.
-        wasm_builder::br(*cur_expr, cur_loop_block->enclosing_block->label());
-    }
-    else
-    {
-        CAPY_FAIL("Trying to break from inside non-loop block; this should already have been caught by semantic check");
-    }
+    CAPY_ASSERT(cur_loop_exit != nullptr, "Trying to break from outside a loop");
+    wasm_builder_v2::br(*cur_instructions, *cur_loop_exit);
 }
 
-void lir_based_emitter::emit(const lir::return_statement& root)
+void lir_based_emitter_v2::emit(const lir::return_statement& stmt)
 {
-    if (root.expression)
-    {
-        emit(*root.expression);
-    }
-    if (root.is_explicit)
-    {
-        wasm_builder::ret(*cur_expr);
-    }
+    if (stmt.expression)
+        emit(*stmt.expression);
+    if (stmt.is_explicit)
+        wasm_builder_v2::ret(*cur_instructions);
 }
 
-void lir_based_emitter::emit(const lir::binary_expression& root)
+void lir_based_emitter_v2::emit(const lir::binary_expression& expr)
 {
-    emit(*root.left);
-    emit(*root.right);
+    emit(*expr.left);
+    emit(*expr.right);
 
-    // Both operands have the same type (ensured by type inference and the
-    // semantic analysis). The operand type decides about the width (i32/i64)
-    // and the signedness of the instruction; for comparisons the result is
-    // always a bool, so root.assigned_type can't be used here.
-    wasm_type operand_type = value_type_of(lir_assigned_node_type(*root.left, parse_context));
+    wasm::type_t operand_type = value_type_of(assigned_node_type(*expr.left, parse_context));
 
-    switch (root.op)
+    switch (expr.op)
     {
         case lir::binary_op_t::Minus:
-            wasm_builder::sub(*cur_expr, operand_type);
+            wasm_builder_v2::sub(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::Plus:
-            wasm_builder::add(*cur_expr, operand_type);
+            wasm_builder_v2::add(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::Multiply:
-            wasm_builder::mul(*cur_expr, operand_type);
+            wasm_builder_v2::mul(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::Division:
-            wasm_builder::div(*cur_expr, operand_type);
+            wasm_builder_v2::div(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::Modulus:
-            wasm_builder::mod(*cur_expr, operand_type);
+            wasm_builder_v2::mod(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::AndOp:
-            wasm_builder::and_instr(*cur_expr, operand_type);
+            wasm_builder_v2::and_instr(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::OrOp:
-            wasm_builder::or_instr(*cur_expr, operand_type);
+            wasm_builder_v2::or_instr(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::Shl:
-            wasm_builder::shl(*cur_expr, operand_type);
+            wasm_builder_v2::shl(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::Shr:
-            wasm_builder::shr(*cur_expr, operand_type);
+            wasm_builder_v2::shr(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::Equals:
-            wasm_builder::eq(*cur_expr, operand_type);
+            wasm_builder_v2::eq(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::NotEquals:
-            wasm_builder::ne(*cur_expr, operand_type);
+            wasm_builder_v2::ne(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::LessThan:
-            wasm_builder::lt(*cur_expr, operand_type);
+            wasm_builder_v2::lt(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::LessThanEqual:
-            wasm_builder::lte(*cur_expr, operand_type);
+            wasm_builder_v2::lte(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::GreaterThan:
-            wasm_builder::gt(*cur_expr, operand_type);
+            wasm_builder_v2::gt(*cur_instructions, operand_type);
             break;
         case lir::binary_op_t::GreaterThanEqual:
-            wasm_builder::gte(*cur_expr, operand_type);
+            wasm_builder_v2::gte(*cur_instructions, operand_type);
             break;
     }
 }
 
-void lir_based_emitter::emit(const lir::unary_expression& root)
+void lir_based_emitter_v2::emit(const lir::unary_expression& expr)
 {
-    // negation is emitted as '0 - expr' in the type of the expression
-    wasm_type operand_type = value_type_of(lir_assigned_node_type(*root.expr, parse_context));
-    wasm_builder::const_val(*cur_expr, operand_type, 0);
-    emit(*root.expr);
-    wasm_builder::sub(*cur_expr, operand_type);
+    wasm::type_t operand_type = value_type_of(assigned_node_type(*expr.expr, parse_context));
+    wasm_builder_v2::const_val(*cur_instructions, operand_type, 0);
+    emit(*expr.expr);
+    wasm_builder_v2::sub(*cur_instructions, operand_type);
 }
 
-void lir_based_emitter::emit(const lir::cast_expression& root)
+void lir_based_emitter_v2::emit(const lir::cast_expression& expr)
 {
-    emit(*root.expression);
+    emit(*expr.expression);
 
-    // Integer types up to 32 bits use i32 in WASM, but casts may still
-    // require sign extension even when the WASM value type stays the same.
-    // TODO: Implement the missing s8/s16 conversion handling, including
-    // sign extension when widening to s32 (i32.extend8_s / i32.extend16_s).
-    auto is_64bit = [](wasm_type t)
-    { return (t == wasm_type::i64) || (t == wasm_type::u64); };
-    wasm_type source_type = value_type_of(lir_assigned_node_type(*root.expression, parse_context));
-    wasm_type target_type = value_type_of(root.cast_type);
+    auto is_64bit = [](wasm::type_t type)
+    { return type == wasm::type_t::I64 || type == wasm::type_t::U64; };
+    wasm::type_t source_type = value_type_of(assigned_node_type(*expr.expression, parse_context));
+    wasm::type_t target_type = value_type_of(expr.cast_type);
+
+    // TODO: Handle the remaining s8/s16 conversions, including sign extension
+    // when widening within the i32 stack representation.
     if (!is_64bit(source_type) && is_64bit(target_type))
     {
-        // the signedness of the source decides how the upper bits are filled
-        bool source_is_signed = (source_type == wasm_type::i8) || (source_type == wasm_type::i16) ||
-                                (source_type == wasm_type::i32);
+        bool source_is_signed = source_type == wasm::type_t::I8 ||
+                                source_type == wasm::type_t::I16 ||
+                                source_type == wasm::type_t::I32;
         if (source_is_signed)
-        {
-            wasm_builder::i64_extend_i32_s(*cur_expr);
-        }
+            wasm_builder_v2::i64_extend_i32_s(*cur_instructions);
         else
-        {
-            wasm_builder::i64_extend_i32_u(*cur_expr);
-        }
+            wasm_builder_v2::i64_extend_i32_u(*cur_instructions);
     }
-    else if (is_64bit(source_type) && !is_64bit(target_type) && (target_type != wasm_type::none))
+    else if (is_64bit(source_type) && !is_64bit(target_type) && target_type != wasm::type_t::None)
     {
-        wasm_builder::i32_wrap_i64(*cur_expr);
+        wasm_builder_v2::i32_wrap_i64(*cur_instructions);
     }
-    if ((parse_context.is_primitive_type(root.cast_type, primitive_type::Void)) &&
-        (!parse_context.is_primitive_type(lir_assigned_node_type(*root.expression, parse_context), primitive_type::Void)))
+
+    if (parse_context.is_primitive_type(expr.cast_type, primitive_type::Void) &&
+        !parse_context.is_primitive_type(assigned_node_type(*expr.expression, parse_context), primitive_type::Void))
     {
-        wasm_builder::drop(*cur_expr);
+        wasm_builder_v2::drop(*cur_instructions);
     }
 }
 
-void lir_based_emitter::emit(const lir::function_call& func_call)
+void lir_based_emitter_v2::emit(const lir::function_call& func_call)
 {
     for (const auto& argument : func_call.arguments)
-    {
-        // TODO: add ABI-related adaptations in the lowering here
         emit(*argument);
+
+    const auto& function_symbol = parse_context.symbol_at(func_call.symbol_ref);
+    if (!function_symbol.is_intrinsic)
+    {
+        wasm_builder_v2::call(*cur_instructions, func_call.function_name);
+        return;
     }
 
-    const auto& func_symbol = parse_context.symbol_at(func_call.symbol_ref);
-    if (func_symbol.is_intrinsic)
-    {
-        if (func_symbol.name == "memory_size")
-        {
-            wasm_builder::memory_size(*cur_expr);
-        }
-        else if (func_symbol.name == "memory_grow")
-        {
-            wasm_builder::memory_grow(*cur_expr);
-        }
-        else if (func_symbol.name == "memory_fill")
-        {
-            wasm_builder::memory_fill(*cur_expr);
-        }
-        else if (func_symbol.name == "unreachable")
-        {
-            wasm_builder::unreachable(*cur_expr);
-        }
-        else
-        {
-            CAPY_FAIL("Unknown intrinsic");
-        }
-    }
+    if (function_symbol.name == "memory_size")
+        wasm_builder_v2::memory_size(*cur_instructions);
+    else if (function_symbol.name == "memory_grow")
+        wasm_builder_v2::memory_grow(*cur_instructions);
+    else if (function_symbol.name == "memory_fill")
+        wasm_builder_v2::memory_fill(*cur_instructions);
+    else if (function_symbol.name == "unreachable")
+        wasm_builder_v2::unreachable(*cur_instructions);
     else
     {
-        wasm_builder::call(*cur_expr, func_call.function_name.c_str());
+        CAPY_FAIL(
+            "Unknown intrinsic: symbol='%s', call='%s'",
+            function_symbol.name.c_str(),
+            func_call.function_name.c_str()
+        );
     }
 }
 
-void lir_based_emitter::emit(const lir::if_expression& if_expr)
+void lir_based_emitter_v2::emit(const lir::if_expression& if_expr)
 {
-    wasm_expr* prev_expr = cur_expr;
-    wasm_control_block* prev_control_block = cur_control_block;
+    auto* previous_instructions = cur_instructions;
     emit(*if_expr.condition);
-    auto& if_block = wasm_builder::if_block(
-        *cur_expr,
-        cur_control_block,
-        lowering->lower_return_type(if_expr.assigned_type)
-    );
+    auto& if_block = wasm_builder_v2::if_block(*cur_instructions, lower_type(if_expr.assigned_type), next_label("if"));
 
-    cur_control_block = &if_block;
-    cur_expr = &if_block.then_block;
-    for (const auto& expression : if_expr.then_code)
-    {
-        emit(*expression);
-    }
-    if (!if_expr.then_code.empty())
-    {
-        cur_expr = &if_block.else_block;
-        for (const auto& expression : if_expr.else_code)
-        {
-            emit(*expression);
-        }
-    }
-    cur_control_block = prev_control_block;
-    cur_expr = prev_expr;
+    cur_instructions = &if_block.then_block;
+    for (const auto& statement : if_expr.then_code)
+        emit(*statement);
+
+    cur_instructions = &if_block.else_block;
+    for (const auto& statement : if_expr.else_code)
+        emit(*statement);
+
+    cur_instructions = previous_instructions;
 }
 
-void lir_based_emitter::emit(const lir::load_expression& load)
+void lir_based_emitter_v2::emit(const lir::load_expression& load)
 {
-    auto source_var = parse_context.symbol_at(load.source.base.symbol_ref);
-    storage_loc sl = transform_symbol(parse_context, source_var);
-    for (const auto& elem : load.source.projection)
+    const auto& source = parse_context.symbol_at(load.source.base.symbol_ref);
+    storage_loc storage = transform_symbol(source);
+    for (const auto& projection : load.source.projection)
     {
-        sl = transform_place(parse_context, sl, elem, *cur_expr);
+        storage = transform_place(parse_context, storage, projection, *cur_instructions);
     }
-    transform_load(parse_context, sl, *cur_expr);
+    transform_load(parse_context, storage, *cur_instructions);
 }
 
-void lir_based_emitter::emit(const lir::allocate_record_expression& expr)
+void lir_based_emitter_v2::emit(const lir::allocate_record_expression& expr)
 {
-    auto type_spec = parse_context.record_behind(expr.type);
-    CAPY_ASSERT(type_spec.has_value(), "Unexpected failure in extracting pointer type for record");
-    type_id r_type = type_spec.value();
+    auto record_type_id = parse_context.record_behind(expr.type);
+    CAPY_ASSERT(record_type_id.has_value(), "Expected a record or pointer-to-record type");
 
-    size_t record_size = lir_type_size(parse_context, type_spec.value());
-
-    wasm_builder::const_val(*cur_expr, wasm_type::i32, 0);
-    wasm_builder::const_val(*cur_expr, wasm_type::i32, 0);
-    wasm_builder::const_val(*cur_expr, wasm_type::i32, 4);
-    wasm_builder::const_val(*cur_expr, wasm_type::i32, lir_type_size(parse_context, r_type));
-    wasm_builder::call(*cur_expr, "cabi_realloc");
+    wasm_builder_v2::const_val(*cur_instructions, wasm::type_t::I32, 0);
+    wasm_builder_v2::const_val(*cur_instructions, wasm::type_t::I32, 0);
+    wasm_builder_v2::const_val(*cur_instructions, wasm::type_t::I32, 4);
+    wasm_builder_v2::const_val(*cur_instructions, wasm::type_t::I32, type_size(parse_context, record_type_id.value()));
+    wasm_builder_v2::call(*cur_instructions, "cabi_realloc");
 }
 
-void lir_based_emitter::emit(const lir::string_literal& literal)
+void lir_based_emitter_v2::emit(const lir::string_literal& literal)
 {
-    // TODO: here we just lower to pointer + length blindly, but we might have to
-    // move this part into the lowering strategies
     uint32_t ptr = parse_context.string_literals[literal.table_index].start_address;
-    wasm_builder::const_val(*cur_expr, wasm_type::i32, ptr);
-    wasm_builder::const_val(*cur_expr, wasm_type::i32, literal.size);
+    wasm_builder_v2::const_val(*cur_instructions, wasm::type_t::I32, ptr);
+    wasm_builder_v2::const_val(*cur_instructions, wasm::type_t::I32, literal.size);
 }
 
-void lir_based_emitter::emit(const lir::bool_literal& bool_const)
+void lir_based_emitter_v2::emit(const lir::bool_literal& literal)
 {
-    wasm_builder::const_val(*cur_expr, wasm_type::i32, bool_const.value ? 1 : 0);
+    wasm_builder_v2::const_val(*cur_instructions, wasm::type_t::I32, literal.value ? 1 : 0);
 }
 
-void lir_based_emitter::emit(const lir::char_literal& literal)
+void lir_based_emitter_v2::emit(const lir::char_literal& literal)
 {
-    wasm_builder::const_val(*cur_expr, wasm_type::i32, literal.ch);
+    wasm_builder_v2::const_val(*cur_instructions, wasm::type_t::I32, literal.ch);
 }
 
-void lir_based_emitter::emit(const lir::number& number)
+void lir_based_emitter_v2::emit(const lir::number& number)
 {
-    // the constant gets the WASM type of the literal (e.g. i64 for u64/s64)
-    wasm_builder::const_val(*cur_expr, value_type_of(number.assigned_type), number.value);
+    wasm_builder_v2::const_val(*cur_instructions, value_type_of(number.assigned_type), number.value);
 }
 
-wasm_type lir_based_emitter::value_type_of(type_id type) const
+std::unique_ptr<wasm::memory> lir_based_emitter_v2::create_memory(size_t initial_block_count)
+{
+    auto memory = std::make_unique<wasm::memory>();
+    memory->initial_block_count = initial_block_count;
+    memory->max_block_count = 0;
+    memory->index = cur_mod->memories.size();
+    memory->export_type = wasm::extern_index_t::MemIdx;
+    return memory;
+}
+
+std::unique_ptr<wasm::function> lir_based_emitter_v2::create_function(
+    const std::string& name,
+    wasm::type_t return_type,
+    std::vector<wasm::argument> arguments
+)
+{
+    auto function = std::make_unique<wasm::function>();
+    function->name = name;
+    function->index = cur_mod->functions.size();
+    function->export_type = wasm::extern_index_t::FuncIdx;
+    function->arguments = std::move(arguments);
+    function->return_type = return_type;
+    return function;
+}
+
+std::unique_ptr<wasm::global> lir_based_emitter_v2::create_global(
+    const std::string& name,
+    wasm::type_t type,
+    wasm::access_t access
+)
+{
+    auto global = std::make_unique<wasm::global>();
+    global->name = name;
+    global->typ = type;
+    global->access = access;
+    return global;
+}
+
+void lir_based_emitter_v2::export_as(const std::string& export_name, const wasm::exportable& object)
+{
+    auto export_item = std::make_unique<wasm::export_item>();
+    export_item->export_name = export_name;
+    export_item->name = object.name;
+    export_item->index = object.index;
+    export_item->export_type = object.export_type;
+    cur_mod->exports.push_back(std::move(export_item));
+}
+
+void lir_based_emitter_v2::lower_function_arguments(
+    const lir::function_head& func_head,
+    std::vector<wasm::argument>& arguments
+)
+{
+    const auto& type_entry = parse_context.types[to_index(func_head.signature.function_type)];
+    const auto& function = std::get<function_type>(std::get<type_kind>(type_entry));
+    const auto& parameters = func_head.signature.parameters;
+    CAPY_ASSERT(parameters.size() == function.parameter_types.size(), "Function parameter name/type count mismatch");
+
+    for (size_t index = 0; index < parameters.size(); index++)
+    {
+        type_id type = parse_context.resolved_type(function.parameter_types[index]);
+        CAPY_ASSERT(parse_context.is_resolved(type), "Function argument type should be resolved in emitter stage");
+        const auto& parameter_entry = parse_context.types[to_index(type)];
+        CAPY_ASSERT(std::holds_alternative<type_kind>(parameter_entry), "Unexpected type variable in resolved function argument");
+        lower_function_argument(std::get<type_kind>(parameter_entry), parameters[index].name, arguments);
+    }
+}
+
+void lir_based_emitter_v2::lower_function_argument(
+    const type_kind& type,
+    const std::string& basename,
+    std::vector<wasm::argument>& arguments
+)
+{
+    std::visit(
+        [&](const auto& kind)
+        {
+            using K = std::decay_t<decltype(kind)>;
+            if constexpr (std::is_same_v<K, primitive_type>)
+            {
+                switch (kind)
+                {
+                    case primitive_type::Void:
+                        arguments.push_back({basename, wasm::type_t::None});
+                        break;
+                    case primitive_type::Char:
+                    case primitive_type::S8:
+                        arguments.push_back({basename, wasm::type_t::I8});
+                        break;
+                    case primitive_type::S16:
+                        arguments.push_back({basename, wasm::type_t::I16});
+                        break;
+                    case primitive_type::S32:
+                        arguments.push_back({basename, wasm::type_t::I32});
+                        break;
+                    case primitive_type::S64:
+                        arguments.push_back({basename, wasm::type_t::I64});
+                        break;
+                    case primitive_type::U8:
+                        arguments.push_back({basename, wasm::type_t::U8});
+                        break;
+                    case primitive_type::U16:
+                        arguments.push_back({basename, wasm::type_t::U16});
+                        break;
+                    case primitive_type::U32:
+                        arguments.push_back({basename, wasm::type_t::U32});
+                        break;
+                    case primitive_type::U64:
+                        arguments.push_back({basename, wasm::type_t::U64});
+                        break;
+                    case primitive_type::Boolean:
+                        arguments.push_back({basename, wasm::type_t::I32});
+                        break;
+                }
+            }
+            else if constexpr (std::is_same_v<K, pointer_type>)
+            {
+                arguments.push_back({basename, wasm::type_t::I32});
+            }
+            else if constexpr (std::is_same_v<K, record_type>)
+            {
+                for (size_t index = 0; index < kind.fields.size(); index++)
+                {
+                    type_id field_type = parse_context.resolved_type(kind.fields[index].second);
+                    CAPY_ASSERT(parse_context.is_resolved(field_type), "Record field type should be resolved in emitter stage");
+                    const auto& field_entry = parse_context.types[to_index(field_type)];
+                    CAPY_ASSERT(std::holds_alternative<type_kind>(field_entry), "Unexpected type variable in resolved record field");
+                    lower_function_argument(std::get<type_kind>(field_entry), basename + "_" + std::to_string(index), arguments);
+                }
+            }
+            else
+            {
+                CAPY_FAIL("Unhandled type in function argument lowering");
+            }
+        },
+        type
+    );
+}
+
+void lir_based_emitter_v2::lower_local_variable(const symbol& sym, wasm::function& function)
+{
+    type_id variable_type = parse_context.resolved_type(sym.symbol_type);
+    const auto& type_entry = parse_context.types[to_index(variable_type)];
+    CAPY_ASSERT(std::holds_alternative<type_kind>(type_entry), "Encountered unresolved type variable when lowering local variable");
+    lower_local_type(std::get<type_kind>(type_entry), sym.name, function);
+}
+
+void lir_based_emitter_v2::lower_local_type(
+    const type_kind& type,
+    const std::string& basename,
+    wasm::function& function
+)
+{
+    std::visit(
+        [&](const auto& kind)
+        {
+            using K = std::decay_t<decltype(kind)>;
+            if constexpr (std::is_same_v<K, primitive_type>)
+            {
+                wasm::type_t type = wasm::type_t::None;
+                switch (kind)
+                {
+                    case primitive_type::Void:
+                        type = wasm::type_t::None;
+                        break;
+                    case primitive_type::Char:
+                    case primitive_type::S8:
+                        type = wasm::type_t::I8;
+                        break;
+                    case primitive_type::S16:
+                        type = wasm::type_t::I16;
+                        break;
+                    case primitive_type::S32:
+                        type = wasm::type_t::I32;
+                        break;
+                    case primitive_type::S64:
+                        type = wasm::type_t::I64;
+                        break;
+                    case primitive_type::U8:
+                        type = wasm::type_t::U8;
+                        break;
+                    case primitive_type::U16:
+                        type = wasm::type_t::U16;
+                        break;
+                    case primitive_type::U32:
+                        type = wasm::type_t::U32;
+                        break;
+                    case primitive_type::U64:
+                        type = wasm::type_t::U64;
+                        break;
+                    case primitive_type::Boolean:
+                        type = wasm::type_t::I32;
+                        break;
+                }
+                function.locals.push_back({basename, type});
+            }
+            else if constexpr (std::is_same_v<K, pointer_type>)
+            {
+                function.locals.push_back({basename, wasm::type_t::I32});
+            }
+            else if constexpr (std::is_same_v<K, record_type>)
+            {
+                for (size_t index = 0; index < kind.fields.size(); index++)
+                {
+                    type_id field_type = parse_context.resolved_type(kind.fields[index].second);
+                    CAPY_ASSERT(parse_context.is_resolved(field_type), "Record field type should be resolved in emitter stage");
+                    const auto& field_entry = parse_context.types[to_index(field_type)];
+                    CAPY_ASSERT(std::holds_alternative<type_kind>(field_entry), "Unexpected type variable in resolved record field");
+                    lower_local_type(std::get<type_kind>(field_entry), basename + "_" + std::to_string(index), function);
+                }
+            }
+            else
+            {
+                CAPY_FAIL("Unknown type kind when lowering local variable");
+            }
+        },
+        type
+    );
+}
+
+wasm::type_t lir_based_emitter_v2::lower_type(type_id type) const
+{
+    return lower_wasm_type(parse_context, type);
+}
+
+wasm::type_t lir_based_emitter_v2::value_type_of(type_id type) const
 {
     type_id resolved = parse_context.resolved_type(type);
     if (!parse_context.is_resolved(resolved))
-    {
-        // Unsuffixed literals without any typed counterpart (e.g. '5 + 3')
-        // aren't resolved by the type inference; they default to i32.
-        return wasm_type::i32;
-    }
-    return lowering->lower_return_type(resolved);
+        return wasm::type_t::I32;
+    return lower_type(resolved);
 }
 
-uint32_t lir_based_emitter::allocate_data(const std::string& data)
+uint32_t lir_based_emitter_v2::allocate_data(const std::string& data)
 {
-    return cur_data->allocate_data(data);
+    auto allocation_offset = cur_data->offset;
+    cur_data->offset += data.size();
+    cur_data->data_buffer += data;
+    return static_cast<uint32_t>(allocation_offset);
+}
+
+std::string lir_based_emitter_v2::next_label(const char* prefix)
+{
+    return std::string(prefix) + "_" + std::to_string(label_index++);
 }

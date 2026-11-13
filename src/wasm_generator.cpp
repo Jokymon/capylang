@@ -1,11 +1,13 @@
 #include "wasm_generator.hpp"
-#include "wasm_mnemonics.hpp"
+
 #include "tools.hpp"
+#include "wasm_mnemonics.hpp"
+
 #include <algorithm>
 #include <cstdint>
-#include <iomanip>
+#include <limits>
 #include <sstream>
-#include <utility>
+#include <type_traits>
 #include <variant>
 
 namespace
@@ -17,24 +19,15 @@ namespace
     const char SECTION_TYPE = '\x01';
     const char SECTION_IMPORT = '\x02';
     const char SECTION_FUNCTION = '\x03';
-    const char SECTION_TABLE = '\x04';
     const char SECTION_MEMORY = '\x05';
     const char SECTION_GLOBAL = '\x06';
     const char SECTION_EXPORT = '\x07';
-    const char SECTION_START = '\x08';
-    const char SECTION_ELEMENT = '\x09';
     const char SECTION_CODE = '\x0A';
     const char SECTION_DATA = '\x0B';
-    const char SECTION_DATA_COUNT = '\x0C';
-    const char SECTION_TAG = '\x0D';
 
-    const char NAME_SUBSECTION_MODULE_NAME = '\x00';
     const char NAME_SUBSECTION_FUNCTION_NAMES = '\x01';
     const char NAME_SUBSECTION_LOCAL_NAMES = '\x02';
-    const char NAME_SUBSECTION_TYPE_NAMES = '\x04';
-    const char NAME_SUBSECTION_GLOBAL_NAMES = '\x07'; // extended name section proposal
-    const char NAME_SUBSECTION_FIELD_NAMES = '\x0a';
-    const char NAME_SUBSECTION_TAG_NAMES = '\x0b';
+    const char NAME_SUBSECTION_GLOBAL_NAMES = '\x07';
 
     const char COMP_TYPE_FUNC = '\x60';
 
@@ -46,146 +39,192 @@ namespace
 
     const char LIMITS_I32_N = '\x00';
     const char LIMITS_I32_NM = '\x01';
-    const char LIMITS_I64_N = '\x04';
-    const char LIMITS_I64_NM = '\x05';
 
     const char MUTABILITY_IMMUT = '\x00';
     const char MUTABILITY_MUT = '\x01';
 
-    void encode_leb128(std::ostream& out, uint64_t value)
+    void encode_leb128(std::ostream& output, uint64_t value)
     {
         do
         {
-            uint8_t b = value & 0x7f;
+            uint8_t byte = value & 0x7f;
             value >>= 7;
-            if (value)
-                b |= 0x80;
-            out.put(b);
+            if (value != 0)
+                byte |= 0x80;
+            output.put(byte);
         } while (value != 0);
     }
 
-    void encode_leb128_signed(std::ostream& out, int64_t value)
+    void encode_leb128_signed(std::ostream& output, int64_t value)
     {
         bool more = true;
-
         while (more)
         {
-            uint8_t b = value & 0x7f; /* low-order 7 bits of value */
+            uint8_t byte = value & 0x7f;
             value >>= 7;
 
-            /* sign bit of byte is second high-order bit (0x40) */
-            uint8_t sign_bit = b & 0x40;
+            uint8_t sign_bit = byte & 0x40;
             if ((value == 0 && sign_bit == 0) || (value == -1 && sign_bit != 0))
                 more = false;
             else
-                b |= 0x80; /* set high-order bit of byte */
+                byte |= 0x80;
 
-            out.put(b);
+            output.put(byte);
         }
     }
 
-    int64_t normalize_i32_immediate(int64_t value)
+    void encode_i32_const_immediate(std::ostream& output, int64_t value)
     {
-        // WASM i32.const uses signed LEB128, but the payload represents 32-bit bits.
-        // Normalize through uint32_t first so values like 4294967295 become -1.
-        return static_cast<int32_t>(static_cast<uint32_t>(value));
+        encode_leb128_signed(output, static_cast<int32_t>(static_cast<uint32_t>(value)));
     }
 
-    void encode_i32_const_immediate(std::ostream& out, int64_t value)
+    void encode_string(std::ostream& output, const std::string& value)
     {
-        encode_leb128_signed(out, normalize_i32_immediate(value));
+        encode_leb128(output, value.size());
+        output.write(value.data(), value.size());
     }
 
-    void encode_string(std::ostream& out, const std::string s)
+    void write_section(std::ostream& output, char section, const std::ostringstream& content)
     {
-        encode_leb128(out, s.size());
-        out << s;
+        const auto data = content.str();
+        output.put(section);
+        encode_leb128(output, data.size());
+        output.write(data.data(), data.size());
     }
 
-    char encode_wasm_type(wasm_type type)
+    char encode_wasm_type(wasm::type_t type)
     {
         switch (type)
         {
-            // the small integer types only exist for memory access; as values
-            // they are represented as i32
-            case wasm_type::i8:
-            case wasm_type::u8:
-            case wasm_type::i16:
-            case wasm_type::u16:
-            case wasm_type::i32:
-            case wasm_type::u32:
+            case wasm::type_t::U8:
+            case wasm::type_t::U16:
+            case wasm::type_t::U32:
+            case wasm::type_t::I8:
+            case wasm::type_t::I16:
+            case wasm::type_t::I32:
                 return '\x7F';
-            case wasm_type::i64:
-            case wasm_type::u64:
+            case wasm::type_t::U64:
+            case wasm::type_t::I64:
                 return '\x7E';
-            case wasm_type::f32:
+            case wasm::type_t::F32:
                 return '\x7D';
-            case wasm_type::f64:
+            case wasm::type_t::F64:
                 return '\x7C';
-            default:
-                CAPY_FAIL("Trying to encode an unknown WASM type");
+            case wasm::type_t::None:
+                CAPY_FAIL("Trying to encode void as a WASM value type");
+                return '\x40';
         }
     }
 
-    char encode_extern_index(wasm_extern_index index)
+    char encode_extern_index(wasm::extern_index_t index)
     {
         switch (index)
         {
-            case wasm_extern_index::funcidx:
+            case wasm::extern_index_t::FuncIdx:
                 return EXTERNAL_TYPE_FUNC;
-            case wasm_extern_index::tableidx:
+            case wasm::extern_index_t::TableIdx:
                 return EXTERNAL_TYPE_TABLE;
-            case wasm_extern_index::memidx:
+            case wasm::extern_index_t::MemIdx:
                 return EXTERNAL_TYPE_MEM;
-            case wasm_extern_index::globalidx:
+            case wasm::extern_index_t::GlobalIdx:
                 return EXTERNAL_TYPE_GLOBAL;
-            case wasm_extern_index::tagidx:
+            case wasm::extern_index_t::TagIdx:
                 return EXTERNAL_TYPE_TAG;
         }
     }
 
-    void encode_func_type(std::ostream& output, const wasm_function& function)
+    void encode_func_type(std::ostream& output, const wasm::function& function)
     {
         output.put(COMP_TYPE_FUNC);
         encode_leb128(output, function.arguments.size());
-        for (const auto& arg : function.arguments)
+        for (const auto& argument : function.arguments)
         {
-            output.put(encode_wasm_type(arg.type));
+            output.put(encode_wasm_type(argument.type));
         }
 
-        if (function.return_type != wasm_type::none)
+        if (function.return_type == wasm::type_t::None)
+        {
+            output.put(0);
+        }
+        else
         {
             output.put(1);
             output.put(encode_wasm_type(function.return_type));
         }
-        else
-        {
-            output.put(0);
-        }
     }
 
-    bool is_wasm_type_signed(wasm_type typ)
+    bool is_imported(const wasm::importable& object)
     {
-        switch (typ)
+        return !object.ns.empty();
+    }
+
+    bool is_wasm_type_signed(wasm::type_t type)
+    {
+        switch (type)
         {
-            case wasm_type::none:
-                return false;
-            case wasm_type::i8:
-            case wasm_type::i16:
-            case wasm_type::i32:
-            case wasm_type::i64:
-            case wasm_type::f32:
-            case wasm_type::f64:
+            case wasm::type_t::I8:
+            case wasm::type_t::I16:
+            case wasm::type_t::I32:
+            case wasm::type_t::I64:
+            case wasm::type_t::F32:
+            case wasm::type_t::F64:
                 return true;
-            case wasm_type::u8:
-            case wasm_type::u16:
-            case wasm_type::u32:
-            case wasm_type::u64:
+            case wasm::type_t::None:
+            case wasm::type_t::U8:
+            case wasm::type_t::U16:
+            case wasm::type_t::U32:
+            case wasm::type_t::U64:
                 return false;
         }
     }
 
-    enum wasm_size_e
+    bool is_i32_stack_type(wasm::type_t type)
+    {
+        switch (type)
+        {
+            case wasm::type_t::U8:
+            case wasm::type_t::U16:
+            case wasm::type_t::U32:
+            case wasm::type_t::I8:
+            case wasm::type_t::I16:
+            case wasm::type_t::I32:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    bool is_i64_stack_type(wasm::type_t type)
+    {
+        return type == wasm::type_t::I64 || type == wasm::type_t::U64;
+    }
+
+    bool is_integer_stack_type(wasm::type_t type)
+    {
+        return is_i32_stack_type(type) || is_i64_stack_type(type);
+    }
+
+    char select_instruction(wasm::type_t type, char i32_instruction, char i64_instruction)
+    {
+        CAPY_ASSERT(is_integer_stack_type(type), "Expected an integer WASM value type");
+        return is_i64_stack_type(type) ? i64_instruction : i32_instruction;
+    }
+
+    char select_signed_instruction(
+        wasm::type_t type,
+        char i32_signed,
+        char i32_unsigned,
+        char i64_signed,
+        char i64_unsigned
+    )
+    {
+        CAPY_ASSERT(is_integer_stack_type(type), "Expected an integer WASM value type");
+        if (is_i64_stack_type(type))
+            return is_wasm_type_signed(type) ? i64_signed : i64_unsigned;
+        return is_wasm_type_signed(type) ? i32_signed : i32_unsigned;
+    }
+
+    enum class wasm_size
     {
         Size8,
         Size16,
@@ -193,74 +232,58 @@ namespace
         Size64
     };
 
-    wasm_size_e wasm_type_size(wasm_type typ)
+    wasm_size wasm_type_size(wasm::type_t type)
     {
-        switch (typ)
+        switch (type)
         {
-            case wasm_type::none:
-            case wasm_type::u32:
-            case wasm_type::i32:
-            case wasm_type::f32:
-                return wasm_size_e::Size32;
-            case wasm_type::u64:
-            case wasm_type::i64:
-            case wasm_type::f64:
-                return wasm_size_e::Size64;
-            case wasm_type::i8:
-            case wasm_type::u8:
-                return wasm_size_e::Size8;
-            case wasm_type::i16:
-            case wasm_type::u16:
-                return wasm_size_e::Size16;
+            case wasm::type_t::I8:
+            case wasm::type_t::U8:
+                return wasm_size::Size8;
+            case wasm::type_t::I16:
+            case wasm::type_t::U16:
+                return wasm_size::Size16;
+            case wasm::type_t::None:
+            case wasm::type_t::U32:
+            case wasm::type_t::I32:
+            case wasm::type_t::F32:
+                return wasm_size::Size32;
+            case wasm::type_t::U64:
+            case wasm::type_t::I64:
+            case wasm::type_t::F64:
+                return wasm_size::Size64;
         }
     }
 
-    /// @brief True for value types that are represented as 64-bit integers in WASM
-    bool is_wasm_type_64bit(wasm_type typ)
+    void encode_limits(std::ostream& output, const wasm::memory& memory)
     {
-        return (typ == wasm_type::i64) || (typ == wasm_type::u64);
-    }
-
-    /// @brief Selects the i32 or the i64 variant of an instruction based on the value type
-    char select_inst(wasm_type typ, char inst_i32, char inst_i64)
-    {
-        return is_wasm_type_64bit(typ) ? inst_i64 : inst_i32;
-    }
-
-    /// @brief Selects the signed/unsigned and i32/i64 variant of an instruction
-    char select_inst(wasm_type typ, char i32_s, char i32_u, char i64_s, char i64_u)
-    {
-        const bool is_signed = is_wasm_type_signed(typ);
-        if (is_wasm_type_64bit(typ))
+        if (memory.max_block_count > 0)
         {
-            return is_signed ? i64_s : i64_u;
+            output.put(LIMITS_I32_NM);
+            encode_leb128(output, memory.initial_block_count);
+            encode_leb128(output, memory.max_block_count);
         }
-        return is_signed ? i32_s : i32_u;
-    }
-
-    uint32_t resolve_block_label(const wasm_control_block* block, const wasm_branch_label& label, uint32_t nesting_level)
-    {
-        if (block == nullptr)
+        else
         {
-            return std::numeric_limits<uint32_t>::max();
+            output.put(LIMITS_I32_N);
+            encode_leb128(output, memory.initial_block_count);
         }
-
-        if (label == block->label())
-        {
-            return nesting_level;
-        }
-        return resolve_block_label(block->enclosing_block, label, nesting_level + 1);
     }
 }
 
-wasm_generator::wasm_generator()
+wasm_generator_v2::wasm_generator_v2()
 : type_entries()
-, current_block(nullptr)
+, function_indices()
+, global_indices()
+, control_labels()
 {
 }
 
-void wasm_generator::generate(const wasm_module& module, std::ostream& output)
+void wasm_generator_v2::generate(const wasm::module& module, std::ostream& output)
 {
+    type_entries.clear();
+    control_labels.clear();
+    index_module(module);
+
     output.write(MAGIC, 4);
     output.write(VERSION, 4);
 
@@ -275,645 +298,625 @@ void wasm_generator::generate(const wasm_module& module, std::ostream& output)
     generate_names(module, output);
 }
 
-void wasm_generator::generate_types(const wasm_module& module, std::ostream& output)
+void wasm_generator_v2::generate_types(const wasm::module& module, std::ostream& output)
 {
-    output.put(SECTION_TYPE);
-
-    for (const auto& func : module.functions)
+    for (const auto& function : module.functions)
     {
-        // First generate for the imported function types
-        // TODO: This is just at the moment to keep the WAT and
-        // WASM generated parts identical for easier comparison,
-        // maybe later we could also drop this
-        if (!func.is_imported())
-            continue;
-
-        intern_func_type(func);
+        if (is_imported(*function))
+            intern_func_type(*function);
     }
-    for (const auto& func : module.functions)
+    for (const auto& function : module.functions)
     {
-        if (func.is_imported())
-            continue;
-
-        intern_func_type(func);
+        if (!is_imported(*function))
+            intern_func_type(*function);
     }
 
     std::ostringstream content(std::ios::binary);
     encode_leb128(content, type_entries.size());
     for (const auto& entry : type_entries)
-    {
-        content.write(entry.c_str(), entry.size());
-    }
-
-    encode_leb128(output, content.str().size());
-    output.write(content.str().c_str(), content.str().size());
+        content.write(entry.data(), entry.size());
+    write_section(output, SECTION_TYPE, content);
 }
 
-void wasm_generator::generate_imports(const wasm_module& module, std::ostream& output)
+void wasm_generator_v2::generate_imports(const wasm::module& module, std::ostream& output)
 {
-    output.put(SECTION_IMPORT);
-
     size_t import_count = std::count_if(
-        module.memories.begin(),
-        module.memories.end(),
-        [](const auto& mem)
-        { return mem.is_imported(); }
+        module.memories.begin(), module.memories.end(), [](const auto& memory)
+        { return is_imported(*memory); }
     );
     import_count += std::count_if(
-        module.functions.begin(),
-        module.functions.end(),
-        [](const auto& func)
-        { return func.is_imported(); }
+        module.functions.begin(), module.functions.end(), [](const auto& function)
+        { return is_imported(*function); }
     );
 
     std::ostringstream content(std::ios::binary);
     encode_leb128(content, import_count);
 
-    for (const auto& mem : module.memories)
+    for (const auto& memory : module.memories)
     {
-        if (!mem.is_imported())
+        if (!is_imported(*memory))
             continue;
-
-        encode_string(content, mem.ns);
-        encode_string(content, mem.import_name);
-
+        encode_string(content, memory->ns);
+        encode_string(content, memory->import_name);
         content.put(EXTERNAL_TYPE_MEM);
-        if (mem.max_block_count > 0)
-        {
-            content.put(LIMITS_I32_NM);
-            encode_leb128(content, mem.initial_block_count);
-            encode_leb128(content, mem.max_block_count);
-        }
-        else
-        {
-            content.put(LIMITS_I32_N);
-            encode_leb128(content, mem.initial_block_count);
-        }
+        encode_limits(content, *memory);
     }
 
-    for (const auto& func : module.functions)
+    for (const auto& function : module.functions)
     {
-        if (!func.is_imported())
+        if (!is_imported(*function))
             continue;
-
-        encode_string(content, func.ns);
-        encode_string(content, func.import_name);
-
+        encode_string(content, function->ns);
+        encode_string(content, function->import_name);
         content.put(EXTERNAL_TYPE_FUNC);
-        size_t index = intern_func_type(func);
-        encode_leb128(content, index);
+        encode_leb128(content, intern_func_type(*function));
     }
 
-    encode_leb128(output, content.str().size());
-    output.write(content.str().c_str(), content.str().size());
+    write_section(output, SECTION_IMPORT, content);
 }
 
-void wasm_generator::generate_functions(const wasm_module& module, std::ostream& output)
+void wasm_generator_v2::generate_functions(const wasm::module& module, std::ostream& output)
 {
-    output.put(SECTION_FUNCTION);
-
-    size_t internal_count = std::count_if(module.functions.begin(), module.functions.end(), [](const auto& func_pair)
-                                          { return !func_pair.is_imported(); });
+    size_t internal_count = std::count_if(
+        module.functions.begin(), module.functions.end(), [](const auto& function)
+        { return !is_imported(*function); }
+    );
 
     std::ostringstream content(std::ios::binary);
     encode_leb128(content, internal_count);
-
-    for (const auto& func : module.functions)
+    for (const auto& function : module.functions)
     {
-        if (func.is_imported())
+        if (is_imported(*function))
             continue;
-
-        size_t index = intern_func_type(func);
-        encode_leb128(content, index);
+        encode_leb128(content, intern_func_type(*function));
     }
-
-    encode_leb128(output, content.str().size());
-    output.write(content.str().c_str(), content.str().size());
+    write_section(output, SECTION_FUNCTION, content);
 }
 
-void wasm_generator::generate_memories(const wasm_module& module, std::ostream& output)
+void wasm_generator_v2::generate_memories(const wasm::module& module, std::ostream& output)
 {
-    output.put(SECTION_MEMORY);
+    size_t internal_count = std::count_if(
+        module.memories.begin(), module.memories.end(), [](const auto& memory)
+        { return !is_imported(*memory); }
+    );
 
     std::ostringstream content(std::ios::binary);
-    encode_leb128(content, module.memories.size());
-    for (const auto& mem : module.memories)
+    encode_leb128(content, internal_count);
+    for (const auto& memory : module.memories)
     {
-        if (mem.max_block_count > 0)
-        {
-            content.put(LIMITS_I32_NM);
-            encode_leb128(content, mem.initial_block_count);
-            encode_leb128(content, mem.max_block_count);
-        }
-        else
-        {
-            content.put(LIMITS_I32_N);
-            encode_leb128(content, mem.initial_block_count);
-        }
+        if (is_imported(*memory))
+            continue;
+        encode_limits(content, *memory);
     }
-
-    encode_leb128(output, content.str().size());
-    output.write(content.str().c_str(), content.str().size());
+    write_section(output, SECTION_MEMORY, content);
 }
 
-void wasm_generator::generate_globals(const wasm_module& module, std::ostream& output)
+void wasm_generator_v2::generate_globals(const wasm::module& module, std::ostream& output)
 {
-    output.put(SECTION_GLOBAL);
-
     std::ostringstream content(std::ios::binary);
     encode_leb128(content, module.globals.size());
-    for (const auto& g : module.globals)
+    for (const auto& global : module.globals)
     {
-        content.put(encode_wasm_type(g.typ));
-        if (g.access == access_type::mut)
-            content.put(MUTABILITY_MUT);
-        else
-            content.put(MUTABILITY_IMMUT);
-
-        // We need a dummy function for generate_block(), because generate_block wants to look up locals; in globals we can't
-        // use any locals, so an empty function should be ok
-        wasm_function dummy_function{0, "", wasm_type::none, {}};
-        generate_expr(module, dummy_function, g.init_expression, content);
+        content.put(encode_wasm_type(global->typ));
+        content.put(global->access == wasm::access_t::Mut ? MUTABILITY_MUT : MUTABILITY_IMMUT);
+        generate_expr(module, nullptr, global->init_expression, content);
         content.put(INST_TERMINATOR);
     }
-
-    encode_leb128(output, content.str().size());
-    output.write(content.str().c_str(), content.str().size());
+    write_section(output, SECTION_GLOBAL, content);
 }
 
-void wasm_generator::generate_exports(const wasm_module& module, std::ostream& output)
+void wasm_generator_v2::generate_exports(const wasm::module& module, std::ostream& output)
 {
-    output.put(SECTION_EXPORT);
-
     std::ostringstream content(std::ios::binary);
     encode_leb128(content, module.exports.size());
-    for (const auto& exp : module.exports)
+    for (const auto& export_item : module.exports)
     {
-        encode_string(content, exp.export_name);
-        content.put(encode_extern_index(exp.export_type));
-        encode_leb128(content, exp.index);
+        encode_string(content, export_item->export_name);
+        content.put(encode_extern_index(export_item->export_type));
+        encode_leb128(content, export_item->index);
     }
-
-    encode_leb128(output, content.str().size());
-    output.write(content.str().c_str(), content.str().size());
+    write_section(output, SECTION_EXPORT, content);
 }
 
-void wasm_generator::generate_code(const wasm_module& module, std::ostream& output)
+void wasm_generator_v2::generate_code(const wasm::module& module, std::ostream& output)
 {
-    output.put(SECTION_CODE);
-
-    size_t internal_count = std::count_if(module.functions.begin(), module.functions.end(), [](const auto& func_pair)
-                                          { return !func_pair.is_imported(); });
+    size_t internal_count = std::count_if(
+        module.functions.begin(), module.functions.end(), [](const auto& function)
+        { return !is_imported(*function); }
+    );
 
     std::ostringstream content(std::ios::binary);
     encode_leb128(content, internal_count);
 
-    for (const auto& func : module.functions)
+    for (const auto& function : module.functions)
     {
-        if (func.is_imported())
+        if (is_imported(*function))
             continue;
 
         std::ostringstream function_code(std::ios::binary);
-
-        // Locals are declared as a vector of (count, type) entries. Consecutive
-        // locals of the same value type are grouped into one entry.
-        std::vector<std::pair<uint32_t, char>> local_groups;
-        for (const auto& local : func.locals)
+        size_t local_group_count = 0;
+        char previous_type = 0;
+        for (const auto& local : function->locals)
         {
-            char encoded_type = encode_wasm_type(local.type);
-            if (!local_groups.empty() && (local_groups.back().second == encoded_type))
+            char current_type = encode_wasm_type(local.type);
+            if (local_group_count == 0 || current_type != previous_type)
             {
-                local_groups.back().first++;
-            }
-            else
-            {
-                local_groups.emplace_back(1, encoded_type);
+                local_group_count++;
+                previous_type = current_type;
             }
         }
-        encode_leb128(function_code, local_groups.size());
-        for (const auto& [count, encoded_type] : local_groups)
+
+        encode_leb128(function_code, local_group_count);
+        size_t local_index = 0;
+        while (local_index < function->locals.size())
         {
-            encode_leb128(function_code, count);
-            function_code.put(encoded_type);
+            char type = encode_wasm_type(function->locals[local_index].type);
+            size_t group_end = local_index + 1;
+            while (group_end < function->locals.size() &&
+                   encode_wasm_type(function->locals[group_end].type) == type)
+            {
+                group_end++;
+            }
+
+            encode_leb128(function_code, group_end - local_index);
+            function_code.put(type);
+            local_index = group_end;
         }
 
-        generate_expr(module, func, func.function_body, function_code);
+        generate_expr(module, function.get(), function->function_body, function_code);
         function_code.put(INST_TERMINATOR);
 
-        encode_leb128(content, function_code.str().size());
-        content.write(function_code.str().c_str(), function_code.str().size());
+        const auto function_data = function_code.str();
+        encode_leb128(content, function_data.size());
+        content.write(function_data.data(), function_data.size());
     }
 
-    encode_leb128(output, content.str().size());
-    output.write(content.str().c_str(), content.str().size());
+    write_section(output, SECTION_CODE, content);
 }
 
-void wasm_generator::generate_data(const wasm_module& module, std::ostream& output)
+void wasm_generator_v2::generate_data(const wasm::module& module, std::ostream& output)
 {
-    output.put(SECTION_DATA);
-
     std::ostringstream content(std::ios::binary);
     encode_leb128(content, module.data_sections.size());
     for (const auto& data : module.data_sections)
     {
-        encode_leb128(content, 0); // active data section in memory 0
-
+        encode_leb128(content, 0);
         content.put(INST_I32_CONST);
-        encode_leb128_signed(content, data.init_offset);
+        encode_i32_const_immediate(content, data->init_offset);
         content.put(INST_TERMINATOR);
-
-        encode_leb128(content, data.data_buffer.size());
-        content << data.data_buffer;
+        encode_leb128(content, data->data_buffer.size());
+        content.write(data->data_buffer.data(), data->data_buffer.size());
     }
-
-    encode_leb128(output, content.str().size());
-    output.write(content.str().c_str(), content.str().size());
+    write_section(output, SECTION_DATA, content);
 }
 
-void wasm_generator::generate_names(const wasm_module& module, std::ostream& output)
+void wasm_generator_v2::generate_names(const wasm::module& module, std::ostream& output)
 {
-    output.put(SECTION_CUSTOM);
-
     std::ostringstream content(std::ios::binary);
     encode_string(content, "name");
 
-    // Add function names: name map
-    std::ostringstream subsection1(std::ios::binary);
-    encode_leb128(subsection1, module.functions.size());
-    for (size_t index = 0; index < module.functions.size(); ++index)
+    std::ostringstream function_names(std::ios::binary);
+    encode_leb128(function_names, module.functions.size());
+    auto emit_function_names = [&](bool imported)
     {
-        encode_leb128(subsection1, index);
-        encode_string(subsection1, module.functions[index].name);
-    }
+        for (const auto& function : module.functions)
+        {
+            if (is_imported(*function) != imported)
+                continue;
+            encode_leb128(function_names, function_indices.at(function->name));
+            encode_string(function_names, function->name);
+        }
+    };
+    emit_function_names(true);
+    emit_function_names(false);
 
     content.put(NAME_SUBSECTION_FUNCTION_NAMES);
-    encode_leb128(content, subsection1.str().size());
-    content.write(subsection1.str().c_str(), subsection1.str().size());
+    const auto function_names_data = function_names.str();
+    encode_leb128(content, function_names_data.size());
+    content.write(function_names_data.data(), function_names_data.size());
 
-    // Add parameter/local names: indirect name map
-    std::ostringstream subsection2(std::ios::binary);
-    encode_leb128(subsection2, module.functions.size());
-    for (size_t index = 0; index < module.functions.size(); ++index)
+    std::ostringstream local_names(std::ios::binary);
+    encode_leb128(local_names, module.functions.size());
+    auto emit_local_names = [&](bool imported)
     {
-        encode_leb128(subsection2, index);
+        for (const auto& function : module.functions)
+        {
+            if (is_imported(*function) != imported)
+                continue;
+            encode_leb128(local_names, function_indices.at(function->name));
+            encode_leb128(local_names, function->arguments.size() + function->locals.size());
 
-        const wasm_function& func{module.functions[index]};
-        // number of arguments and locals of this function
-        encode_leb128(subsection2, func.arguments.size() + func.locals.size());
-        size_t local_index = 0;
-        for (const auto& param : func.arguments)
-        {
-            encode_leb128(subsection2, local_index++);
-            encode_string(subsection2, param.name);
+            size_t index = 0;
+            for (const auto& argument : function->arguments)
+            {
+                encode_leb128(local_names, index++);
+                encode_string(local_names, argument.name);
+            }
+            for (const auto& local : function->locals)
+            {
+                encode_leb128(local_names, index++);
+                encode_string(local_names, local.name);
+            }
         }
-        for (const auto& param : func.locals)
-        {
-            encode_leb128(subsection2, local_index++);
-            encode_string(subsection2, param.name);
-        }
-    }
+    };
+    emit_local_names(true);
+    emit_local_names(false);
 
     content.put(NAME_SUBSECTION_LOCAL_NAMES);
-    encode_leb128(content, subsection2.str().size());
-    content.write(subsection2.str().c_str(), subsection2.str().size());
+    const auto local_names_data = local_names.str();
+    encode_leb128(content, local_names_data.size());
+    content.write(local_names_data.data(), local_names_data.size());
 
-    // Add global names
-    std::ostringstream subsection7(std::ios::binary);
-    encode_leb128(subsection7, module.globals.size());
-    for (size_t index = 0; index < module.globals.size(); ++index)
+    std::ostringstream global_names(std::ios::binary);
+    encode_leb128(global_names, module.globals.size());
+    for (const auto& global : module.globals)
     {
-        encode_leb128(subsection7, index);
-        encode_string(subsection7, module.globals[index].name);
+        encode_leb128(global_names, global_indices.at(global->name));
+        encode_string(global_names, global->name);
     }
 
     content.put(NAME_SUBSECTION_GLOBAL_NAMES);
-    encode_leb128(content, subsection7.str().size());
-    content.write(subsection7.str().c_str(), subsection7.str().size());
-
-    encode_leb128(output, content.str().size());
-    output.write(content.str().c_str(), content.str().size());
+    const auto global_names_data = global_names.str();
+    encode_leb128(content, global_names_data.size());
+    content.write(global_names_data.data(), global_names_data.size());
+    write_section(output, SECTION_CUSTOM, content);
 }
 
-void wasm_generator::generate_expr(const wasm_module& module, const wasm_function& function, const wasm_expr& expr, std::ostream& output)
+void wasm_generator_v2::generate_expr(
+    const wasm::module& module,
+    const wasm::function* function,
+    const wasm::instruction_list& expr,
+    std::ostream& output
+)
 {
-    for (const auto& inst : expr)
+    for (const auto& instruction : expr)
     {
-        std::visit([&](const auto& t)
-                   {
-                       using T = std::decay_t<decltype(t)>;
+        CAPY_ASSERT(instruction != nullptr, "Encountered null instruction during WASM generation");
+        std::visit(
+            [&](const auto& value)
+            {
+                using T = std::decay_t<decltype(value)>;
 
-                       if constexpr (std::is_same_v<T, wasm_op_base>)
-                       {
-                           switch (t.op)
-                           {
-                               case wasm_op::drop:
-                                   output.put(INST_DROP);
-                                   break;
-                               case wasm_op::ret:
-                                   output.put(INST_RET);
-                                   break;
-                               case wasm_op::memory_size:
-                                   output.put(INST_MEMORY_SIZE);
-                                   encode_leb128(output, 0);  // memory index is hardcoded for the moment
-                                   break;
-                               case wasm_op::memory_grow:
-                                   output.put(INST_MEMORY_GROW);
-                                   encode_leb128(output, 0);  // memory index is hardcoded for the moment
-                                   break;
-                               case wasm_op::memory_fill:
-                                   output.put(INST_FC);
-                                   output.put(INST_FC_MEMORY_FILL);
-                                   encode_leb128(output, 0);  // memory index is hardcoded for the moment
-                                   break;
-                               case wasm_op::unreachable:
-                                   output.put(INST_UNREACHABLE);
-                                   break;
-                               case wasm_op::i64_extend_i32_s:
-                                   output.put(INST_I64_EXTEND_I32_S);
-                                   break;
-                               case wasm_op::i64_extend_i32_u:
-                                   output.put(INST_I64_EXTEND_I32_U);
-                                   break;
-                               case wasm_op::i32_wrap_i64:
-                                   output.put(INST_I32_WRAP_I64);
-                                   break;
-                               default:
-                                   break;
-                           }
-                       }
-                       else if constexpr (std::is_same_v<T, wasm_op_type>)
-                       {
-                           switch (t.op)
-                           {
-                               case wasm_op::iadd:
-                                   output.put(select_inst(t.value_type, INST_I32_ADD, INST_I64_ADD));
-                                   break;
-                               case wasm_op::isub:
-                                   output.put(select_inst(t.value_type, INST_I32_SUB, INST_I64_SUB));
-                                   break;
-                               case wasm_op::imul:
-                                   output.put(select_inst(t.value_type, INST_I32_MUL, INST_I64_MUL));
-                                   break;
-                               case wasm_op::iand:
-                                   output.put(select_inst(t.value_type, INST_I32_AND, INST_I64_AND));
-                                   break;
-                               case wasm_op::ior:
-                                   output.put(select_inst(t.value_type, INST_I32_OR, INST_I64_OR));
-                                   break;
-                               case wasm_op::ishl:
-                                   output.put(select_inst(t.value_type, INST_I32_SHL, INST_I64_SHL));
-                                   break;
-                               case wasm_op::eq:
-                                   output.put(select_inst(t.value_type, INST_I32_EQ, INST_I64_EQ));
-                                   break;
-                               case wasm_op::ne:
-                                   output.put(select_inst(t.value_type, INST_I32_NE, INST_I64_NE));
-                                   break;
-                               case wasm_op::eqz:
-                                   output.put(select_inst(t.value_type, INST_I32_EQZ, INST_I64_EQZ));
-                                   break;
-                               default:
-                                   break;
-                           }
-                       }
-                       else if constexpr (std::is_same_v<T, wasm_op_index>)
-                       {
-                           size_t index = 0;
-                           switch (t.op)
-                           {
-                               case wasm_op::local_get:
-                                   output.put(INST_LOCAL_GET);
-                                   break;
-                               case wasm_op::local_set:
-                                   output.put(INST_LOCAL_SET);
-                                   break;
-                               case wasm_op::local_tee:
-                                   output.put(INST_LOCAL_TEE);
-                                   break;
-                               case wasm_op::global_get:
-                                   output.put(INST_GLOBAL_GET);
-                                   break;
-                               case wasm_op::global_set:
-                                   output.put(INST_GLOBAL_SET);
-                                   break;
-                               default:
-                                   break;
-                           }
-                           switch (t.op)
-                           {
-                               case wasm_op::local_get:
-                               case wasm_op::local_set:
-                               case wasm_op::local_tee:
-                                   index = function.locals_map.at(t.name);
-                                   break;
-                               case wasm_op::global_get:
-                               case wasm_op::global_set:
-                                   index = module.globals_map.at(t.name);
-                                   break;
-                               default:
-                                   break;
-                           }
-                           encode_leb128(output, index);
-                       }
-                       else if constexpr (std::is_same_v<T, wasm_op_type_sign>)
-                       {
-                           switch (t.op)
-                           {
-                               case wasm_op::idiv:
-                                   output.put(select_inst(t.value_type, INST_I32_DIV_S, INST_I32_DIV_U, INST_I64_DIV_S, INST_I64_DIV_U));
-                                   break;
-                               case wasm_op::irem:
-                                   output.put(select_inst(t.value_type, INST_I32_REM_S, INST_I32_REM_U, INST_I64_REM_S, INST_I64_REM_U));
-                                   break;
-                               case wasm_op::ishr:
-                                   output.put(select_inst(t.value_type, INST_I32_SHR_S, INST_I32_SHR_U, INST_I64_SHR_S, INST_I64_SHR_U));
-                                   break;
-                               case wasm_op::ilt:
-                                   output.put(select_inst(t.value_type, INST_I32_LT_S, INST_I32_LT_U, INST_I64_LT_S, INST_I64_LT_U));
-                                   break;
-                               case wasm_op::ilte:
-                                   output.put(select_inst(t.value_type, INST_I32_LE_S, INST_I32_LE_U, INST_I64_LE_S, INST_I64_LE_U));
-                                   break;
-                               case wasm_op::igt:
-                                   output.put(select_inst(t.value_type, INST_I32_GT_S, INST_I32_GT_U, INST_I64_GT_S, INST_I64_GT_U));
-                                   break;
-                               case wasm_op::igte:
-                                   output.put(select_inst(t.value_type, INST_I32_GE_S, INST_I32_GE_U, INST_I64_GE_S, INST_I64_GE_U));
-                                   break;
-                               default:
-                                   break;
-                           }
-                       }
-                       else if constexpr (std::is_same_v<T, wasm_op_type_value>)
-                       {
-                           if (is_wasm_type_64bit(t.value_type))
-                           {
-                               // the value already holds the 64-bit two's complement pattern
-                               output.put(INST_I64_CONST);
-                               encode_leb128_signed(output, t.value);
-                           }
-                           else
-                           {
-                               output.put(INST_I32_CONST);
-                               encode_i32_const_immediate(output, t.value);
-                           }
-                       }
-                       else if constexpr (std::is_same_v<T, wasm_op_align_offset>)
-                       {
+                if constexpr (std::is_same_v<T, wasm::op_no_arg>)
+                {
+                    switch (value.op)
+                    {
+                        case wasm::operation_t::Nop:
+                            output.put(INST_NOP);
+                            break;
+                        case wasm::operation_t::Unreachable:
+                            output.put(INST_UNREACHABLE);
+                            break;
+                        case wasm::operation_t::Drop:
+                            output.put(INST_DROP);
+                            break;
+                        case wasm::operation_t::Ret:
+                            output.put(INST_RET);
+                            break;
+                        case wasm::operation_t::MemorySize:
+                            output.put(INST_MEMORY_SIZE);
+                            encode_leb128(output, 0);
+                            break;
+                        case wasm::operation_t::MemoryGrow:
+                            output.put(INST_MEMORY_GROW);
+                            encode_leb128(output, 0);
+                            break;
+                        case wasm::operation_t::MemoryFill:
+                            output.put(INST_FC);
+                            encode_leb128(output, INST_FC_MEMORY_FILL);
+                            encode_leb128(output, 0);
+                            break;
+                        case wasm::operation_t::I64ExtendI32S:
+                            output.put(INST_I64_EXTEND_I32_S);
+                            break;
+                        case wasm::operation_t::I64ExtendI32U:
+                            output.put(INST_I64_EXTEND_I32_U);
+                            break;
+                        case wasm::operation_t::I32WrapI64:
+                            output.put(INST_I32_WRAP_I64);
+                            break;
+                        default:
+                            CAPY_FAIL("Unexpected no-argument operation in WASM generator");
+                            break;
+                    }
+                }
+                else if constexpr (std::is_same_v<T, wasm::op_index>)
+                {
+                    if (value.op == wasm::operation_t::Call)
+                    {
+                        output.put(INST_CALL);
+                        encode_leb128(output, function_indices.at(value.name));
+                        return;
+                    }
 
-                           switch (t.op)
-                           {
-                               case wasm_op::load:
-                                   switch (wasm_type_size(t.value_type))
-                                   {
-                                       case wasm_size_e::Size8:
-                                           if (is_wasm_type_signed(t.value_type))
-                                           {
-                                               output.put(INST_I32_LOAD8_S);
-                                           }
-                                           else
-                                           {
-                                               output.put(INST_I32_LOAD8_U);
-                                           }
-                                           break;
-                                       case wasm_size_e::Size16:
-                                           if (is_wasm_type_signed(t.value_type))
-                                           {
-                                               output.put(INST_I32_LOAD16_S);
-                                           }
-                                           else
-                                           {
-                                               output.put(INST_I32_LOAD16_U);
-                                           }
-                                           break;
-                                       case wasm_size_e::Size64:
-                                           output.put(INST_I64_LOAD);
-                                           break;
-                                       default:
-                                           output.put(INST_I32_LOAD);
-                                           break;
-                                   }
-                                   encode_leb128(output, t.alignment);
-                                   encode_leb128(output, t.offset);
-                                   break;
-                               case wasm_op::store:
-                                   switch (wasm_type_size(t.value_type))
-                                   {
-                                       case wasm_size_e::Size8:
-                                           output.put(INST_I32_STORE8);
-                                           break;
-                                       case wasm_size_e::Size16:
-                                           output.put(INST_I32_STORE16);
-                                           break;
-                                       case wasm_size_e::Size64:
-                                           output.put(INST_I64_STORE);
-                                           break;
-                                       default:
-                                           output.put(INST_I32_STORE);
-                                           break;
-                                   }
-                                   encode_leb128(output, t.alignment);
-                                   encode_leb128(output, t.offset);
-                                   break;
-                               default:
-                                   break;
-                           }
-                       }
-                       else if constexpr (std::is_same_v<T, wasm_op_label>)
-                       {
-                           uint32_t block_label = resolve_block_label(current_block, t.label, 0);
-                           CAPY_ASSERT(block_label != std::numeric_limits<uint32_t>::max(), "Can't resolve block label in jump instruction");
+                    size_t index = 0;
+                    switch (value.op)
+                    {
+                        case wasm::operation_t::LocalGet:
+                            CAPY_ASSERT(function != nullptr, "Local access is not valid in a global initializer");
+                            output.put(INST_LOCAL_GET);
+                            index = local_index(*function, value.name);
+                            break;
+                        case wasm::operation_t::LocalSet:
+                            CAPY_ASSERT(function != nullptr, "Local access is not valid in a global initializer");
+                            output.put(INST_LOCAL_SET);
+                            index = local_index(*function, value.name);
+                            break;
+                        case wasm::operation_t::LocalTee:
+                            CAPY_ASSERT(function != nullptr, "Local access is not valid in a global initializer");
+                            output.put(INST_LOCAL_TEE);
+                            index = local_index(*function, value.name);
+                            break;
+                        case wasm::operation_t::GlobalGet:
+                            output.put(INST_GLOBAL_GET);
+                            index = global_indices.at(value.name);
+                            break;
+                        case wasm::operation_t::GlobalSet:
+                            output.put(INST_GLOBAL_SET);
+                            index = global_indices.at(value.name);
+                            break;
+                        default:
+                            CAPY_FAIL("Unexpected indexed operation in WASM generator");
+                            break;
+                    }
+                    encode_leb128(output, index);
+                }
+                else if constexpr (std::is_same_v<T, wasm::op_type>)
+                {
+                    switch (value.op)
+                    {
+                        case wasm::operation_t::IAdd:
+                            output.put(select_instruction(value.value_type, INST_I32_ADD, INST_I64_ADD));
+                            break;
+                        case wasm::operation_t::ISub:
+                            output.put(select_instruction(value.value_type, INST_I32_SUB, INST_I64_SUB));
+                            break;
+                        case wasm::operation_t::IMul:
+                            output.put(select_instruction(value.value_type, INST_I32_MUL, INST_I64_MUL));
+                            break;
+                        case wasm::operation_t::IAnd:
+                            output.put(select_instruction(value.value_type, INST_I32_AND, INST_I64_AND));
+                            break;
+                        case wasm::operation_t::IOr:
+                            output.put(select_instruction(value.value_type, INST_I32_OR, INST_I64_OR));
+                            break;
+                        case wasm::operation_t::IShl:
+                            output.put(select_instruction(value.value_type, INST_I32_SHL, INST_I64_SHL));
+                            break;
+                        case wasm::operation_t::Eq:
+                            output.put(select_instruction(value.value_type, INST_I32_EQ, INST_I64_EQ));
+                            break;
+                        case wasm::operation_t::Ne:
+                            output.put(select_instruction(value.value_type, INST_I32_NE, INST_I64_NE));
+                            break;
+                        case wasm::operation_t::Eqz:
+                            output.put(select_instruction(value.value_type, INST_I32_EQZ, INST_I64_EQZ));
+                            break;
+                        default:
+                            CAPY_FAIL("Unexpected typed operation in WASM generator");
+                            break;
+                    }
+                }
+                else if constexpr (std::is_same_v<T, wasm::op_type_sign>)
+                {
+                    switch (value.op)
+                    {
+                        case wasm::operation_t::IDiv:
+                            output.put(select_signed_instruction(value.value_type, INST_I32_DIV_S, INST_I32_DIV_U, INST_I64_DIV_S, INST_I64_DIV_U));
+                            break;
+                        case wasm::operation_t::IRem:
+                            output.put(select_signed_instruction(value.value_type, INST_I32_REM_S, INST_I32_REM_U, INST_I64_REM_S, INST_I64_REM_U));
+                            break;
+                        case wasm::operation_t::IShr:
+                            output.put(select_signed_instruction(value.value_type, INST_I32_SHR_S, INST_I32_SHR_U, INST_I64_SHR_S, INST_I64_SHR_U));
+                            break;
+                        case wasm::operation_t::ILt:
+                            output.put(select_signed_instruction(value.value_type, INST_I32_LT_S, INST_I32_LT_U, INST_I64_LT_S, INST_I64_LT_U));
+                            break;
+                        case wasm::operation_t::ILte:
+                            output.put(select_signed_instruction(value.value_type, INST_I32_LE_S, INST_I32_LE_U, INST_I64_LE_S, INST_I64_LE_U));
+                            break;
+                        case wasm::operation_t::IGt:
+                            output.put(select_signed_instruction(value.value_type, INST_I32_GT_S, INST_I32_GT_U, INST_I64_GT_S, INST_I64_GT_U));
+                            break;
+                        case wasm::operation_t::IGte:
+                            output.put(select_signed_instruction(value.value_type, INST_I32_GE_S, INST_I32_GE_U, INST_I64_GE_S, INST_I64_GE_U));
+                            break;
+                        default:
+                            CAPY_FAIL("Unexpected signed typed operation in WASM generator");
+                            break;
+                    }
+                }
+                else if constexpr (std::is_same_v<T, wasm::op_type_value>)
+                {
+                    CAPY_ASSERT(value.op == wasm::operation_t::Const, "Unexpected typed-value operation in WASM generator");
+                    switch (wasm_type_size(value.value_type))
+                    {
+                        case wasm_size::Size8:
+                        case wasm_size::Size16:
+                        case wasm_size::Size32:
+                            CAPY_ASSERT(value.value_type != wasm::type_t::F32, "Floating-point constants are not represented by the current IR");
+                            output.put(INST_I32_CONST);
+                            encode_i32_const_immediate(output, value.value);
+                            break;
+                        case wasm_size::Size64:
+                            CAPY_ASSERT(value.value_type != wasm::type_t::F64, "Floating-point constants are not represented by the current IR");
+                            output.put(INST_I64_CONST);
+                            encode_leb128_signed(output, value.value);
+                            break;
+                    }
+                }
+                else if constexpr (std::is_same_v<T, wasm::op_align_offset>)
+                {
+                    auto size = wasm_type_size(value.value_type);
+                    CAPY_ASSERT(
+                        value.value_type != wasm::type_t::F32 &&
+                            value.value_type != wasm::type_t::F64 &&
+                            value.value_type != wasm::type_t::None,
+                        "Only integer memory operations are currently supported"
+                    );
 
-                           switch (t.op)
-                           {
-                               case wasm_op::br:
-                                   output.put(INST_BR);
-                                   break;
-                               case wasm_op::br_if:
-                                   output.put(INST_BR_IF);
-                                   break;
-                               default:
-                                   break;
-                           }
+                    if (value.op == wasm::operation_t::Load)
+                    {
+                        switch (size)
+                        {
+                            case wasm_size::Size8:
+                                output.put(is_wasm_type_signed(value.value_type) ? INST_I32_LOAD8_S : INST_I32_LOAD8_U);
+                                break;
+                            case wasm_size::Size16:
+                                output.put(is_wasm_type_signed(value.value_type) ? INST_I32_LOAD16_S : INST_I32_LOAD16_U);
+                                break;
+                            case wasm_size::Size32:
+                                output.put(INST_I32_LOAD);
+                                break;
+                            case wasm_size::Size64:
+                                output.put(INST_I64_LOAD);
+                                break;
+                        }
+                    }
+                    else if (value.op == wasm::operation_t::Store)
+                    {
+                        switch (size)
+                        {
+                            case wasm_size::Size8:
+                                output.put(INST_I32_STORE8);
+                                break;
+                            case wasm_size::Size16:
+                                output.put(INST_I32_STORE16);
+                                break;
+                            case wasm_size::Size32:
+                                output.put(INST_I32_STORE);
+                                break;
+                            case wasm_size::Size64:
+                                output.put(INST_I64_STORE);
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        CAPY_FAIL("Unexpected memory operation in WASM generator");
+                    }
 
-                           encode_leb128(output, block_label);
-                       }
-                       else if constexpr (std::is_same_v<T, wasm_op_func>)
-                       {
-                           output.put(INST_CALL);
-                           size_t function_index = module.functions_map.at(t.function.name());
-                           encode_leb128(output, function_index);
-                       }
-                       else if constexpr (std::is_same_v<T, wasm_if_block>)
-                       {
-                           output.put(INST_IF);
-                           if (t.return_type != wasm_type::none)
-                           {
-                               output.put(encode_wasm_type(t.return_type));
-                           }
-                           else
-                           {
-                               output.put(0x40); // block type 'void'
-                           }
+                    encode_leb128(output, value.alignment);
+                    encode_leb128(output, value.offset);
+                }
+                else if constexpr (std::is_same_v<T, wasm::op_label>)
+                {
+                    if (value.op == wasm::operation_t::Br)
+                        output.put(INST_BR);
+                    else if (value.op == wasm::operation_t::BrIf)
+                        output.put(INST_BR_IF);
+                    else
+                    {
+                        CAPY_FAIL("Unexpected label operation in WASM generator");
+                    }
+                    encode_leb128(output, resolve_block_label(value.label));
+                }
+                else if constexpr (std::is_same_v<T, wasm::if_block>)
+                {
+                    output.put(INST_IF);
+                    output.put(value.return_type == wasm::type_t::None ? '\x40' : encode_wasm_type(value.return_type));
 
-                           const wasm_control_block* previous_block = current_block;
-                           current_block = &t;
-                           generate_expr(module, function, t.then_block, output);
-
-                           if (!t.else_block.empty())
-                           {
-                               output.put(INST_ELSE);
-                               generate_expr(module, function, t.else_block, output);
-                           }
-                           current_block = previous_block;
-
-                           output.put(INST_TERMINATOR);
-                       }
-                       else if constexpr (std::is_same_v<T, wasm_block>)
-                       {
-                        generate_block(module, function, t, output);
-                       } },
-                   *inst);
+                    CAPY_ASSERT(value.block_label != nullptr, "If block is missing a branch label");
+                    control_labels.push_back(value.block_label->name);
+                    generate_expr(module, function, value.then_block, output);
+                    if (!value.else_block.empty())
+                    {
+                        output.put(INST_ELSE);
+                        generate_expr(module, function, value.else_block, output);
+                    }
+                    control_labels.pop_back();
+                    output.put(INST_TERMINATOR);
+                }
+                else if constexpr (std::is_same_v<T, wasm::block>)
+                {
+                    generate_block(module, function, value, output);
+                }
+            },
+            *instruction
+        );
     }
 }
 
-void wasm_generator::generate_block(const wasm_module& module, const wasm_function& function, const wasm_block& block, std::ostream& output)
+void wasm_generator_v2::generate_block(
+    const wasm::module& module,
+    const wasm::function* function,
+    const wasm::block& block,
+    std::ostream& output
+)
 {
-    const wasm_control_block* previous_block = current_block;
-    current_block = &block;
+    output.put(block.block_type == wasm::block_type_t::Block ? INST_BLOCK : INST_LOOP);
+    output.put(block.return_type == wasm::type_t::None ? '\x40' : encode_wasm_type(block.return_type));
 
-    switch (block.block_type)
-    {
-        case wasm_block::t_block:
-            output.put(INST_BLOCK);
-            output.put(0x40);
-            break;
-        case wasm_block::t_loop:
-            output.put(INST_LOOP);
-            output.put(0x40);
-            break;
-    }
-
+    CAPY_ASSERT(block.block_label != nullptr, "Block is missing a branch label");
+    control_labels.push_back(block.block_label->name);
     generate_expr(module, function, block.instructions, output);
-
+    control_labels.pop_back();
     output.put(INST_TERMINATOR);
-
-    current_block = previous_block;
 }
 
-size_t wasm_generator::intern_func_type(const wasm_function& function)
+size_t wasm_generator_v2::intern_func_type(const wasm::function& function)
 {
-    std::ostringstream func_type_entry(std::ios::binary);
-    encode_func_type(func_type_entry, function);
+    std::ostringstream entry(std::ios::binary);
+    encode_func_type(entry, function);
 
-    auto existing_entry = std::find(type_entries.begin(), type_entries.end(), func_type_entry.str());
-    if (existing_entry == type_entries.end())
+    auto existing = std::find(type_entries.begin(), type_entries.end(), entry.str());
+    if (existing != type_entries.end())
+        return std::distance(type_entries.begin(), existing);
+
+    type_entries.push_back(entry.str());
+    return type_entries.size() - 1;
+}
+
+void wasm_generator_v2::index_module(const wasm::module& module)
+{
+    function_indices.clear();
+    global_indices.clear();
+
+    size_t function_index = 0;
+    for (const auto& function : module.functions)
     {
-        type_entries.push_back(func_type_entry.str());
-        return type_entries.size() - 1;
+        if (is_imported(*function))
+            function_indices[function->name] = function_index++;
     }
-    else
+    for (const auto& function : module.functions)
     {
-        return std::distance(type_entries.begin(), existing_entry);
+        if (!is_imported(*function))
+            function_indices[function->name] = function_index++;
     }
+
+    for (size_t index = 0; index < module.globals.size(); index++)
+    {
+        global_indices[module.globals[index]->name] = index;
+    }
+}
+
+size_t wasm_generator_v2::local_index(const wasm::function& function, const std::string& name) const
+{
+    for (size_t index = 0; index < function.arguments.size(); index++)
+    {
+        if (function.arguments[index].name == name)
+            return index;
+    }
+    for (size_t index = 0; index < function.locals.size(); index++)
+    {
+        if (function.locals[index].name == name)
+            return function.arguments.size() + index;
+    }
+
+    CAPY_FAIL("Unknown local '%s' in function '%s'", name.c_str(), function.name.c_str());
+    return 0;
+}
+
+uint32_t wasm_generator_v2::resolve_block_label(const wasm::branch_label& label) const
+{
+    for (size_t depth = 0; depth < control_labels.size(); depth++)
+    {
+        size_t index = control_labels.size() - depth - 1;
+        if (control_labels[index] == label.name)
+            return static_cast<uint32_t>(depth);
+    }
+
+    CAPY_FAIL("Can't resolve block label '%s' in jump instruction", label.name.c_str());
+    return std::numeric_limits<uint32_t>::max();
 }
