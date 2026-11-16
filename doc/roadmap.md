@@ -5,7 +5,6 @@ compiler internals.
 
 ## Language and Type System
 
-- Add `\0` shorthand for inserting a zero-byte into a string
 - add support for capital hex-digits
 - Check type inference when accessing ptr/size of a string whose type was only inferred
 - Add structured component model types such as variants, enums, lists, and

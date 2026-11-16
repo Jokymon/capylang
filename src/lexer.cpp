@@ -817,6 +817,9 @@ token lexer::parse_char_literal()
             case 't':
                 ch = '\t';
                 break;
+            case '0':
+                ch = 0;
+                break;
             case '\\':
                 ch = '\\';
                 break;
@@ -865,6 +868,9 @@ token lexer::parse_string_literal()
                     break;
                 case 't':
                     string_literal += '\t';
+                    break;
+                case '0':
+                    string_literal += '\0';
                     break;
                 case '\\':
                     string_literal += '\\';
