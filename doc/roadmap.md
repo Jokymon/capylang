@@ -5,16 +5,9 @@ compiler internals.
 
 ## Language and Type System
 
-- Add 64-bit integer types.
-- Add floating-point types.
-- Define the numerical model for integers and floats
-  - automatic and non-automatic coercions
-  - explicit wrap/saturate/... conversions
-  - automatic promotion or not
 - Add `\0` shorthand for inserting a zero-byte into a string
 - add support for capital hex-digits
 - Check type inference when accessing ptr/size of a string whose type was only inferred
-- Design and add vector numeric types.
 - Add structured component model types such as variants, enums, lists, and
   results.
 - Improve type inference for `if` and `else` branches when surrounding type
@@ -62,14 +55,6 @@ compiler internals.
 - Turn explicit import structures for functions into regular attributes.
 - Add support for multiple WebAssembly memories and define whether that should
   be explicit in the language.
-- Design a library, module, or package concept for source reuse and module
-  mapping.
-- The `unreachable()` intrinsic allows for some very simple abort/fail semantic,
-  however the stack unwinding/traceback in this scenario is still very limited
-  and only shows the function names. Having more detailed information here would
-  be nice, including the line number in the capy source, the source file name
-  and depending on what DWARF/the wasm runtime can provide, maybe even more
-  information, like function signature.
 
 ## Intrinsics
 
