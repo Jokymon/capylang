@@ -15,15 +15,18 @@ extra_css:
 
 nav:
   - Overview: index.md
-  - Philosophy:
-    - Charta: charta.md
-    - Journey: journey.md
   - Details:
     - Compiler Pipeline: compiler-pipeline.md
     - Places and storage locations: places-and-locations.md
     - Design Decisions: design-decisions.md
     - Checklists: checklists.md
-  - Roadmap: roadmap.md
+  - Philosophy:
+    - Charta: charta.md
+    - Journey: journey.md
+  - Planning:
+    - Roadmap: roadmap.md
+    - Roadmap selfhosting: roadmap-selfhosting.md
+    - Open issues: https://github.com/Jokymon/capylang/issues
 
 exclude_docs: |
   lir_examples.md
