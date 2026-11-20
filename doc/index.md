@@ -17,4 +17,6 @@ core compiler pipeline:
   check before declaring a new Capylang language feature as "completed".
 - [Roadmap](roadmap.md) collects open compiler work that is relevant for future
   implementation and documentation.
+- [Roadmap selfhosting](roadmap-selfhosting.md) outlines the mid to longer-term roadmap to
+  get to a selfhosting compiler.
 - [Journey](journey.md) describes some of the bigger milestones and roadblocks encountered along the way
